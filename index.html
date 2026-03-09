@@ -1,875 +1,1998 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Borrado del Mapa — Admin v10</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>borradodelmapa · Crea tu ruta. Vívela.</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+*{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --negro:#0a0908;
-  --negro-2:#050505;
-  --dorado:#d4a017;
-  --dorado-2:#e8b040;
-  --crema:#f5f0e8;
-  --blanco:#ffffff;
-  --gris:#161311;
-  --gris-2:#201c19;
-  --gris-3:#322c28;
-  --line:rgba(212,160,23,.22);
-  --line-soft:rgba(245,240,232,.08);
-  --done:#7ff0c7;
-  --donebg:#103328;
-  --pendingbg:#41330d;
-  --danger:#dc2626;
+  --negro:#0a0908;--dorado:#c8930f;--dorado2:#e8b040;
+  --crema:#f5f0e8;--blanco:#ffffff;
+  --gris:#1a1816;--gris2:#2a2826;--gris3:#3d3a36;
+  --verde:#16a34a;--rojo:#dc2626;
 }
-*{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{
-  font-family:'Inter',sans-serif;
-  background:
-    radial-gradient(circle at 20% 10%, rgba(212,160,23,.10), transparent 18%),
-    radial-gradient(circle at 80% 0%, rgba(212,160,23,.06), transparent 16%),
-    linear-gradient(180deg,var(--negro-2) 0%, var(--negro) 100%);
-  color:var(--crema);
-  font-size:18px;
-  line-height:1.55;
-}
-.container{max-width:1180px;margin:auto;padding:32px 24px 80px}
-.hero,
-.cards-section,
-.stat,
-.modal,
-.sidepanel{
-  background:var(--negro-2);
-  border:1px solid var(--line);
-  box-shadow:none;
-}
-.hero{
-  margin:10px 0 28px;
-  padding:32px 24px 24px;
-  border-radius:28px;
-  text-align:center;
-}
-.logo-box{
-  display:inline-flex;align-items:center;justify-content:center;width:min(100%,860px);
-  min-height:110px;border:1px solid var(--dorado);padding:18px 20px;border-radius:24px;
-  background:var(--negro-2);
-}
-.logo-image{display:block;width:min(100%,980px);height:auto;border-radius:20px}
-.hero-sub{margin-top:12px;font-size:14px;color:rgba(245,240,232,.62);letter-spacing:.02em}
-.hero-sub strong{display:block;font-size:18px;color:var(--blanco)}
-.top-actions{display:flex;justify-content:center;gap:12px;margin-top:20px;flex-wrap:wrap}
-button{
-  appearance:none;
-  min-height:48px;
-  padding:14px 20px;
-  border-radius:0;
-  border:1px solid var(--dorado);
-  background:var(--dorado);
-  color:var(--negro);
-  font-family:'Space Mono',monospace;
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:1.6px;
-  text-transform:uppercase;
-  cursor:pointer;
-  transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease;
-}
-button:hover{background:var(--dorado-2);border-color:var(--dorado-2);transform:translateY(-1px)}
-button.secondary,
-button.copy{
-  background:transparent;
-  color:var(--crema);
-  border-color:var(--gris-3);
-}
-button.secondary:hover,
-button.copy:hover{border-color:var(--dorado);color:var(--dorado);background:transparent}
-button.green{background:#165c3d;border-color:#165c3d;color:#fff}
-button.green:hover{background:#1d744d;border-color:#1d744d}
-button.warn{background:#6b5410;border-color:#6b5410;color:#fff}
-button.warn:hover{background:#836714;border-color:#836714}
-button.red{background:#7a2323;border-color:#7a2323;color:#fff}
-button.red:hover{background:#922b2b;border-color:#922b2b}
-.top-actions button{min-width:188px}
-.task-input-box,
-.edit-box,
-.prompt-box{
-  margin-top:18px;
-  padding:18px;
-  border:1px solid var(--line);
-  border-radius:22px;
-  background:rgba(255,255,255,.02);
-}
-.edit-box h4,
-.prompt-box h4{
-  margin:0 0 12px 0;
-  font-family:'Space Mono',monospace;
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:1.8px;
-  color:var(--dorado);
-}
-select, textarea, input{
-  width:100%;
-  padding:14px 16px;
-  font-size:16px;
-  border-radius:0;
-  border:1px solid var(--gris-3);
-  background:#0d0d0d;
-  color:var(--crema);
-  margin-bottom:12px;
-  font-family:'Inter',sans-serif;
-}
-select:focus, textarea:focus, input:focus{outline:none;border-color:var(--dorado)}
-textarea{min-height:120px;resize:vertical}
-.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
-.stat{border-radius:24px;padding:22px;text-align:center;cursor:pointer;transition:border-color .2s ease,transform .2s ease}
-.stat:hover{border-color:rgba(212,160,23,.45);transform:translateY(-1px)}
-.stat .label{
-  color:rgba(245,240,232,.62);
-  font-family:'Space Mono',monospace;
-  font-size:11px;
-  text-transform:uppercase;
-  letter-spacing:1.8px;
-}
-.stat .value{font-size:36px;font-weight:800;margin-top:6px;color:var(--blanco)}
-.cards-section{display:none;border-radius:28px;padding:22px}
-.cards-header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
-.cards-header h2,
-.modal h3,
-.ai-header h3{
-  margin:0;
-  font-family:'Playfair Display',serif;
-  font-size:clamp(28px,3vw,40px);
-  line-height:1.1;
-  color:var(--blanco);
-}
-.cards{margin-top:8px}
-.task-card{padding:24px 0 26px;border-bottom:1px solid var(--line-soft)}
-.task-card:last-child{border-bottom:none}
-.category{
-  font-size:11px;
-  color:var(--dorado);
-  font-family:'Space Mono',monospace;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:1.7px;
-  margin-bottom:10px;
-}
-.task-text{font-size:28px;line-height:1.3;color:var(--blanco);margin-bottom:14px;font-weight:700}
-.task-meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.pill{display:inline-flex;align-items:center;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:700;border:1px solid var(--line-soft);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.8px}
-.pill.pending{color:var(--dorado-2);background:var(--pendingbg);border-color:rgba(232,176,64,.24)}
-.pill.done{color:var(--done);background:var(--donebg);border-color:rgba(127,240,199,.24)}
-.pill.idea{color:#fff;background:#222}
-.card-actions,.prompt-actions{display:flex;gap:10px;flex-wrap:wrap}
-.card-actions button,.prompt-actions button{min-width:180px}
-.copy-msg{font-size:14px;color:var(--done);align-self:center}
-.link-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line-soft)}
-.link-item:last-child{border-bottom:none}
-.link-item a{color:var(--blanco);text-decoration:none;word-break:break-all}
-.link-item a:hover{color:var(--dorado)}
-.empty{opacity:.72;padding:12px 0}
-.fab{
-  position:fixed;right:18px;bottom:18px;width:68px;height:68px;border-radius:999px;
-  font-size:14px;z-index:1001;box-shadow:none;
-}
-.sidepanel{
-  position:fixed;top:0;right:-430px;width:min(430px,100vw);height:100vh;
-  border-left:1px solid var(--line);z-index:1000;transition:right .25s ease;display:flex;flex-direction:column;
-}
-.sidepanel.open{right:0}
-.ai-header{padding:20px;border-bottom:1px solid var(--line-soft)}
-.ai-header p{margin:6px 0 0;color:rgba(245,240,232,.62);font-size:14px;line-height:1.5}
-.ai-actions{padding:14px 20px 8px;display:grid;grid-template-columns:1fr;gap:8px}
-.ai-chat{flex:1;overflow:auto;padding:12px 20px 18px}
-.msg{margin-bottom:12px;padding:14px 16px;border-radius:18px;line-height:1.6;white-space:pre-wrap}
-.msg.user{background:#181818;border:1px solid rgba(255,255,255,.06)}
-.msg.ai{background:#111;border:1px solid rgba(212,160,23,.18)}
-.msg-title{font-size:11px;color:var(--dorado);font-family:'Space Mono',monospace;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:1.4px}
-.ai-input{border-top:1px solid var(--line-soft);padding:14px 20px 18px}
-.ai-input textarea{min-height:90px}
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;padding:18px;z-index:999}
-.modal{width:min(860px,100%);max-height:88vh;overflow:auto;border-radius:28px;padding:24px}
-.modal .close-row{display:flex;justify-content:flex-end;margin-top:16px}
+html{scroll-behavior:smooth;}
+body{background:var(--negro);font-family:'DM Sans',sans-serif;color:var(--crema);min-height:100vh;}
+
+/* ===== NAVBAR ===== */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;height:88px;background:rgba(10,9,8,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--gris2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 48px;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:var(--blanco);cursor:pointer;text-align:center;}
+.nav-logo span{color:var(--dorado);}
+.nav-links{display:flex;align-items:center;gap:24px;}
+.nav-link{font-family:'Space Mono',monospace;font-size:10px;color:var(--crema);opacity:.6;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:opacity .2s;text-decoration:none;}
+.nav-link:hover{opacity:1;color:var(--dorado);}
+.nav-cta{font-family:'Space Mono',monospace;font-size:10px;background:var(--dorado);color:var(--negro);padding:7px 16px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;border:none;transition:background .2s;font-weight:700;}
+.nav-cta:hover{background:var(--dorado2);}
+.nav-user{display:none;align-items:center;gap:16px;}
+.nav-avatar{width:32px;height:32px;background:var(--dorado);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--negro);cursor:pointer;}
+
+/* ===== PAGES ===== */
+.page{display:none;min-height:100vh;padding-top:88px;}
+.page.active{display:block;}
+
+/* ===== HERO ===== */
+
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:0 40px;}
+#hero-map{position:absolute;inset:0;z-index:0;}
+.hero-map-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(to bottom,rgba(10,9,8,.4) 0%,rgba(10,9,8,0) 30%,rgba(10,9,8,0) 70%,rgba(10,9,8,.6) 100%);}
+
+
+.hero-content{position:relative;z-index:2;max-width:800px;text-align:center;}
+.hero-label{font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;opacity:.8;}
+.hero-title{font-family:'Playfair Display',serif;font-size:clamp(48px,7vw,88px);color:var(--blanco);line-height:1.05;margin-bottom:16px;}
+.hero-title em{font-style:italic;color:var(--dorado);}
+.hero-sub{font-size:18px;color:var(--crema);opacity:.55;margin-bottom:48px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7;}
+.hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+.btn-hero{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:16px 36px;cursor:pointer;transition:all .25s;border:none;}
+.btn-hero-primary{background:var(--dorado);color:var(--negro);}
+.btn-hero-primary:hover{background:var(--dorado2);transform:translateY(-2px);}
+.btn-hero-secondary{background:transparent;color:var(--crema);border:1px solid var(--gris3);}
+.btn-hero-secondary:hover{border-color:var(--dorado);color:var(--dorado);}
+.hero-stats{display:flex;gap:48px;justify-content:center;margin-top:64px;padding-top:48px;border-top:1px solid var(--gris2);}
+.hero-stat-num{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--dorado);line-height:1;}
+.hero-stat-lbl{font-family:'Space Mono',monospace;font-size:10px;color:var(--crema);opacity:.4;text-transform:uppercase;letter-spacing:2px;margin-top:4px;}
+
+/* FEATURES */
+.features{padding:100px 80px;max-width:1200px;margin:0 auto;}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px;}
+.feature-card{background:var(--gris);border:1px solid var(--gris2);border-left:3px solid var(--dorado);padding:20px 24px;transition:all .3s;}
+.feature-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.feature-icon{font-size:18px;margin-right:8px;}
+.feature-title{font-family:'Space Mono',monospace;font-size:13px;color:var(--blanco);margin-bottom:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;}
+.feature-desc{font-size:13px;color:var(--crema);opacity:.55;line-height:1.6;}
+
+/* PRICING */
+.pricing{padding:100px 80px;max-width:1000px;margin:0 auto;text-align:center;}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:48px;text-align:left;}
+.pricing-card{background:var(--gris);border:1px solid var(--gris2);padding:36px;position:relative;transition:all .3s;}
+.pricing-card.featured{border-color:var(--dorado);background:linear-gradient(135deg,rgba(200,147,15,.08),var(--gris));}
+.pricing-card.featured::before{content:'MÁS POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:4px 14px;letter-spacing:2px;}
+.pricing-name{font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;}
+.pricing-price{font-family:'Bebas Neue',sans-serif;font-size:56px;color:var(--blanco);line-height:1;margin-bottom:4px;}
+.pricing-price span{font-family:'DM Sans',sans-serif;font-size:16px;color:var(--crema);opacity:.4;}
+.pricing-desc{font-size:13px;color:var(--crema);opacity:.5;margin-bottom:28px;line-height:1.6;}
+.pricing-features{list-style:none;margin-bottom:28px;}
+.pricing-features li{font-size:13px;color:var(--crema);opacity:.7;padding:8px 0;border-bottom:1px solid var(--gris2);display:flex;align-items:center;gap:10px;}
+.pricing-features li::before{content:'✓';color:var(--dorado);font-weight:700;flex-shrink:0;}
+.pricing-features li.no{opacity:.3;}
+.pricing-features li.no::before{content:'✗';color:var(--gris3);}
+.btn-pricing{width:100%;padding:14px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border:none;transition:all .2s;}
+.btn-pricing-primary{background:var(--dorado);color:var(--negro);}
+.btn-pricing-primary:hover{background:var(--dorado2);}
+.btn-pricing-outline{background:transparent;color:var(--crema);border:1px solid var(--gris3);}
+.btn-pricing-outline:hover{border-color:var(--dorado);color:var(--dorado);}
+
+/* SECTION HEADER */
+.sec-header{text-align:center;margin-bottom:0;}
+.sec-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);letter-spacing:4px;text-transform:uppercase;margin-bottom:16px;opacity:.8;}
+.sec-title{font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,48px);color:var(--blanco);margin-bottom:12px;line-height:1.1;}
+.sec-sub{font-size:15px;color:var(--crema);opacity:.45;max-width:480px;margin:0 auto;line-height:1.7;}
+
+/* ===== AUTH MODAL ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.active{display:flex;}
+.modal{background:var(--gris);border:1px solid var(--gris3);width:100%;max-width:440px;padding:40px;position:relative;animation:modalIn .25s ease;}
+@keyframes modalIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.modal-close{position:absolute;top:16px;right:20px;font-size:20px;cursor:pointer;color:var(--crema);opacity:.4;transition:opacity .2s;background:none;border:none;}
+.modal-close:hover{opacity:1;}
+.modal-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--blanco);margin-bottom:4px;}
+.modal-sub{font-size:13px;color:var(--crema);opacity:.45;margin-bottom:28px;}
+.form-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;display:block;}
+.form-input{width:100%;padding:12px 14px;background:var(--negro);border:1px solid var(--gris3);color:var(--crema);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;margin-bottom:16px;}
+.form-input:focus{border-color:var(--dorado);}
+.form-input::placeholder{color:rgba(245,240,232,.2);}
+.btn-form{width:100%;padding:14px;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:none;cursor:pointer;transition:background .2s;margin-bottom:12px;}
+.btn-form:hover{background:var(--dorado2);}
+.modal-divider{display:flex;align-items:center;gap:10px;margin:16px 0;}
+.modal-div-line{flex:1;height:1px;background:var(--gris3);}
+.modal-div-txt{font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.3;}
+.btn-social{width:100%;padding:12px;background:var(--negro);border:1px solid var(--gris3);color:var(--crema);font-size:13px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;margin-bottom:8px;transition:border-color .2s;}
+.btn-social:hover{border-color:var(--dorado);}
+.modal-switch{text-align:center;font-size:12px;color:var(--crema);opacity:.4;margin-top:16px;}
+.modal-switch a{color:var(--dorado);opacity:1;cursor:pointer;}
+.modal-error{background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);color:#f87171;font-size:12px;padding:10px 14px;margin-bottom:16px;display:none;font-family:'Space Mono',monospace;}
+.modal-error.show{display:block;}
+
+/* ===== DASHBOARD ===== */
+#page-dashboard{background:var(--negro);}
+.dashboard-layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 64px);}
+
+/* SIDEBAR */
+.sidebar{background:var(--gris);border-right:1px solid var(--gris2);padding:32px 0;}
+.sidebar-user{padding:0 24px 28px;border-bottom:1px solid var(--gris2);margin-bottom:24px;}
+.sidebar-avatar{width:48px;height:48px;background:var(--dorado);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--negro);margin-bottom:10px;}
+.sidebar-name{font-family:'Playfair Display',serif;font-size:16px;color:var(--blanco);}
+.sidebar-plan{font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);opacity:.7;margin-top:2px;}
+.sidebar-nav{padding:0 12px;}
+.sidebar-item{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;transition:all .2s;border-left:2px solid transparent;margin-bottom:2px;}
+.sidebar-item:hover{background:var(--gris2);}
+.sidebar-item.active{border-left-color:var(--dorado);background:rgba(200,147,15,.08);}
+.sidebar-item-icon{font-size:18px;min-width:24px;}
+.sidebar-item-txt{font-size:14px;color:var(--crema);opacity:.7;}
+.sidebar-item.active .sidebar-item-txt{color:var(--dorado);opacity:1;}
+.sidebar-upgrade{margin:24px 16px 0;background:linear-gradient(135deg,rgba(200,147,15,.15),rgba(200,147,15,.04));border:1px solid rgba(200,147,15,.25);padding:18px;}
+.sidebar-upgrade-title{font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);letter-spacing:1px;margin-bottom:6px;}
+.sidebar-upgrade-desc{font-size:12px;color:var(--crema);opacity:.55;margin-bottom:12px;line-height:1.5;}
+.btn-upgrade{width:100%;padding:9px;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;border:none;cursor:pointer;transition:background .2s;}
+.btn-upgrade:hover{background:var(--dorado2);}
+
+/* MAIN CONTENT */
+.dash-content{padding:40px 48px;overflow-y:auto;}
+.dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:36px;}
+.dash-title{font-family:'Playfair Display',serif;font-size:28px;color:var(--blanco);}
+.dash-sub{font-size:13px;color:var(--crema);opacity:.4;margin-top:3px;}
+.btn-new{display:flex;align-items:center;gap:8px;padding:12px 24px;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;border:none;cursor:pointer;transition:background .2s;}
+.btn-new:hover{background:var(--dorado2);}
+
+/* FREE BANNER */
+.free-alert{background:linear-gradient(135deg,rgba(200,147,15,.12),rgba(200,147,15,.04));border:1px solid rgba(200,147,15,.3);padding:18px 24px;display:flex;align-items:center;gap:20px;margin-bottom:32px;}
+.free-alert-icon{font-size:28px;}
+.free-alert-text strong{display:block;font-size:14px;color:var(--dorado);margin-bottom:2px;}
+.free-alert-text span{font-size:13px;color:var(--crema);opacity:.6;}
+.btn-alert{margin-left:auto;padding:9px 20px;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+
+/* MAPS GRID */
+.maps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-bottom:40px;}
+.map-card{background:var(--gris);border:1px solid var(--gris2);overflow:hidden;cursor:pointer;transition:all .3s;}
+.map-card:hover{border-color:var(--dorado);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.map-card-img{height:140px;background:var(--gris2);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;}
+.map-card-body{padding:18px;}
+.map-card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--blanco);margin-bottom:5px;}
+.map-card-meta{font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);opacity:.7;margin-bottom:10px;}
+.map-card-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.tag{font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;background:rgba(200,147,15,.1);border:1px solid rgba(200,147,15,.2);color:var(--dorado);}
+.map-card-new{border-style:dashed;opacity:.5;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;gap:12px;}
+.map-card-new:hover{opacity:.8;}
+.map-card-new-icon{font-size:36px;}
+.map-card-new-txt{font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.6;text-align:center;letter-spacing:1px;}
+.map-card-locked{position:absolute;inset:0;background:rgba(10,9,8,.7);display:flex;align-items:center;justify-content:center;font-size:28px;}
+
+/* ===== MAP EDITOR ===== */
+#page-editor{background:var(--negro);}
+.editor-layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 88px);}
+.editor-panel{background:var(--gris);border-right:1px solid var(--gris2);display:flex;flex-direction:column;overflow:hidden;}
+.editor-panel-header{padding:20px 24px;border-bottom:1px solid var(--gris2);display:flex;align-items:center;gap:12px;}
+.editor-back{font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);opacity:.7;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.editor-map-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--blanco);flex:1;}
+.editor-scroll{flex:1;overflow-y:auto;padding:20px 24px;}
+.editor-section-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--gris2);}
+.day-tab-list{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
+.day-tab{font-family:'Space Mono',monospace;font-size:9px;padding:6px 12px;border:1px solid var(--gris3);color:var(--crema);opacity:.5;cursor:pointer;transition:all .2s;}
+.day-tab:hover{border-color:var(--dorado);opacity:.8;}
+.day-tab.active{border-color:var(--dorado);background:rgba(200,147,15,.1);color:var(--dorado);opacity:1;}
+.poi-list-editor{margin-bottom:20px;}
+.poi-item-editor{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--negro);border:1px solid var(--gris2);margin-bottom:6px;cursor:pointer;transition:all .2s;}
+.poi-item-editor:hover{border-color:var(--dorado);}
+.poi-emoji{font-size:20px;min-width:24px;}
+.poi-info-editor{flex:1;}
+.poi-name-editor{font-size:13px;color:var(--crema);}
+.poi-meta-editor{font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.4;margin-top:2px;}
+.poi-del{font-size:14px;color:var(--gris3);cursor:pointer;transition:color .2s;background:none;border:none;padding:4px;}
+.poi-del:hover{color:var(--rojo);}
+.btn-add-poi{width:100%;padding:10px;background:transparent;border:1px dashed var(--gris3);color:var(--crema);opacity:.5;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-add-poi:hover{border-color:var(--dorado);color:var(--dorado);opacity:1;}
+.editor-map-container{flex:1;position:relative;}
+#leaflet-map{width:100%;height:100%;}
+.map-toolbar{position:absolute;top:16px;right:16px;z-index:500;display:flex;flex-direction:column;gap:8px;}
+.map-tool-btn{width:40px;height:40px;background:var(--negro);border:1px solid var(--gris3);color:var(--crema);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.map-tool-btn:hover{border-color:var(--dorado);color:var(--dorado);}
+
+/* ===== STORE ===== */
+#page-store .store-inner{max-width:1100px;margin:0 auto;padding:60px 40px;}
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;margin-top:40px;}
+.store-card{background:var(--gris);border:1px solid var(--gris2);overflow:hidden;cursor:pointer;transition:all .3s;}
+.store-card:hover{border-color:var(--dorado);transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.4);}
+.store-card-img{height:120px;background:var(--gris2);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;}
+.store-badge{position:absolute;top:8px;right:8px;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:3px 8px;}
+.store-card-body{padding:18px;}
+.store-country{font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);margin-bottom:4px;letter-spacing:1px;}
+.store-name{font-family:'Playfair Display',serif;font-size:16px;color:var(--blanco);margin-bottom:6px;}
+.store-meta{font-size:12px;color:var(--crema);opacity:.45;margin-bottom:14px;line-height:1.5;}
+.store-footer{display:flex;justify-content:space-between;align-items:center;}
+.store-price{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--dorado2);}
+.btn-buy{padding:8px 16px;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;border:none;cursor:pointer;transition:background .2s;}
+.btn-buy:hover{background:var(--dorado2);}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:32px;right:32px;background:var(--gris);border:1px solid var(--dorado);padding:14px 20px;font-family:'Space Mono',monospace;font-size:12px;color:var(--crema);z-index:3000;transform:translateY(100px);opacity:0;transition:all .3s;}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ADD POI MODAL */
+.poi-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2500;align-items:center;justify-content:center;}
+.poi-modal.active{display:flex;}
+.poi-modal-box{background:var(--gris);border:1px solid var(--gris3);width:100%;max-width:400px;padding:32px;position:relative;}
+
+/* FOOTER */
+footer{background:var(--gris);border-top:1px solid var(--dorado);padding:48px 80px;display:flex;justify-content:space-between;align-items:center;}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--blanco);}
+.footer-logo span{color:var(--dorado);}
+.footer-links{display:flex;gap:24px;}
+.footer-link{font-family:'Space Mono',monospace;font-size:11px;color:rgba(255,255,255,0.85);opacity:1;cursor:pointer;text-transform:uppercase;letter-spacing:1px;text-decoration:none;}
+.footer-link:hover{color:var(--dorado);}
+.footer-copy{font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,0.6);}
+
+/* RESPONSIVE */
 @media(max-width:900px){
-  .dashboard{grid-template-columns:1fr}
-  .top-actions button,
-  .card-actions button,
-  .prompt-actions button{min-width:auto;width:100%}
-  .task-text{font-size:24px}
-  .container{padding:20px 16px 72px}
-  .hero{padding:24px 16px 18px}
-  .logo-box{border-radius:20px}
+  nav{padding:0 24px;}
+  .nav-links{display:none;}
+  .hero{padding:0 24px;}
+  .hero-stats{gap:24px;flex-wrap:wrap;}
+  .features{padding:60px 24px;}
+  .features-grid{grid-template-columns:1fr;}
+  .pricing{padding:60px 24px;}
+  .pricing-grid{grid-template-columns:1fr;}
+  .dashboard-layout{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .dash-content{padding:24px;display:block!important;}
+  #page-dashboard{padding-bottom:70px;}
+  .editor-layout{grid-template-columns:1fr;grid-template-rows:50vh 50vh;}
+  .editor-panel{display:flex;height:50vh;overflow-y:auto;}
+  .editor-map-container{height:50vh;}
+  footer{padding:32px 24px;flex-direction:column;gap:20px;text-align:center;}
 }
+
+
+.hero-tooltip{background:rgba(10,9,8,.85)!important;border:1px solid rgba(200,147,15,.5)!important;color:#f5f0e8!important;font-family:"Space Mono",monospace!important;font-size:9px!important;letter-spacing:1px!important;padding:3px 8px!important;border-radius:0!important;box-shadow:none!important;}
+.hero-tooltip::before{display:none!important;}
+.mobile-dash-nav{position:fixed;bottom:0;left:0;right:0;background:var(--negro);border-top:1px solid var(--gris2);z-index:999;justify-content:space-around;padding:10px 0;}
+.mobile-nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:20px;cursor:pointer;padding:6px 20px;}
+.mobile-nav-item span{font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.6;letter-spacing:1px;text-transform:uppercase;}
+.mobile-nav-item.active span{color:var(--dorado);opacity:1;}
+
+
+#hero-map .leaflet-overlay-pane, #hero-map .leaflet-marker-pane, #hero-map .leaflet-tooltip-pane, #hero-map .leaflet-popup-pane {display:none!important;}
+/* LEAFLET OVERRIDES */
+.leaflet-container{background:#1a2a1a;}
+.leaflet-tile{filter:brightness(2.2) contrast(1.8) saturate(0);}
+@keyframes glow{0%,100%{box-shadow:0 0 12px rgba(232,176,64,1),0 0 28px rgba(232,176,64,.7),0 0 50px rgba(232,176,64,.3);}50%{box-shadow:0 0 24px rgba(232,176,64,1),0 0 50px rgba(232,176,64,.9),0 0 80px rgba(232,176,64,.5);}}
 </style>
 </head>
 <body>
-<div class="container">
-  <section class="hero">
-    <div class="logo-box" onclick="goHome()" title="Volver al inicio"><img class="logo-image" src="data:image/svg+xml;utf8,%0A%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%201400%20520%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22gold%22%20x1%3D%220%22%20x2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23f2c318%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23ffd84d%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%20%20%3Cfilter%20id%3D%22softShadow%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%3E%0A%20%20%20%20%20%20%3CfeDropShadow%20dx%3D%220%22%20dy%3D%228%22%20stdDeviation%3D%2214%22%20flood-color%3D%22%23000000%22%20flood-opacity%3D%22.45%22/%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%0A%20%20%3Crect%20width%3D%221400%22%20height%3D%22520%22%20fill%3D%22transparent%22/%3E%0A%0A%20%20%3Cg%20filter%3D%22url%28%23softShadow%29%22%3E%0A%20%20%20%20%3Crect%20x%3D%22210%22%20y%3D%2295%22%20width%3D%22980%22%20height%3D%22150%22%20rx%3D%2226%22%20fill%3D%22%23050505%22%20stroke%3D%22url%28%23gold%29%22%20stroke-width%3D%2214%22/%3E%0A%0A%20%20%20%20%3Ctext%20x%3D%22270%22%20y%3D%22196%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2288%22%20fill%3D%22%23f1f1f1%22%3EBORRADO%3C/text%3E%0A%20%20%20%20%3Ctext%20x%3D%22730%22%20y%3D%22196%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2288%22%20fill%3D%22url%28%23gold%29%22%3EDEL%3C/text%3E%0A%20%20%20%20%3Ctext%20x%3D%22890%22%20y%3D%22196%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2288%22%20fill%3D%22%23f1f1f1%22%3EMAPA%3C/text%3E%0A%0A%20%20%20%20%3Ctext%20x%3D%22450%22%20y%3D%22355%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22800%22%20font-size%3D%2268%22%20fill%3D%22%23f1f1f1%22%3ENacidos%20para%20el%20ocio%3C/text%3E%0A%0A%20%20%20%20%3Cg%20transform%3D%22translate%28878%2C260%29%22%3E%0A%20%20%20%20%20%20%3Ccircle%20cx%3D%220%22%20cy%3D%2222%22%20r%3D%2226%22%20fill%3D%22%23d81818%22/%3E%0A%20%20%20%20%20%20%3Ccircle%20cx%3D%22-7%22%20cy%3D%2215%22%20r%3D%229%22%20fill%3D%22%23ffffff%22%20opacity%3D%22.7%22/%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M0%2C42%20C13%2C76%2014%2C101%200%2C135%20C-14%2C101%20-13%2C76%200%2C42Z%22%20fill%3D%22%23d81818%22/%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M4%2C42%20C13%2C73%2013%2C98%204%2C129%20C8%2C101%206%2C72%200%2C42Z%22%20fill%3D%22%23ffffff%22%20opacity%3D%22.92%22/%3E%0A%20%20%20%20%3C/g%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A" alt="Logo Borrado del Mapa"></div>
-    <p class="hero-sub"><span style="font-size:13px;opacity:.75">Pulsa el logo para volver al inicio</span></p>
-    <div class="top-actions">
-      <button onclick="openRoadmap()">Roadmap</button>
-      <button onclick="openPlanHoy()">📌 Plan de trabajo hoy</button>
-      <button class="secondary" onclick="toggleProviders()">Proveedores</button>
-            <button class="secondary" onclick="toggleIA()">Asistente IA</button>
-      <input type="file" id="importBackupInput" accept=".json,application/json" style="display:none" onchange="importBackup(event)">
+<div id="admin-gate" aria-hidden="true">
+  <div class="admin-gate-card">
+    <div class="admin-gate-eyebrow">ACCESO PRIVADO</div>
+    <h1>Panel admin protegido</h1>
+    <p>Introduce la contraseña para entrar al panel de Borradodelmapa.</p>
+    <label for="admin-gate-password">Contraseña</label>
+    <input id="admin-gate-password" type="password" placeholder="••••••••••" autocomplete="current-password">
+    <button id="admin-gate-submit" type="button">Entrar al admin</button>
+    <div id="admin-gate-error" role="alert"></div>
+    <div class="admin-gate-note">Bloqueo local activo. Para protección real en producción, añade también Password Protection de Netlify.</div>
+  </div>
+</div>
+<button id="admin-lock-toggle" type="button" title="Bloquear admin" aria-label="Bloquear admin">🔒</button>
+<style>
+  body.admin-locked{overflow:hidden!important;}
+  #admin-gate{position:fixed;inset:0;z-index:50000;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top,#1a1510 0%,#090807 48%,#050505 100%);backdrop-filter:blur(10px);}
+  #admin-gate.hidden{display:none;}
+  .admin-gate-card{width:min(100%,420px);background:rgba(10,9,8,.96);border:1px solid rgba(212,160,23,.28);box-shadow:0 24px 80px rgba(0,0,0,.55);padding:28px;border-radius:22px;color:var(--crema);}
+  .admin-gate-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--dorado);margin-bottom:10px;}
+  .admin-gate-card h1{font-size:34px;line-height:1.05;margin:0 0 12px;color:#fff;}
+  .admin-gate-card p{font-size:14px;line-height:1.7;opacity:.86;margin:0 0 18px;}
+  .admin-gate-card label{display:block;margin-bottom:8px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--dorado);}
+  .admin-gate-card input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(212,160,23,.22);background:#111;color:#fff;font-size:15px;outline:none;}
+  .admin-gate-card input:focus{border-color:var(--dorado);box-shadow:0 0 0 3px rgba(212,160,23,.15);}
+  #admin-gate-submit{width:100%;margin-top:14px;padding:14px 16px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--dorado),var(--dorado2));color:#111;font-weight:800;font-size:14px;cursor:pointer;}
+  #admin-gate-error{min-height:20px;margin-top:10px;font-size:13px;color:#ff8d8d;}
+  .admin-gate-note{margin-top:12px;font-size:12px;line-height:1.6;opacity:.65;}
+  #admin-lock-toggle{position:fixed;left:20px;bottom:20px;z-index:12000;width:48px;height:48px;border-radius:999px;border:1px solid rgba(212,160,23,.35);background:#0c0b0a;color:var(--dorado);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 12px 24px rgba(0,0,0,.35);}
+</style>
+
+<!-- NAVBAR -->
+<nav>
+  <div class="nav-logo" onclick="showPage('home')">borrado<span>del</span>mapa</div>
+  <div class="nav-links" id="nav-links-guest" style="display:flex;">
+    <a class="nav-link" onclick="showPage('editor')" style="cursor:pointer;">Demo</a>
+    <button class="nav-cta" onclick="openModal('login')">Entrar</button>
+  </div>
+  <div class="nav-user" id="nav-links-user" style="display:none;">
+    <a class="nav-link" onclick="showPage('editor')" style="cursor:pointer;">Demo</a>
+    <a class="nav-link" onclick="showPage('dashboard')" style="cursor:pointer;">Mis mapas</a>
+    <div class="nav-avatar" id="nav-avatar" onclick="toggleUserMenu()" style="cursor:pointer;position:relative;">B
+      <div id="user-menu" style="display:none;position:absolute;top:48px;right:0;background:#111;border:1px solid var(--gris2);min-width:140px;z-index:999;">
+        <div onclick="setDashTab('profile',null);showPage('dashboard')" style="padding:12px 16px;font-family:'Space Mono',monospace;font-size:10px;color:var(--crema);cursor:pointer;border-bottom:1px solid var(--gris2);">⚙️ MI CUENTA</div>
+        <div onclick="logout()" style="padding:12px 16px;font-family:'Space Mono',monospace;font-size:10px;color:#e74c3c;cursor:pointer;">🚪 SALIR</div>
+      </div>
     </div>
-    <div class="edit-box" id="providersBox" style="display:none; text-align:left;">
-      <h4>Proveedores y enlaces</h4>
-      <div id="providersList"></div>
-      <input id="newLinkName" placeholder="Nombre del enlace">
-      <input id="newLinkUrl" placeholder="https://...">
-      <button onclick="addProviderLink()">Añadir enlace</button>
-      <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0;"></div>
-      <div class="card-actions">
-        <button class="secondary" onclick="exportBackup()">Exportar backup</button>
-        <button class="secondary" onclick="triggerImport()">Importar backup</button>
+  </div>
+</nav>
+
+<!-- ===== HOME ===== -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div id="hero-map" style="background:url('https://raw.githubusercontent.com/borradodelmapa/borradodelmapa/main/mapa.png') center/cover no-repeat;filter:brightness(0.6);"></div>
+    <div class="hero-map-overlay"></div>
+    <div class="hero-content" style="position:relative;z-index:2;">
+      <div class="hero-label">Planifica · Explora · Comparte</div>
+      <h1 class="hero-title">Crea tu ruta.<br><em>Vívela.</em></h1>
+      <p class="hero-sub">Diseña itinerarios interactivos para cualquier país en segundos. Mapas, POIs y días organizados. Comparte con quien quieras.</p>
+      <div class="hero-btns">
+        <button class="btn-hero btn-hero-primary" onclick="openModal('register')">Crea tus rutas →</button>
+      </div>
+      <div class="hero-stats">
+        <div><div class="hero-stat-num">∞</div><div class="hero-stat-lbl">mapas gratis</div></div>
+        
+        <div><div class="hero-stat-num">0</div><div class="hero-stat-lbl">instalación</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section class="features">
+    <div class="sec-header">
+      <div class="sec-label">Funcionalidades</div>
+      <h2 class="sec-title">Todo lo que necesitas para planificar</h2>
+      <p class="sec-sub">Sin Excel, sin notas dispersas. Tu viaje entero en un solo mapa interactivo.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-title">Mapas interactivos</div>
+        <div class="feature-desc">Añade puntos de interés, traza rutas y organiza todo visualmente. Cada día del viaje en su propia capa.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-title">En segundos</div>
+        <div class="feature-desc">Elige destino, número de días y tipo de viaje. El mapa base se genera automáticamente. Tú solo personalizas.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-title">Comparte y exporta</div>
+        <div class="feature-desc">Comparte tu ruta con un enlace. Exporta a PDF para llevarla sin internet. Compatible con Google Maps.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-title">Organización por días</div>
+        <div class="feature-desc">Cada día con sus actividades, alojamiento y desplazamientos. Visualiza el viaje completo de un vistazo.</div>
+      </div>
+    </div>
+  </section>
+
+
+  <footer>
+    <div class="footer-logo">borrado<span>del</span>mapa</div>
+    <div style="max-width:560px;margin:0 auto 28px;text-align:center;font-size:13px;color:var(--crema);opacity:.7;line-height:1.7;">
+      borradodelmapa es gratuita y lo seguirá siendo. Asumimos el coste de desarrollo y mantenimiento usando herramientas colaborativas. Si quieres aportar algo, irá directo a ayuda humanitaria — entregada en mano en Marruecos, Ucrania, la DANA en España y donde haga falta.
+    </div>
+    <a href="https://ko-fi.com/borradodelmapa" target="_blank" style="display:inline-block;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:12px;font-weight:700;padding:14px 32px;letter-spacing:2px;text-decoration:none;margin-bottom:28px;">☕ APOYA EL PROYECTO</a>
+  </footer>
+</div>
+
+<!-- ===== BLOG ===== -->
+<div class="page" id="page-blog">
+  <div style="max-width:800px;margin:0 auto;padding:60px 32px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:56px;color:var(--blanco);margin-bottom:8px;">Blog</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.5;margin-bottom:48px;letter-spacing:1px;">RUTAS · AYUDA · VIAJES</div>
+    <div id="blog-list" style="display:grid;gap:24px;"></div>
+    <div id="blog-post" style="display:none;">
+      <div onclick="closeBlogPost()" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);cursor:pointer;letter-spacing:1px;margin-bottom:40px;">← VOLVER AL BLOG</div>
+      <div id="blog-post-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TÉRMINOS ===== -->
+<div class="page" id="page-terminos">
+  <div style="max-width:720px;margin:0 auto;padding:60px 32px;">
+    <div onclick="showPage('home')" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);cursor:pointer;letter-spacing:1px;margin-bottom:40px;">← VOLVER</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--blanco);margin-bottom:8px;">Términos de uso</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.5;margin-bottom:48px;">Última actualización: marzo 2025</div>
+
+    <div style="color:var(--crema);line-height:1.8;font-size:14px;opacity:.85;">
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">1. Qué es borradodelmapa</strong><br>
+      borradodelmapa es una herramienta gratuita para crear y compartir itinerarios de viaje. No tiene coste, no hay planes de pago ocultos y no vendemos datos.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">2. Uso del servicio</strong><br>
+      Puedes usar borradodelmapa para crear tus rutas personales. Está prohibido usar la plataforma para actividades ilegales, spam o cualquier uso que perjudique a otros usuarios.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">3. Tu contenido</strong><br>
+      Los mapas e itinerarios que creas son tuyos. borradodelmapa no reclama propiedad sobre tu contenido. Puedes eliminar tu cuenta y todos tus datos en cualquier momento.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">4. Donaciones</strong><br>
+      Las donaciones son voluntarias y no otorgan ningún privilegio especial. El desarrollo y mantenimiento de borradodelmapa se asume con herramientas colaborativas. Las aportaciones que recibimos se destinan íntegramente a proyectos de ayuda humanitaria entregados directamente por el equipo.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">5. Disponibilidad</strong><br>
+      Nos esforzamos por mantener el servicio disponible, pero no garantizamos disponibilidad ininterrumpida. Al ser un servicio gratuito, puede haber interrupciones puntuales.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">6. Cambios</strong><br>
+      Podemos actualizar estos términos. Si hay cambios relevantes lo comunicaremos a través de nuestro Instagram @borradodelmapa.</p>
+
+      <p style="margin-bottom:0;"><strong style="color:var(--blanco);">7. Contacto</strong><br>
+      Para cualquier consulta: <a href="https://instagram.com/borradodelmapa" target="_blank" style="color:var(--dorado);">@borradodelmapa</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PRIVACIDAD ===== -->
+<div class="page" id="page-privacidad">
+  <div style="max-width:720px;margin:0 auto;padding:60px 32px;">
+    <div onclick="showPage('home')" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);cursor:pointer;letter-spacing:1px;margin-bottom:40px;">← VOLVER</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--blanco);margin-bottom:8px;">Política de privacidad</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.5;margin-bottom:48px;">Última actualización: marzo 2025</div>
+
+    <div style="color:var(--crema);line-height:1.8;font-size:14px;opacity:.85;">
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">1. Qué datos recogemos</strong><br>
+      Solo recogemos los datos necesarios para que el servicio funcione: nombre, email y los itinerarios que creas. No recogemos datos de localización, no instalamos cookies de seguimiento ni compartimos información con terceros.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">2. Para qué usamos tus datos</strong><br>
+      Únicamente para que puedas acceder a tu cuenta y recuperar tus mapas. Nunca para publicidad, nunca para análisis de terceros, nunca para vender.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">3. Dónde se guardan</strong><br>
+      Tus datos se almacenan en Firebase (Google) en servidores europeos. Puedes consultar su política de privacidad en firebase.google.com.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">4. Tus derechos</strong><br>
+      Tienes derecho a acceder, corregir o eliminar todos tus datos en cualquier momento. Para ejercerlos, contáctanos por Instagram y lo gestionamos en menos de 48 horas.</p>
+
+      <p style="margin-bottom:24px;"><strong style="color:var(--blanco);">5. Menores</strong><br>
+      borradodelmapa no está dirigida a menores de 14 años. Si eres menor, necesitas el consentimiento de tus padres o tutores para registrarte.</p>
+
+      <p style="margin-bottom:0;"><strong style="color:var(--blanco);">6. Contacto</strong><br>
+      Para cualquier consulta sobre privacidad: <a href="https://instagram.com/borradodelmapa" target="_blank" style="color:var(--dorado);">@borradodelmapa</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="page" id="page-dashboard">
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">B</div>
+        <div class="sidebar-name" id="sidebar-name">Viajero</div>
+        <div class="sidebar-plan" id="sidebar-plan">Plan Gratuito · 1/1 mapa</div>
+      </div>
+      <div class="sidebar-nav">
+        <div class="sidebar-item active" onclick="setDashTab('maps',this)">
+          <div class="sidebar-item-icon">🗺️</div>
+          <div class="sidebar-item-txt">Mis mapas</div>
+        </div>
+
+        <div class="sidebar-item" onclick="setDashTab('profile',this)">
+          <div class="sidebar-item-icon">👤</div>
+          <div class="sidebar-item-txt">Mi perfil</div>
+        </div>
+        <div class="sidebar-item" onclick="logout()">
+          <div class="sidebar-item-icon">🚪</div>
+          <div class="sidebar-item-txt">Cerrar sesión</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="dash-content" id="dash-tab-maps">
+      <div class="dash-header">
+        <div><div class="dash-title">Mis rutas</div><div class="dash-sub">Tus itinerarios de viaje</div></div>
+        <button onclick="newMap()" style="background:var(--dorado);color:var(--negro);border:none;padding:12px 24px;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;">＋ NUEVA RUTA</button>
+        <button onclick="showPage('editor')" style="background:transparent;color:var(--dorado);border:1px solid var(--dorado);padding:12px 24px;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;">DEMO RUTA</button>
+      </div>
+      <div class="maps-grid" id="maps-grid-dynamic"></div>
+    </div>
+
+    <div class="dash-content" id="dash-tab-profile" style="display:none;">
+      <div class="dash-header">
+        <div><div class="dash-title">Mi perfil</div><div class="dash-sub">Tu cuenta y preferencias</div></div>
+      </div>
+      <div style="max-width:520px;">
+
+        <!-- Avatar y nombre -->
+        <div style="background:var(--gris);border:1px solid var(--gris2);padding:28px;margin-bottom:12px;display:flex;align-items:center;gap:20px;">
+          <div id="profile-avatar-big" style="width:64px;height:64px;border-radius:50%;background:var(--dorado);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--negro);flex-shrink:0;">U</div>
+          <div style="flex:1;">
+            <div id="profile-display-name" style="font-family:'Playfair Display',serif;font-size:22px;color:var(--blanco);margin-bottom:4px;">Viajero</div>
+            <div id="profile-display-email" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--crema);opacity:.5;"></div>
+          </div>
+        </div>
+
+        <!-- Datos personales -->
+        <div style="background:var(--gris);border:1px solid var(--gris2);padding:28px;margin-bottom:12px;">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--gris2);">Datos personales</div>
+          <label class="form-label">Nombre</label>
+          <input class="form-input" id="profile-name-input" placeholder="Tu nombre">
+          <label class="form-label">País de origen</label>
+          <input class="form-input" id="profile-country-input" placeholder="España, México, Argentina...">
+          <label class="form-label">Sobre ti</label>
+          <textarea class="form-input" id="profile-bio-input" placeholder="Cuéntanos cómo viajas..." style="height:80px;resize:none;font-family:'DM Sans',sans-serif;"></textarea>
+          <button class="btn-form" onclick="saveProfile()">Guardar cambios</button>
+        </div>
+
+        <!-- Estadísticas -->
+        <div style="background:var(--gris);border:1px solid var(--gris2);padding:28px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div style="text-align:center;">
+            <div id="profile-routes-count" style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--dorado);">0</div>
+            <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.5;letter-spacing:1px;">RUTAS CREADAS</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--dorado);">∞</div>
+            <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.5;letter-spacing:1px;">PLAN GRATUITO</div>
+          </div>
+        </div>
+
+        <!-- Ko-fi -->
+        <div style="background:var(--gris);border:1px solid var(--gris2);padding:28px;">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--gris2);">Apoya el proyecto</div>
+          <div style="font-size:14px;color:var(--crema);opacity:.7;margin-bottom:16px;line-height:1.7;">Borrado del Mapa es gratuito y lo seguirá siendo. Si te ayuda, puedes colaborar para proyectos sociales.</div>
+          <a href="https://ko-fi.com/borradodelmapa" target="_blank" class="btn-form" style="display:block;text-align:center;text-decoration:none;">☕ Colabora en Ko-fi</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Mobile bottom nav - FUERA del dashboard, controlado por JS -->
+<!-- Mobile bottom nav -->
+<div id="mobile-dash-nav" class="mobile-dash-nav" style="display:none;">
+  <div onclick="event.stopPropagation();setDashTab('maps',this);showPage('dashboard')" class="mobile-nav-item">🗺️<span>Rutas</span></div>
+  <div onclick="event.stopPropagation();setDashTab('profile',null);showPage('dashboard')" class="mobile-nav-item">⚙️<span>Cuenta</span></div>
+  <div onclick="event.stopPropagation();logout()" class="mobile-nav-item">🚪<span>Salir</span></div>
+</div>
+<div class="page" id="page-editor" style="background:var(--negro);overflow-y:auto;padding-top:88px;padding-bottom:80px;">
+
+  <!-- HERO DEMO -->
+  <div style="max-width:860px;margin:0 auto;padding:40px 24px 0;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);letter-spacing:3px;margin-bottom:12px;">DEMO · RUTA COMPLETA</div>
+    <div style="font-family:'Playfair Display',serif;font-size:clamp(32px,6vw,56px);color:var(--blanco);line-height:1.1;margin-bottom:8px;">Vietnam en Moto</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:16px;color:var(--crema);opacity:.7;margin-bottom:28px;">De Hanoi al sur y de vuelta — la ruta definitiva</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:40px;">
+      <div style="background:var(--gris);border:1px solid var(--gris2);padding:16px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dorado);">25</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.6;letter-spacing:1px;">DÍAS</div>
+      </div>
+      <div style="background:var(--gris);border:1px solid var(--gris2);padding:16px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dorado);">3.000</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.6;letter-spacing:1px;">KM</div>
+      </div>
+      <div style="background:var(--gris);border:1px solid var(--gris2);padding:16px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dorado);">9</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.6;letter-spacing:1px;">PARADAS</div>
+      </div>
+      <div style="background:var(--gris);border:1px solid var(--gris2);padding:16px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dorado);">&lt;20€</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.6;letter-spacing:1px;">ALOJAM./NOCHE</div>
+      </div>
+    </div>
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--crema);opacity:.5;letter-spacing:2px;margin-bottom:40px;text-align:center;">HANOI → HA GIANG → NINH BINH → PHONG NHA → HUÉ → HOI AN → NHA TRANG → DA LAT → HANOI</div>
+
+    <!-- SECCIÓN 01: MAPA INTERACTIVO -->
+    <div style="margin-bottom:8px;">
+      <div style="background:var(--gris);border:1px solid var(--gris2);border-left:3px solid var(--dorado);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);margin-right:12px;">01</span>
+          <span style="font-family:'Playfair Display',serif;font-size:18px;color:var(--blanco);">Mapa interactivo</span>
+        </div>
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--crema);opacity:.5;">Visible</span>
+      </div>
+      <div style="border:1px solid var(--gris2);border-top:none;">
+        <div id="demo-leaflet-map" style="height:380px;width:100%;"></div>
+        <div style="padding:16px;background:var(--gris);">
+          <a href="https://www.google.com/maps/dir/Hanoi,Vietnam/Ha+Giang,Vietnam/Ninh+Binh,Vietnam/Phong+Nha,Vietnam/Hue,Vietnam/Hoi+An,Vietnam/Nha+Trang,Vietnam/Da+Lat,Vietnam/Hanoi,Vietnam" target="_blank" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);text-decoration:none;letter-spacing:1px;">🗺 Ver ruta completa en Google Maps →</a>
+        </div>
       </div>
     </div>
 
-    <div class="task-input-box">
-      <select id="categorySelect">
-        <option value="desarrollo">Desarrollo</option>
-        <option value="marketing">Marketing</option>
-        <option value="finanzas">Finanzas</option>
-        <option value="diseno">Diseño</option>
-        <option value="seguridad">Seguridad</option>
-        <option value="metricas">Métricas</option>
-        <option value="planhoy">Plan de trabajo hoy</option>
-      </select>
-      <textarea id="taskInput" placeholder="Escribe la tarea..."></textarea>
-      <button onclick="addTask(false)">Guardar tarea</button>
+    <!-- SECCIÓN 02: MAPAS DIARIOS -->
+    <div style="margin-bottom:8px;">
+      <div onclick="toggleDemo('mapas-diarios')" style="background:var(--gris);border:1px solid var(--gris2);border-left:3px solid var(--dorado);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+        <div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);margin-right:12px;">02</span>
+          <span style="font-family:'Playfair Display',serif;font-size:18px;color:var(--blanco);">Mapas diarios</span>
+        </div>
+        <span id="icon-mapas-diarios" style="font-family:'Space Mono',monospace;font-size:16px;color:var(--dorado);">＋</span>
+      </div>
+      <div id="mapas-diarios" style="display:none;border:1px solid var(--gris2);border-top:none;padding:24px;background:var(--gris);">
+        <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:var(--crema);opacity:.7;margin-bottom:20px;">Haz clic en los marcadores para abrir cada punto en Google Maps.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;" id="day-tabs-demo"></div>
+        <div id="day-map-demo" style="height:300px;border:1px solid var(--gris2);"></div>
+        <div id="day-pois-demo" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
     </div>
-  </section>
 
-  <div class="dashboard">
-    <div class="stat" onclick="openPendingCategories()"><div class="label">Total tareas</div><div class="value" id="totalTasks">0</div></div>
-    <div class="stat" onclick="setFilter('pending')"><div class="label">Pendientes</div><div class="value" id="pendingCount">0</div></div>
-    <div class="stat" onclick="setFilter('done')"><div class="label">Finalizadas</div><div class="value" id="doneCount">0</div></div>
+    <!-- SECCIÓN 03: ITINERARIO DETALLADO -->
+    <div style="margin-bottom:8px;">
+      <div onclick="toggleDemo('itinerario')" style="background:var(--gris);border:1px solid var(--gris2);border-left:3px solid var(--dorado);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+        <div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);margin-right:12px;">03</span>
+          <span style="font-family:'Playfair Display',serif;font-size:18px;color:var(--blanco);">Itinerario detallado</span>
+        </div>
+        <span id="icon-itinerario" style="font-family:'Space Mono',monospace;font-size:16px;color:var(--dorado);">＋</span>
+      </div>
+      <div id="itinerario" style="display:none;border:1px solid var(--gris2);border-top:none;background:var(--gris);"></div>
+    </div>
+
+    <!-- SECCIÓN 04: PRESUPUESTO -->
+    <div style="margin-bottom:8px;">
+      <div onclick="toggleDemo('presupuesto')" style="background:var(--gris);border:1px solid var(--gris2);border-left:3px solid var(--dorado);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+        <div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);margin-right:12px;">04</span>
+          <span style="font-family:'Playfair Display',serif;font-size:18px;color:var(--blanco);">Consejos esenciales</span>
+        </div>
+        <span id="icon-presupuesto" style="font-family:'Space Mono',monospace;font-size:16px;color:var(--dorado);">＋</span>
+      </div>
+      <div id="presupuesto" style="display:none;border:1px solid var(--gris2);border-top:none;padding:24px;background:var(--gris);"></div>
+    </div>
+
+    <!-- SECCIÓN 05: RECOMENDACIONES -->
+    <div style="margin-bottom:40px;">
+      <div onclick="toggleDemo('recomendaciones')" style="background:var(--gris);border:1px solid var(--gris2);border-left:3px solid var(--dorado);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+        <div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);margin-right:12px;">05</span>
+          <span style="font-family:'Playfair Display',serif;font-size:18px;color:var(--blanco);">Recomendaciones</span>
+        </div>
+        <span id="icon-recomendaciones" style="font-family:'Space Mono',monospace;font-size:16px;color:var(--dorado);">＋</span>
+      </div>
+      <div id="recomendaciones" style="display:none;border:1px solid var(--gris2);border-top:none;padding:24px;background:var(--gris);"></div>
+    </div>
+
+    <div style="text-align:center;padding:20px 0 40px;">
+      <button onclick="showPage('dashboard')" style="background:transparent;border:1px solid var(--gris2);color:var(--crema);opacity:.6;font-family:'Space Mono',monospace;font-size:11px;padding:12px 24px;cursor:pointer;letter-spacing:1px;">← VOLVER</button>
+    </div>
   </div>
-
-  <section class="cards-section" id="cardsSection">
-    <div class="cards-header">
-      <h2 id="cardsTitle">Tareas</h2>
-      <button class="secondary" onclick="hideCards()">Ocultar</button>
-    </div>
-    <div class="cards" id="cards"></div>
-  </section>
 </div>
 
-<button class="fab" onclick="toggleIA()">IA</button>
-
-<aside class="sidepanel" id="iaPanel">
-  <div class="ai-header">
-    <h3>Asistente IA</h3>
-    <p>Asesor colaborativo · diseño · informática · priorización</p>
-  </div>
-  <div class="ai-actions">
-    <button onclick="aiQuick('summary')">Resumir estado</button>
-    <button onclick="aiQuick('priorities')">Sugerir prioridades</button>
-    <button onclick="aiQuick('improvements')">Proponer mejoras</button>
-  </div>
-  <div class="ai-chat" id="aiChat"></div>
-  <div class="ai-input">
-    <textarea id="aiInput" placeholder="Pide consejo, prioridades o una tarea IA..."></textarea>
-    <button onclick="sendAI()">Enviar</button>
-  </div>
-</aside>
-
-<div class="modal-backdrop" id="roadmapModal">
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-overlay" id="modal-auth">
   <div class="modal">
-    <h3>Roadmap</h3>
-    <p><strong>Descripción:</strong> Plan estratégico de qué se construye y en qué orden.</p>
-    <p><strong>Fase 1:</strong> Producto útil.</p>
-    <p><strong>Fase 2:</strong> Compartir y optimizar.</p>
-    <p><strong>Fase 3:</strong> Escalar y monetizar.</p>
-    <div class="close-row"><button class="secondary" onclick="closeRoadmap()">Cerrar</button></div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-login-view">
+      <div class="modal-title">Bienvenido.</div>
+      <div class="modal-sub">Inicia sesión en tu cuenta</div>
+      <div class="modal-error" id="login-error"></div>
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="tu@email.com">
+      <label class="form-label">Contraseña</label>
+      <input class="form-input" id="login-pass" type="password" placeholder="••••••••">
+      <button class="btn-form" onclick="doLogin()">Entrar →</button>
+      <div class="modal-divider"><div class="modal-div-line"></div><div class="modal-div-txt">o continúa con</div><div class="modal-div-line"></div></div>
+      <button class="btn-social" onclick="doSocialLogin()">🔵 Continuar con Google</button>
+      <div class="modal-switch">¿Sin cuenta? <a onclick="switchModal('register')">Regístrate gratis</a></div>
+    </div>
+    <div id="modal-register-view" style="display:none;">
+      <div class="modal-title">Empieza gratis.</div>
+      <div class="modal-sub">Crea tu cuenta en segundos</div>
+      <div class="modal-error" id="register-error"></div>
+      <label class="form-label">Nombre</label>
+      <input class="form-input" id="reg-name" type="text" placeholder="Tu nombre">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="reg-email" type="email" placeholder="tu@email.com">
+      <label class="form-label">Contraseña</label>
+      <input class="form-input" id="reg-pass" type="password" placeholder="Mínimo 6 caracteres">
+      <button class="btn-form" onclick="doRegister()">Crear cuenta gratis →</button>
+      <div class="modal-divider"><div class="modal-div-line"></div><div class="modal-div-txt">o regístrate con</div><div class="modal-div-line"></div></div>
+      <button class="btn-social" onclick="doSocialLogin()">🔵 Continuar con Google</button>
+      <div class="modal-switch">¿Ya tienes cuenta? <a onclick="switchModal('login')">Inicia sesión</a></div>
+    </div>
   </div>
 </div>
 
+<!-- ADD POI MODAL -->
+<div class="poi-modal" id="poi-modal">
+  <div class="poi-modal-box">
+    <button class="modal-close" onclick="closePoiModal()">✕</button>
+    <div class="modal-title" style="font-size:20px;margin-bottom:4px;">Añadir punto</div>
+    <div class="modal-sub">Añade un lugar a tu itinerario</div>
+    <label class="form-label">Nombre del lugar</label>
+    <input class="form-input" id="poi-name-input" placeholder="Ej: Templo Hoan Kiem">
+    <label class="form-label">Tipo</label>
+    <select class="form-input" id="poi-type-input" style="cursor:pointer;">
+      <option value="🏛️">🏛️ Monumento / Atracción</option>
+      <option value="🍜">🍜 Restaurante / Comida</option>
+      <option value="🏨">🏨 Alojamiento</option>
+      <option value="🏖️">🏖️ Playa / Naturaleza</option>
+      <option value="📸">📸 Mirador / Foto</option>
+      <option value="🛵">🛵 Transporte</option>
+    </select>
+    <label class="form-label">Nota (opcional)</label>
+    <input class="form-input" id="poi-note-input" placeholder="Horario, precio, consejo...">
+    <button class="btn-form" onclick="addPoi()">Añadir al mapa →</button>
+  </div>
+</div>
 
-<div class="modal-backdrop" id="pendingCategoriesModal">
-  <div class="modal">
-    <h3>Categorías con tareas pendientes</h3>
-    <div id="pendingCategoriesContent"></div>
-    <div class="close-row"><button class="secondary" onclick="closePendingCategories()">Cerrar</button></div>
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+const SALMA_API_DEFAULT = "https://salma-api.paco-defoto.workers.dev";
+window.SALMA_API = localStorage.getItem("salma_api_url") || SALMA_API_DEFAULT;
+const ADMIN_GATE_STORAGE_KEY = "bdm_admin_access";
+const ADMIN_GATE_HASH = "5501a7c7ef74ebcf49bf9b93ef0a4d4f05e8897985a594b6e2534c97237e70eb";
+
+async function sha256Hex(value){
+  const data = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+function openAdminGate(){
+  document.body.classList.add("admin-locked");
+  const gate = document.getElementById("admin-gate");
+  if(gate) gate.classList.remove("hidden");
+  setTimeout(()=>document.getElementById("admin-gate-password")?.focus(), 50);
+}
+
+function closeAdminGate(){
+  document.body.classList.remove("admin-locked");
+  document.getElementById("admin-gate")?.classList.add("hidden");
+  document.getElementById("admin-gate-error").textContent = "";
+  document.getElementById("admin-gate-password").value = "";
+}
+
+function lockAdminAccess(){
+  sessionStorage.removeItem(ADMIN_GATE_STORAGE_KEY);
+  openAdminGate();
+}
+window.lockAdminAccess = lockAdminAccess;
+
+async function unlockAdminAccess(){
+  const input = document.getElementById("admin-gate-password");
+  const error = document.getElementById("admin-gate-error");
+  const password = (input?.value || "").trim();
+  if(!password){ error.textContent = "Escribe la contraseña."; return; }
+  const hash = await sha256Hex(password);
+  if(hash !== ADMIN_GATE_HASH){ error.textContent = "Contraseña incorrecta."; return; }
+  sessionStorage.setItem(ADMIN_GATE_STORAGE_KEY, "ok");
+  closeAdminGate();
+}
+
+async function callSalmaAPI(message, history = []){
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try{
+    const res = await fetch(window.SALMA_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, history }),
+      signal: controller.signal
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok){
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    if(!data.reply || typeof data.reply !== "string"){
+      throw new Error("Respuesta de IA vacía");
+    }
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("admin-gate-submit")?.addEventListener("click", unlockAdminAccess);
+  document.getElementById("admin-gate-password")?.addEventListener("keydown", (e) => {
+    if(e.key === "Enter") unlockAdminAccess();
+  });
+  document.getElementById("admin-lock-toggle")?.addEventListener("click", lockAdminAccess);
+  if(sessionStorage.getItem(ADMIN_GATE_STORAGE_KEY) === "ok") closeAdminGate();
+  else openAdminGate();
+});
+</script>
+
+<script>
+window.onload = function() {
+firebase.initializeApp({
+  apiKey: "AIzaSyDjpJMEs-I_3bAR4OP2O9thKqecgNkpjkA",
+  authDomain: "borradodelmapa-85257.firebaseapp.com",
+  projectId: "borradodelmapa-85257",
+  storageBucket: "borradodelmapa-85257.firebasestorage.app",
+  messagingSenderId: "833042338746",
+  appId: "1:833042338746:web:32b58e582488c6064d8383"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+// ===== STATE =====
+let currentUser = null;
+let isPremium = false;
+let map = null;
+let markers = [];
+let polyline = null;
+
+const POIS_DEMO = [
+  // Día 1 - Hanoi
+  {id:1, name:"Puente Long Bien", type:"🏛️", note:"Icono colonial francés. Mejor al amanecer.", day:1, lat:21.044, lng:105.852},
+  {id:2, name:"Pho Thin Bo Ho", type:"🍜", note:"El mejor pho de Hanoi. Abre desde las 6am.", day:1, lat:21.028, lng:105.849},
+  {id:3, name:"Hoan Kiem Lake", type:"📸", note:"El lago del espada. Paseo nocturno imprescindible.", day:1, lat:21.028, lng:105.852},
+  {id:4, name:"Bun Bo Nam Bo", type:"🍜", note:"Fideos con ternera. Local sin turistas.", day:1, lat:21.031, lng:105.848},
+  // Día 2 - Hanoi
+  {id:5, name:"Ho Chi Minh Mausoleum", type:"🏛️", note:"Llegar pronto, colas desde las 8am.", day:2, lat:21.037, lng:105.835},
+  {id:6, name:"Old Quarter", type:"🏛️", note:"36 calles de artesanos. Perderse es el plan.", day:2, lat:21.033, lng:105.850},
+  {id:7, name:"Bia Hoi Corner", type:"🍜", note:"Cerveza a 25 céntimos. Esquina más famosa de Asia.", day:2, lat:21.034, lng:105.851},
+  // Día 3 - Ha Giang
+  {id:8, name:"Dong Van Geopark", type:"🏛️", note:"Patrimonio UNESCO. Paisaje lunar.", day:3, lat:23.278, lng:105.362},
+  {id:9, name:"Ma Pi Leng Pass", type:"📸", note:"El paso de montaña más espectacular de Vietnam.", day:3, lat:23.165, lng:105.354},
+  {id:10, name:"Lung Cu Flag Tower", type:"📸", note:"El punto más al norte de Vietnam.", day:3, lat:23.366, lng:105.334},
+  // Día 4 - Ninh Binh
+  {id:11, name:"Trang An", type:"🏖️", note:"Kayak entre karsts. Reservar con antelación.", day:4, lat:20.253, lng:105.975},
+  {id:12, name:"Mua Cave", type:"📸", note:"500 escalones. Las vistas valen cada uno.", day:4, lat:20.218, lng:105.974},
+  {id:13, name:"Ninh Binh Local Resto", type:"🍜", note:"Cabra de montaña y arroz. Especialidad local.", day:4, lat:20.253, lng:105.975},
+  // Día 5 - Phong Nha
+  {id:14, name:"Phong Nha Cave", type:"🏖️", note:"Cueva navegable en barca. Impresionante.", day:5, lat:17.599, lng:106.142},
+  {id:15, name:"Hang En Cave", type:"🏖️", note:"3ª cueva más grande del mundo. Trek 2 días.", day:5, lat:17.551, lng:106.081},
+  // Día 6 - Hue
+  {id:16, name:"Hue Imperial City", type:"🏛️", note:"Ciudad prohibida vietnamita. Medio día.", day:6, lat:16.469, lng:107.578},
+  {id:17, name:"Thien Mu Pagoda", type:"🏛️", note:"La pagoda más antigua de Hue.", day:6, lat:16.453, lng:107.546},
+  {id:18, name:"Bun Bo Hue", type:"🍜", note:"La sopa más picante de Vietnam. Origen aquí.", day:6, lat:16.463, lng:107.590},
+  // Día 7 - Hoi An
+  {id:19, name:"Hoi An Ancient Town", type:"🏛️", note:"Casco antiguo UNESCO. Por la tarde con las linternas.", day:7, lat:15.880, lng:108.338},
+  {id:20, name:"An Bang Beach", type:"🏖️", note:"La mejor playa cerca de Hoi An.", day:7, lat:15.920, lng:108.373},
+  {id:21, name:"White Rose Restaurant", type:"🍜", note:"Especialidad local: banh bao vac.", day:7, lat:15.877, lng:108.329},
+  // Día 8 - Da Nang
+  {id:22, name:"Marble Mountains", type:"🏛️", note:"Cuevas y pagodas en montañas de mármol.", day:8, lat:16.003, lng:108.263},
+  {id:23, name:"My Khe Beach", type:"🏖️", note:"Forbes la eligió top 6 del mundo.", day:8, lat:16.060, lng:108.247},
+  // Día 9 - Nha Trang
+  {id:24, name:"Po Nagar Towers", type:"🏛️", note:"Torres cham del siglo VII.", day:9, lat:12.265, lng:109.194},
+  {id:25, name:"Nha Trang Beach", type:"🏖️", note:"La bahía más bonita de Vietnam.", day:9, lat:12.238, lng:109.197},
+  // Día 10 - Mui Ne
+  {id:26, name:"Red Sand Dunes", type:"📸", note:"Dunas de arena roja. Al atardecer.", day:10, lat:10.947, lng:108.286},
+  {id:27, name:"Fairy Stream", type:"🏖️", note:"Paseo descalzo por el arroyo entre dunas.", day:10, lat:10.933, lng:108.272},
+  // Día 11-12 - Ho Chi Minh
+  {id:28, name:"Cu Chi Tunnels", type:"🏛️", note:"270km de túneles de la guerra. Imprescindible.", day:11, lat:11.135, lng:106.462},
+  {id:29, name:"Ben Thanh Market", type:"🍜", note:"El mercado más famoso de Saigon.", day:11, lat:10.772, lng:106.698},
+  {id:30, name:"War Remnants Museum", type:"🏛️", note:"El museo más impactante que verás.", day:12, lat:10.779, lng:106.692},
+];
+
+let poiList = [...POIS_DEMO];
+let nextPoiId = 100;
+
+const ROUTE_COORDS = [
+  [21.028,105.834], // Hanoi
+  [23.278,105.362], // Ha Giang
+  [20.253,105.975], // Ninh Binh
+  [17.551,106.081], // Phong Nha
+  [16.463,107.590], // Hue
+  [15.880,108.338], // Hoi An
+  [16.060,108.247], // Da Nang
+  [12.238,109.197], // Nha Trang
+  [10.947,108.286], // Mui Ne
+  [10.772,106.698], // Ho Chi Minh
+];
+
+// ===== AUTH STATE LISTENER =====
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    try {
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+      currentUser = {
+        uid: user.uid,
+        name: userData.name || user.displayName || user.email.split("@")[0],
+        email: user.email,
+        isPremium: userData.isPremium || false,
+        bio: userData.bio || '',
+        country: userData.country || '',
+        photo: userData.photo || ''
+      };
+      isPremium = currentUser.isPremium;
+      updateNavForUser(currentUser);
+      updateSidebar(currentUser);
+      loadUserMaps();
+      // Mostrar mobile nav
+      const mobileNav = document.getElementById("mobile-dash-nav");
+      if (mobileNav) mobileNav.style.display = "flex";
+      // Sesión persistente — si recarga y está logado, va al dashboard
+      const currentPage = document.querySelector('.page.active');
+      if (!currentPage || currentPage.id === 'page-home') {
+        showPage('dashboard');
+      }
+    } catch(e) {
+      console.error("Error loading user:", e);
+    }
+  } else {
+    currentUser = null;
+    isPremium = false;
+    updateNavForGuest();
+  }
+});
+
+// ===== NAVIGATION =====
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => {
+    p.classList.remove("active");
+    p.style.display = "none";
+  });
+  const target = document.getElementById("page-" + name);
+  if (target) {
+    target.classList.add("active");
+    target.style.display = "block";
+  }
+  // Mostrar mobile nav en todas las páginas si hay usuario
+  const mobileNav = document.getElementById("mobile-dash-nav");
+  if (mobileNav) {
+    mobileNav.style.display = currentUser ? "flex" : "none";
+  }
+  window.scrollTo(0,0);
+  if (name === "editor") setTimeout(initDemoMap, 100);
+}
+window.showPage = showPage;
+
+// ===== BLOG =====
+const GITHUB_USER = "borradodelmapa";
+const GITHUB_REPO = "borradodelmapa";
+const BLOG_PATH = "blog";
+
+async function loadBlog() {
+  const list = document.getElementById("blog-list");
+  const post = document.getElementById("blog-post");
+  list.style.display = "grid";
+  post.style.display = "none";
+  list.innerHTML = `<div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.5;">Cargando artículos...</div>`;
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${BLOG_PATH}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("no blog");
+    const files = await res.json();
+    const articles = files.filter(f => f.name.endsWith(".md") || f.name.endsWith(".txt"));
+    if (articles.length === 0) {
+      list.innerHTML = `<div style="color:var(--crema);opacity:.5;font-size:14px;">Pronto habrá artículos aquí. Mientras tanto, síguenos en <a href="https://instagram.com/borradodelmapa" target="_blank" style="color:var(--dorado);">@borradodelmapa</a></div>`;
+      return;
+    }
+    list.innerHTML = articles.map(f => {
+      const title = f.name.replace(".md","").replace(".txt","").replace(/-/g," ");
+      return `<div onclick="loadBlogPost('${f.download_url}','${title}')" style="background:var(--gris);border:1px solid var(--gris2);padding:28px;cursor:pointer;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--dorado)'" onmouseout="this.style.borderColor='var(--gris2)'">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--blanco);margin-bottom:8px;text-transform:capitalize;">${title}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);letter-spacing:1px;">LEER ARTÍCULO →</div>
+      </div>`;
+    }).join("");
+  } catch(e) {
+    list.innerHTML = `<div style="color:var(--crema);opacity:.5;font-size:14px;">Pronto habrá artículos aquí. Mientras tanto, síguenos en <a href="https://instagram.com/borradodelmapa" target="_blank" style="color:var(--dorado);">@borradodelmapa</a></div>`;
+  }
+}
+
+async function loadBlogPost(url, title) {
+  const list = document.getElementById("blog-list");
+  const post = document.getElementById("blog-post");
+  const content = document.getElementById("blog-post-content");
+  list.style.display = "none";
+  post.style.display = "block";
+  content.innerHTML = `<div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.5;">Cargando...</div>`;
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    content.innerHTML = `
+      <div style="font-family:'Playfair Display',serif;font-size:36px;color:var(--blanco);margin-bottom:32px;text-transform:capitalize;">${title}</div>
+      <div style="color:var(--crema);line-height:1.9;font-size:15px;opacity:.85;white-space:pre-wrap;">${text}</div>`;
+  } catch(e) {
+    content.innerHTML = `<div style="color:var(--crema);opacity:.5;">Error cargando el artículo.</div>`;
+  }
+}
+
+function closeBlogPost() {
+  document.getElementById("blog-list").style.display = "grid";
+  document.getElementById("blog-post").style.display = "none";
+}
+
+// Load blog when page is shown
+const origShowPage = showPage;
+window.showPage = function(name) {
+  origShowPage(name);
+  if (name === "blog") loadBlog();
+};
+window.closeBlogPost = closeBlogPost;
+
+// Init: hide all pages except home on load
+document.querySelectorAll(".page").forEach(p => {
+  if (!p.classList.contains("active")) p.style.display = "none";
+});
+
+// ===== AUTH MODAL =====
+function openModal(view) {
+  document.getElementById("modal-auth").classList.add("active");
+  switchModal(view);
+}
+function closeModal() {
+  document.getElementById("modal-auth").classList.remove("active");
+}
+function switchModal(view) {
+  document.getElementById("modal-login-view").style.display = view === "login" ? "block" : "none";
+  document.getElementById("modal-register-view").style.display = view === "register" ? "block" : "none";
+}
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.switchModal = switchModal;
+
+// ===== LOGIN =====
+async function doLogin() {
+  const email = document.getElementById("login-email").value.trim();
+  const pass = document.getElementById("login-pass").value;
+  const err = document.getElementById("login-error");
+  if (!email || !pass) { showError(err, "Rellena email y contrasena"); return; }
+  try {
+    showToast("Entrando...");
+    await auth.signInWithEmailAndPassword(email, pass);
+    closeModal();
+    showPage("dashboard");
+  } catch(e) {
+    const msgs = {
+      "auth/user-not-found": "No existe cuenta con ese email",
+      "auth/wrong-password": "Contrasena incorrecta",
+      "auth/invalid-email": "Email no valido",
+      "auth/invalid-credential": "Email o contrasena incorrectos"
+    };
+    showError(err, msgs[e.code] || "Error al iniciar sesion");
+  }
+}
+window.doLogin = doLogin;
+
+// ===== REGISTER =====
+async function doRegister() {
+  const name = document.getElementById("reg-name").value.trim();
+  const email = document.getElementById("reg-email").value.trim();
+  const pass = document.getElementById("reg-pass").value;
+  const err = document.getElementById("register-error");
+  if (!name || !email || !pass) { showError(err, "Rellena todos los campos"); return; }
+  if (pass.length < 6) { showError(err, "Contrasena minimo 6 caracteres"); return; }
+  try {
+    showToast("Creando cuenta...");
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+    try {
+      await db.collection("users").doc(cred.user.uid).set({
+        name, email, isPremium: false, mapsCount: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(dbErr) {
+      console.warn("Firestore no disponible, continuando:", dbErr);
+    }
+    closeModal();
+    showPage("dashboard");
+  } catch(e) {
+    const msgs = {
+      "auth/email-already-in-use": "Ya existe cuenta con ese email",
+      "auth/weak-password": "Contrasena demasiado debil",
+      "auth/invalid-email": "Email no valido"
+    };
+    showError(err, msgs[e.code] || "Error al crear cuenta");
+  }
+}
+window.doRegister = doRegister;
+
+// ===== GOOGLE LOGIN =====
+async function doSocialLogin() {
+  try {
+    showToast("Conectando con Google...");
+    const result = await auth.signInWithPopup(googleProvider);
+    const user = result.user;
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    if (!userDoc.exists) {
+      await db.collection("users").doc(user.uid).set({
+        name: user.displayName || user.email.split("@")[0],
+        email: user.email, isPremium: false, mapsCount: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    closeModal();
+    showPage("dashboard");
+  } catch(e) {
+    showToast("Error con Google. Intenta con email.");
+  }
+}
+window.doSocialLogin = doSocialLogin;
+
+// ===== LOGOUT =====
+async function logout() {
+  await auth.signOut();
+  showPage("home");
+  showToast("Sesion cerrada");
+}
+window.logout = logout;
+
+function updateNavForUser(user) {
+  document.getElementById("nav-links-guest").style.display = "none";
+  document.getElementById("nav-links-user").style.display = "flex";
+  document.getElementById("nav-avatar").textContent = (user.name||"U")[0].toUpperCase();
+}
+function updateNavForGuest() {
+  document.getElementById("nav-links-guest").style.display = "flex";
+  document.getElementById("nav-links-user").style.display = "none";
+}
+function updateSidebar(user) {
+  document.getElementById("sidebar-name").textContent = user.name;
+  document.getElementById("sidebar-avatar").textContent = (user.name||"U")[0].toUpperCase();
+  document.getElementById("sidebar-plan").textContent = user.isPremium ? "Plan Premium" : "Plan Gratuito";
+  document.getElementById("profile-name-input").value = user.name || "";
+  document.getElementById("profile-country-input").value = user.country || "";
+  document.getElementById("profile-bio-input").value = user.bio || "";
+  document.getElementById("profile-display-name").textContent = user.name || "Viajero";
+  document.getElementById("profile-display-email").textContent = user.email || "";
+  document.getElementById("profile-avatar-big").textContent = (user.name||"U")[0].toUpperCase();
+  showToast("Bienvenido, " + user.name + "!");
+}
+
+// ===== LOAD MAPS FROM FIRESTORE =====
+async function loadUserMaps() {
+  if (!currentUser) return;
+  try {
+    const mapsRef = db.collection("users").doc(currentUser.uid).collection("maps");
+    const snap = await mapsRef.get();
+    const maps = [];
+    snap.forEach(d => maps.push({id: d.id, ...d.data()}));
+    renderMapsGrid(maps);
+  } catch(e) {
+    console.error("Error loading maps:", e);
+  }
+}
+
+function renderMapsGrid(maps) {
+  const grid = document.getElementById("maps-grid-dynamic");
+  if (!grid) return;
+
+  // Actualizar contador en perfil
+  const el = document.getElementById('profile-routes-count');
+  if (el) el.textContent = maps.length;
+
+  const destEmoji = (d='') => {
+    d = d.toLowerCase();
+    if (d.includes('vietnam')) return '🏍️';
+    if (d.includes('japon') || d.includes('japan')) return '🏯';
+    if (d.includes('tailandia') || d.includes('thailand')) return '🏖️';
+    if (d.includes('marruecos') || d.includes('morocco')) return '🏜️';
+    if (d.includes('peru') || d.includes('perú')) return '🏔️';
+    if (d.includes('india')) return '🕌';
+    return '🗺️';
+  };
+
+  let html = maps.map(m => `
+    <div class="map-card" style="position:relative;cursor:pointer;" onclick="verRuta('${m.id}','${(m.nombre||m.title||'').replace(/'/g,"\\'")}')">
+      <div class="map-card-img" style="font-size:48px;">${destEmoji(m.destino||m.country)}</div>
+      <div class="map-card-body">
+        <div class="map-card-title">${m.nombre || m.title || 'Mi ruta'}</div>
+        <div class="map-card-meta">${m.dias||m.days||0} días · ${m.destino||m.country||'Destino'}</div>
+        ${m.desc ? `<div style="font-size:12px;color:var(--crema);opacity:.6;margin-bottom:8px;line-height:1.5;">${m.desc.substring(0,80)}${m.desc.length>80?'...':''}</div>` : ''}
+        <div style="display:flex;gap:8px;margin-top:8px;" onclick="event.stopPropagation()">
+          <button onclick="eliminarRuta('${m.id}')" style="background:transparent;border:1px solid var(--gris2);color:var(--crema);opacity:.5;padding:6px 10px;font-family:'Space Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">BORRAR</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  // Botón nueva ruta siempre visible
+  html += `<div class="map-card map-card-new" onclick="newMap()" style="cursor:pointer;">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:40px 20px;">
+      <div style="font-size:40px;">＋</div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.6;text-align:center;letter-spacing:1px;">NUEVA RUTA</div>
+    </div>
+  </div>`;
+
+  // Si no hay rutas, mostrar ejemplo
+  if (maps.length === 0) {
+    html = `<div class="map-card" style="position:relative;">
+      <div style="position:absolute;top:10px;left:10px;background:var(--dorado);color:var(--negro);font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:4px 8px;letter-spacing:1px;z-index:1;">EJEMPLO</div>
+      <div class="map-card-img">🏍️</div>
+      <div class="map-card-body">
+        <div class="map-card-title">Vietnam en Moto</div>
+        <div class="map-card-meta">25 días · 9 paradas · 106 POIs</div>
+        <div style="font-size:11px;color:var(--crema);opacity:.6;margin-bottom:8px;">Así quedará tu ruta. ¡Crea la tuya!</div>
+        <div class="map-card-tags"><span class="tag">Hanoi</span><span class="tag">Ha Giang</span><span class="tag">Hoi An</span></div>
+      </div>
+    </div>
+    <div class="map-card map-card-new" onclick="newMap()" style="cursor:pointer;">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:40px 20px;">
+        <div style="font-size:40px;">＋</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--crema);opacity:.6;text-align:center;letter-spacing:1px;">CREAR MI PRIMERA RUTA</div>
+      </div>
+    </div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+async function eliminarRuta(id) {
+  if (!currentUser || !id) return;
+  if (!confirm('¿Borrar esta ruta?')) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('maps').doc(id).delete();
+    showToast('Ruta eliminada');
+    loadUserMaps();
+  } catch(e) {
+    showToast('Error al eliminar');
+  }
+}
+window.eliminarRuta = eliminarRuta;
+
+// ===== NEW MAP =====
+function newMap() {
+  if (!currentUser) { showModal(); return; }
+  // Mostrar modal de creación de ruta
+  const modal = document.getElementById('modal-nueva-ruta');
+  if (modal) { modal.style.display = 'flex'; return; }
+  // Crear modal si no existe
+  const m = document.createElement('div');
+  m.id = 'modal-nueva-ruta';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  m.innerHTML = `
+    <div style="background:#111;border:1px solid var(--gris2);padding:32px;max-width:420px;width:100%;">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Nueva Ruta</div>
+      <label class="form-label">Nombre de la ruta</label>
+      <input class="form-input" id="nueva-ruta-nombre" placeholder="Ej: Vietnam en moto, 25 días">
+      <label class="form-label">Destino principal</label>
+      <input class="form-input" id="nueva-ruta-destino" placeholder="Ej: Vietnam, Tailandia, Marruecos...">
+      <label class="form-label">Duración (días)</label>
+      <input class="form-input" id="nueva-ruta-dias" type="number" placeholder="25" min="1" max="365">
+      <label class="form-label">Descripción breve</label>
+      <textarea class="form-input" id="nueva-ruta-desc" placeholder="De qué va esta ruta..." style="height:70px;resize:none;font-family:'DM Sans',sans-serif;"></textarea>
+
+      <div style="border-top:1px solid var(--gris2);margin:20px 0 16px;"></div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Genera tu ruta con Salma</div>
+      <div style="font-size:12px;color:var(--crema);opacity:.5;margin-bottom:12px;line-height:1.6;">Describe tu viaje como si hablaras con una amiga. Salma te genera el itinerario completo con puntos de interés organizados por días.</div>
+      <textarea class="form-input" id="nueva-ruta-ia-prompt" placeholder="Ej: Voy a hacer un viaje a Vietnam de 20 días en moto. Hazme una ruta por el norte que salga desde Hanoi pasando por los puntos turísticos más espectaculares, con sitios para comer barato y alojamiento económico..." style="height:120px;resize:none;font-family:'DM Sans',sans-serif;"></textarea>
+      <div id="ia-resultado" style="display:none;background:var(--negro);border:1px solid var(--gris2);padding:16px;margin-bottom:12px;max-height:200px;overflow-y:auto;">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:1px;margin-bottom:8px;">ITINERARIO GENERADO POR SALMA</div>
+        <div id="ia-resultado-texto" style="font-size:13px;color:var(--crema);opacity:.85;line-height:1.7;white-space:pre-wrap;"></div>
+      </div>
+      <div id="ia-loading" style="display:none;text-align:center;padding:16px;">
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);letter-spacing:1px;">Salma está creando tu ruta...</div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button onclick="document.getElementById('modal-nueva-ruta').style.display='none'" style="flex:1;background:transparent;border:1px solid var(--gris2);color:var(--crema);padding:12px;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;">CANCELAR</button>
+        <button id="btn-generar-ia" onclick="generarRutaConIA()" style="flex:2;background:transparent;border:1px solid var(--dorado);color:var(--dorado);padding:12px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;">GENERAR CON SALMA</button>
+        <button onclick="crearRuta()" style="flex:2;background:var(--dorado);border:none;color:var(--negro);padding:12px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;">CREAR RUTA →</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+}
+window.newMap = newMap;
+
+async function crearRuta() {
+  const nombre = document.getElementById('nueva-ruta-nombre').value.trim();
+  const destino = document.getElementById('nueva-ruta-destino').value.trim();
+  const dias = document.getElementById('nueva-ruta-dias').value;
+  const desc = document.getElementById('nueva-ruta-desc').value.trim();
+  const itinerarioIA = document.getElementById('ia-resultado-texto')?.textContent?.trim() || '';
+  if (!nombre || !destino) { showToast('Nombre y destino son obligatorios'); return; }
+  if (!currentUser) return;
+  try {
+    const ruta = {
+      nombre, destino, dias: parseInt(dias)||0, desc,
+      itinerarioIA: itinerarioIA,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      pois: [], published: false
+    };
+    await db.collection('users').doc(currentUser.uid).collection('maps').add(ruta);
+    document.getElementById('modal-nueva-ruta').style.display = 'none';
+    showToast('¡Ruta creada! ✓');
+    loadUserMaps();
+    const snap = await db.collection('users').doc(currentUser.uid).collection('maps').get();
+    const el = document.getElementById('profile-routes-count');
+    if (el) el.textContent = snap.size;
+  } catch(e) {
+    showToast('Error al crear la ruta');
+    console.error(e);
+  }
+}
+window.crearRuta = crearRuta;
+
+async function generarRutaConIA() {
+  const prompt = document.getElementById('nueva-ruta-ia-prompt').value.trim();
+  const nombre = document.getElementById('nueva-ruta-nombre').value.trim();
+  const destino = document.getElementById('nueva-ruta-destino').value.trim();
+  const dias = document.getElementById('nueva-ruta-dias').value;
+
+  if (!prompt && !destino) { showToast('Escribe una descripción del viaje o al menos el destino'); return; }
+
+  const fullPrompt = prompt || `Hazme un itinerario de ${dias||7} días en ${destino}. Incluye puntos turísticos, sitios para comer y alojamiento económico.`;
+
+  const loading = document.getElementById('ia-loading');
+  const resultado = document.getElementById('ia-resultado');
+  const texto = document.getElementById('ia-resultado-texto');
+  const btn = document.getElementById('btn-generar-ia');
+
+  loading.style.display = 'block';
+  resultado.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'GENERANDO...';
+
+  try {
+    const data = await callSalmaAPI(
+      `El usuario quiere crear una ruta de viaje. Genera un itinerario detallado organizado por días con puntos de interés, restaurantes y alojamiento. Sé concisa pero útil. Aquí la petición del usuario: "${fullPrompt}"${destino ? ` Destino: ${destino}.` : ''}${dias ? ` Duración: ${dias} días.` : ''}${nombre ? ` Nombre de la ruta: ${nombre}.` : ''}`,
+      []
+    );
+    loading.style.display = 'none';
+
+    if (data.reply) {
+      texto.textContent = data.reply;
+      resultado.style.display = 'block';
+      // Autorellenar campos si están vacíos
+      if (!nombre && destino) document.getElementById('nueva-ruta-nombre').value = destino + ' - ' + (dias||7) + ' días';
+      if (!document.getElementById('nueva-ruta-desc').value.trim()) {
+        document.getElementById('nueva-ruta-desc').value = fullPrompt.substring(0, 200);
+      }
+      showToast('Itinerario generado ✓');
+    } else {
+      showToast('Salma no pudo generar la ruta. Inténtalo de nuevo.');
+    }
+  } catch(err) {
+    loading.style.display = 'none';
+    showToast('Error conectando con Salma');
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'GENERAR CON SALMA';
+}
+window.generarRutaConIA = generarRutaConIA;
+
+// ===== SAVE PROFILE =====
+async function saveProfile() {
+  const name = document.getElementById("profile-name-input").value.trim();
+  const country = document.getElementById("profile-country-input").value.trim();
+  const bio = document.getElementById("profile-bio-input").value.trim();
+  if (!name) { showToast('El nombre no puede estar vacío'); return; }
+  if (!currentUser) { showToast('No hay sesión activa'); return; }
+  try {
+    await db.collection("users").doc(currentUser.uid).update({ name, country, bio });
+    await auth.currentUser.updateProfile({ displayName: name });
+    currentUser.name = name;
+    currentUser.country = country;
+    currentUser.bio = bio;
+    document.getElementById("sidebar-name").textContent = name;
+    document.getElementById("nav-avatar").textContent = name[0].toUpperCase();
+    document.getElementById("profile-display-name").textContent = name;
+    document.getElementById("profile-avatar-big").textContent = name[0].toUpperCase();
+    showToast("Perfil actualizado ✓");
+  } catch(e) {
+    console.error("saveProfile error:", e);
+    showToast("Error: " + e.message);
+  }
+}
+window.saveProfile = saveProfile;
+
+// ===== DEMO ACCORDION DATA =====
+const ITINERARIO_DATA = [
+  {n:"01",dias:"Días 1–2",km:"Punto de partida",ciudad:"Hanoi",desc:"Capital con 1.000 años de historia. Pasea por el Casco Antiguo de 36 calles gremiales, visita el Mausoleo de Ho Chi Minh y el Templo de la Literatura. Come bún chả en los puestos callejeros. Clave para alquilar la moto y afinar el equipaje.",pois:["Hoan Kiem Lake","Old Quarter 36 calles","Street Food","Ho Chi Minh Mausoleum","Temple of Literature"],alt:"Barrio de Ba Dinh y Tay Ho (West Lake): mercado de flores Quảng Bá al amanecer, templo Trấn Quốc y los cafés de especialidad de Đặng Thai Mai Street.",altmap:"https://www.google.com/maps/dir/Hoan+Kiem+Lake,+Hanoi/Tay+Ho+District,+Hanoi/Tran+Quoc+Pagoda,+Hanoi",booking:"https://www.booking.com/searchresults.es.html?ss=Hanoi&nflt=price%3DEUR-max-20-1"},
+  {n:"02",dias:"Días 3–6",km:"320 km desde Hanoi",ciudad:"Ha Giang Loop",desc:"El bucle de montaña más espectacular del sudeste asiático. 4 días por la meseta kárstica de Dong Van, el paso Mã Pí Lèng a 1.400 m sobre el cañón del río Nho Quế, aldeas H'Mong y Dao.",pois:["Mã Pí Lèng Pass","Dong Van Plateau","Lung Cu Flag Tower","Nho Quế River"],alt:"Extensión Bac Me → Na Hang: un 80% menos de turistas, paisaje igual de épico y pueblos de minoría Tay completamente auténticos.",altmap:"https://www.google.com/maps/dir/Ha+Giang,+Vietnam/Bac+Me,+Ha+Giang/Na+Hang,+Tuyen+Quang,+Vietnam",booking:"https://www.booking.com/searchresults.es.html?ss=Ha+Giang&nflt=price%3DEUR-max-20-1"},
+  {n:"03",dias:"Días 7–8",km:"90 km desde Hanoi",ciudad:"Ninh Binh / Tam Coc",desc:"La Bahía de Ha Long terrestre. Barcas de remo entre picos calizos, el mirador de Mua Cave con 500 escalones, la antigua capital imperial de Hoa Lu y la zona UNESCO de Trang An.",pois:["Tam Coc","Mua Cave","Trang An UNESCO","Hoa Lu","Van Long"],alt:"Van Long Nature Reserve: 20 km de Tam Coc, 90% menos turistas, monos langur dorados y reflejos perfectos al amanecer.",altmap:"https://www.google.com/maps/place/Van+Long+Nature+Reserve,+Ninh+Binh,+Vietnam/@20.348,105.825",booking:"https://www.booking.com/searchresults.es.html?ss=Ninh+Binh&nflt=price%3DEUR-max-20-1"},
+  {n:"04",dias:"Días 9–11",km:"500 km desde Ninh Binh",ciudad:"Phong Nha-Kẻ Bàng",desc:"El parque nacional con las cuevas más grandes del mundo. Paradise Cave (31 km), Dark Cave con kayak y tirolina, Phong Nha Cave en barca por el río subterráneo.",pois:["Paradise Cave","Dark Cave kayak","Phong Nha Cave","Ho Chi Minh Road"],alt:"Tu Lan Cave System: expedición 2 días con Oxalis Adventures. Natación subterránea en ríos de cuevas vírgenes — la experiencia más brutal de Vietnam.",altmap:"https://www.google.com/maps/place/Tu+Lan+Cave,+Quang+Binh,+Vietnam/@17.65,105.95",booking:"https://www.booking.com/searchresults.es.html?ss=Phong+Nha&nflt=price%3DEUR-max-20-1"},
+  {n:"05",dias:"Días 12–13",km:"200 km desde Phong Nha",ciudad:"Huế",desc:"La antigua capital imperial de Vietnam. La Ciudadela UNESCO, los mausoleos reales en la jungla, la Pagoda Thien Mu y la gastronomía de la corte imperial.",pois:["Ciudadela UNESCO","Mausoleo Tu Duc","Pagoda Thien Mu","Río Perfume","Bún Bò Huế"],alt:"Bach Ma National Park: 45 km en moto, sube 1.450 m entre niebla y selva hasta ruinas de una estación francesa. Casi sin turistas.",altmap:"https://www.google.com/maps/dir/Hue,+Vietnam/Bach+Ma+National+Park,+Vietnam",booking:"https://www.booking.com/searchresults.es.html?ss=Hue+Vietnam&nflt=price%3DEUR-max-20-1"},
+  {n:"06",dias:"Días 14–16",km:"130 km desde Huế",ciudad:"Hải Vân → Hội An",desc:"El paso de las nubes Hải Vân en moto y la llegada al casco antiguo UNESCO de Hội An. Linternas de seda sobre el río Thu Bon, sastres a medida en 24h y las ruinas Cham de Mỹ Sơn.",pois:["Hai Van Pass","Casco antiguo UNESCO","Linternas Thu Bon","Mỹ Sơn Cham","An Bang Beach"],alt:"Pueblo alfarero Thanh Ha: alfareros con torno de pie desde el siglo XV. Combínalo con Mỹ Sơn en tarde para un día perfecto fuera del circuito.",altmap:"https://www.google.com/maps/dir/Hoi+An+Old+Town/Thanh+Ha+Pottery+Village,+Hoi+An/My+Son+Sanctuary,+Vietnam",booking:"https://www.booking.com/searchresults.es.html?ss=Hoi+An&nflt=price%3DEUR-max-20-1"},
+  {n:"07",dias:"Días 17–18",km:"530 km desde Hội An",ciudad:"Nha Trang",desc:"La capital del buceo en Vietnam. Seis kilómetros de playa blanca, arrecifes de coral en las islas y las torres Cham de Po Nagar del siglo VII.",pois:["Hon Mun diving","Torres Po Nagar","Playa 6 km","Long Son Pagoda"],alt:"Parada en Quy Nhon: la cala de Bãi Xép y la isla de Kỳ Co tienen agua turquesa igual que Nha Trang pero con un 95% menos de turistas.",altmap:"https://www.google.com/maps/dir/Hoi+An,+Vietnam/Bai+Xep+Beach,+Quy+Nhon,+Vietnam/Ky+Co+Island,+Quy+Nhon/Nha+Trang,+Vietnam",booking:"https://www.booking.com/searchresults.es.html?ss=Nha+Trang&nflt=price%3DEUR-max-20-1"},
+  {n:"08",dias:"Días 19–21",km:"200 km desde Nha Trang",ciudad:"Đà Lạt",desc:"La ciudad de los pinos a 1.500 m. Arquitectura colonial francesa, la Crazy House de Hang Nga, plantaciones de weasel coffee y la cascada Datanla.",pois:["Crazy House","Weasel coffee","Datanla Falls","Lago Xuân Hương","Mercado nocturno"],alt:"Plantaciones de té Cau Dat: terrazas a 1.500 m, una de las vistas más fotogénicas de todo Vietnam y apenas aparecen en las guías.",altmap:"https://www.google.com/maps/dir/Da+Lat,+Vietnam/Cau+Dat+Tea+Farm,+Lac+Duong,+Lam+Dong,+Vietnam",booking:"https://www.booking.com/searchresults.es.html?ss=Da+Lat&nflt=price%3DEUR-max-20-1"},
+  {n:"09",dias:"Días 22–25",km:"✈️ Vuelo DLI → HAN",ciudad:"Regreso a Hanoi",desc:"Vuelo Đà Lạt → Hanoi en 45 minutos. Últimos días para vender la moto, el bún chả que comió Obama, la bia hoi a 20 céntimos, y cerrar el círculo en Hoan Kiem.",pois:["Venta moto","Bún chả Obama","Bia Hoi Corner","Hoan Kiem cierre"],alt:"Da Lat → Mui Ne → bus nocturno: ruta por las dunas de arena roja. Vende la moto en Mui Ne y toma el sleeper bus a Hanoi (12h, ~15€).",altmap:"https://www.google.com/maps/dir/Da+Lat,+Vietnam/Mui+Ne,+Phan+Thiet,+Vietnam/Hanoi,+Vietnam",booking:"https://www.booking.com/searchresults.es.html?ss=Hanoi&nflt=price%3DEUR-max-20-1"}
+];
+
+const CONSEJOS_DATA = [
+  {icon:"🏍",titulo:"Qué moto elegir",texto:"Honda Win o Minsk para rutas largas (~300–500 USD). Para Ha Giang mínimo 150cc. Compra en Hanoi, vende en Hanoi o Saigón. Mr. Pumpy y Tigit Motorbikes son los más fiables."},
+  {icon:"📄",titulo:"Documentación",texto:"Carnet internacional categoría A. E-Visa de 90 días online (~25 USD). Fotocopias del pasaporte siempre encima. Seguro de moto 5–10 USD/mes."},
+  {icon:"🛡",titulo:"Seguridad vial",texto:"Casco integral, no de cuenco. El tráfico vietnamita tiene su lógica: fluye, cede, no confrontes. Nunca conduzcas de noche. Ha Giang tiene tramos sin guardarraíl sobre precipicios de 500 m."},
+  {icon:"🌧",titulo:"Mejor época",texto:"Nov–Feb para norte y centro. El sur es seco todo el año. Ha Giang en octubre (cosecha del arroz amarillo) es mágico. Evita el monzón del norte: mayo–septiembre."},
+  {icon:"🔧",titulo:"Mecánicos",texto:"Cada pocos km hay un taller. Reparaciones de 1 a 5 USD. Lleva parches, aceite de cadena y cable de embrague de repuesto."},
+  {icon:"💊",titulo:"Salud y seguro",texto:"Seguro con cobertura de moto obligatorio: World Nomads o SafetyWing. Vacunas: hepatitis A/B y tifoidea. Botiquín con antidiarreicos y antihistamínico."}
+];
+
+const RECOMENDACIONES_DATA = [
+  {icon:"🏙",ciudad:"Hanoi",tip:"No te quedes más de dos días. El Old Quarter se ve en uno. El segundo: Museo de Etnología por la mañana, Tay Ho al atardecer y la esquina de la bia hoi por la noche."},
+  {icon:"⛰",ciudad:"Ha Giang",tip:"Hazlo en sentido antihorario. Yendo al revés evitas los grupos y tienes el paso Mã Pí Lèng con luz de tarde, que es cuando la fotografía es espectacular."},
+  {icon:"🚣",ciudad:"Ninh Binh",tip:"Madrugar o nada. Las barcas de Tam Coc al amanecer son otra cosa. A las 7am estás solo. A las 9am hay 50 barcas."},
+  {icon:"🦇",ciudad:"Phong Nha",tip:"Reserva Dark Cave. Paradise Cave impresiona, pero Dark Cave es la que recuerdas: kayak, tirolina, nado en barro blanco."},
+  {icon:"👑",ciudad:"Huế",tip:"Céntrate en los mausoleos. Tu Duc y Khai Dinh en un día en moto, luego Thien Mu al atardecer. Cena bún bò Huế en puesto local, no en restaurante turístico."},
+  {icon:"🏖",ciudad:"Hội An",tip:"Merece tres días. Casco antiguo antes de las 8am. Mỹ Sơn el segundo día. Playa de An Bang el tercero. Si te haces ropa, lleva foto y da 48h al sastre."},
+  {icon:"🤿",ciudad:"Nha Trang",tip:"Para una noche en Quy Nhon. El trayecto de 530 km es largo — la cala de Bãi Xép tiene el agua más clara de Vietnam central."},
+  {icon:"☕",ciudad:"Đà Lạt",tip:"Sube a Cau Dat. Las terrazas de té a 1.500 m son una de las imágenes más bonitas del viaje. El frío nocturno es un lujo después de semanas de calor."}
+];
+
+// ===== DEMO ACCORDION =====
+function toggleDemo(id) {
+  const el = document.getElementById(id);
+  const icon = document.getElementById('icon-' + id);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (icon) icon.textContent = isOpen ? '＋' : '－';
+  if (!isOpen) {
+    if (id === 'mapas-diarios') initDayMaps();
+    if (id === 'itinerario') renderItinerario();
+    if (id === 'presupuesto') renderConsejos();
+    if (id === 'recomendaciones') renderRecomendaciones();
+  }
+}
+window.toggleDemo = toggleDemo;
+
+function renderItinerario() {
+  const el = document.getElementById('itinerario');
+  if (!el || el.innerHTML.trim()) return;
+  el.innerHTML = ITINERARIO_DATA.map(p => `
+    <div style="border-bottom:1px solid var(--gris2);padding:28px 24px;">
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);letter-spacing:2px;margin-bottom:6px;">${p.n} · ${p.dias} · ${p.km}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--blanco);margin-bottom:12px;">${p.ciudad}</div>
+      <div style="font-size:15px;color:var(--crema);opacity:.82;line-height:1.75;margin-bottom:16px;">${p.desc}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;">${p.pois.map(poi=>`<span style="font-family:'Space Mono',monospace;font-size:10px;background:rgba(200,147,15,.12);color:var(--dorado);padding:5px 10px;border:1px solid rgba(200,147,15,.3);">${poi}</span>`).join('')}</div>
+      <div style="background:rgba(200,147,15,.06);border-left:2px solid var(--dorado);padding:12px 16px;margin-bottom:18px;">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:1px;margin-bottom:6px;">RUTA ALTERNATIVA</div>
+        <div style="font-size:14px;color:var(--crema);opacity:.7;line-height:1.7;margin-bottom:10px;">${p.alt}</div>
+        <a href="${p.altmap}" target="_blank" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);text-decoration:none;letter-spacing:1px;border-bottom:1px solid rgba(200,147,15,.4);padding-bottom:1px;">🗺 Ver en Google Maps →</a>
+      </div>
+      <a href="${p.booking}" target="_blank" style="font-family:'Space Mono',monospace;font-size:10px;background:var(--dorado);color:var(--negro);padding:10px 18px;text-decoration:none;letter-spacing:1px;display:inline-block;">🏨 BOOKING &lt;20€/NOCHE</a>
+    </div>`).join('');
+}
+
+function renderConsejos() {
+  const el = document.getElementById('presupuesto');
+  if (!el || el.innerHTML.trim()) return;
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;margin-bottom:1px;">
+      ${CONSEJOS_DATA.map(c=>`
+        <div style="background:var(--negro);padding:24px;border:1px solid var(--gris2);">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dorado);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">${c.titulo}</div>
+          <div style="font-size:14px;color:var(--crema);opacity:.75;line-height:1.75;">${c.texto}</div>
+        </div>`).join('')}
+    </div>
+    <div style="background:var(--negro);border:1px solid var(--gris2);padding:24px;margin-top:1px;">
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);letter-spacing:2px;margin-bottom:20px;">PRESUPUESTO ESTIMADO · 25 DÍAS</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:16px;">
+        ${[["~400€","Moto compra+venta"],["~10€/día","Alojamiento"],["~8€/día","Comida"],["~5€/día","Gasolina"],["~1.100€","TOTAL 25 días"]].map(([v,l])=>`
+          <div><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--dorado);">${v}</div><div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--crema);opacity:.5;letter-spacing:1px;margin-top:4px;">${l}</div></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderRecomendaciones() {
+  const el = document.getElementById('recomendaciones');
+  if (!el || el.innerHTML.trim()) return;
+  el.innerHTML = RECOMENDACIONES_DATA.map(r=>`
+    <div style="border-bottom:1px solid var(--gris2);padding:20px 0;">
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--dorado);letter-spacing:2px;margin-bottom:8px;">${r.ciudad.toUpperCase()}</div>
+      <div style="font-size:15px;color:var(--crema);opacity:.82;line-height:1.75;">${r.tip}</div>
+    </div>`).join('');
+}
+
+// ===== DEMO DAY MAPS =====
+const DEMO_DAYS = [
+  {label:"Día 1-2 · Hanoi",pois:[{n:"Hoan Kiem Lake",lat:21.028,lng:105.852},{n:"Old Quarter 36 calles",lat:21.033,lng:105.850},{n:"Ho Chi Minh Mausoleum",lat:21.037,lng:105.835},{n:"Temple of Literature",lat:21.023,lng:105.836},{n:"Tay Ho West Lake",lat:21.058,lng:105.820},{n:"Museo de Etnología",lat:21.038,lng:105.800},{n:"Bia Hoi Corner",lat:21.034,lng:105.851},{n:"Bún Chả Huong Lien",lat:21.022,lng:105.845}]},
+  {label:"Día 3-6 · Ha Giang",pois:[{n:"Mã Pí Lèng Pass",lat:23.165,lng:105.354},{n:"Dong Van Plateau",lat:23.278,lng:105.362},{n:"Lung Cu Flag Tower",lat:23.366,lng:105.334},{n:"Nho Quế River",lat:23.148,lng:105.358},{n:"Dong Van Old Quarter",lat:23.277,lng:105.360},{n:"Meo Vac Market",lat:23.152,lng:105.425},{n:"Quan Ba Heaven Gate",lat:23.050,lng:105.032}]},
+  {label:"Día 7-8 · Ninh Binh",pois:[{n:"Tam Coc barcas",lat:20.218,lng:105.961},{n:"Mua Cave 500 escalones",lat:20.218,lng:105.974},{n:"Trang An UNESCO",lat:20.253,lng:105.975},{n:"Hoa Lu capital imperial",lat:20.280,lng:105.908},{n:"Van Long Reserve",lat:20.348,lng:105.825},{n:"Bich Dong Pagoda",lat:20.230,lng:105.953}]},
+  {label:"Día 9-11 · Phong Nha",pois:[{n:"Paradise Cave 31km",lat:17.599,lng:106.142},{n:"Dark Cave kayak",lat:17.565,lng:106.089},{n:"Phong Nha Cave barca",lat:17.551,lng:106.081},{n:"Ho Chi Minh Road",lat:17.600,lng:106.050},{n:"Nuoc Mooc Spring",lat:17.555,lng:106.038},{n:"Son Trach village",lat:17.551,lng:106.064}]},
+  {label:"Día 12-13 · Huế",pois:[{n:"Ciudadela UNESCO",lat:16.469,lng:107.578},{n:"Mausoleo Tu Duc",lat:16.438,lng:107.553},{n:"Mausoleo Khai Dinh",lat:16.424,lng:107.573},{n:"Pagoda Thien Mu",lat:16.453,lng:107.546},{n:"Río Perfume barca",lat:16.450,lng:107.560},{n:"Mercado Dong Ba",lat:16.470,lng:107.582},{n:"Bún Bò Huế puesto",lat:16.462,lng:107.578}]},
+  {label:"Día 14-16 · Hội An",pois:[{n:"Hai Van Pass cumbre",lat:16.200,lng:108.120},{n:"Casco antiguo UNESCO",lat:15.880,lng:108.338},{n:"Linternas Thu Bon",lat:15.877,lng:108.329},{n:"Mỹ Sơn ruinas Cham",lat:15.763,lng:108.124},{n:"An Bang Beach",lat:15.920,lng:108.373},{n:"Thanh Ha pottery",lat:15.887,lng:108.305},{n:"Mercado central",lat:15.879,lng:108.334}]},
+  {label:"Día 17-18 · Nha Trang",pois:[{n:"Quy Nhon Bãi Xép",lat:13.762,lng:109.218},{n:"Hon Mun diving",lat:12.172,lng:109.280},{n:"Torres Po Nagar s.VII",lat:12.265,lng:109.194},{n:"Playa Nha Trang 6km",lat:12.238,lng:109.197},{n:"Long Son Pagoda",lat:12.253,lng:109.183},{n:"Mercado Dam",lat:12.245,lng:109.192}]},
+  {label:"Día 19-21 · Đà Lạt",pois:[{n:"Crazy House",lat:11.934,lng:108.442},{n:"Datanla Falls",lat:11.907,lng:108.454},{n:"Cau Dat Tea Farm",lat:11.824,lng:108.499},{n:"Lago Xuân Hương",lat:11.941,lng:108.441},{n:"Weasel Coffee farm",lat:11.950,lng:108.430},{n:"Mercado nocturno",lat:11.940,lng:108.440},{n:"Valle de Amor",lat:11.962,lng:108.423}]},
+  {label:"Día 22-25 · Regreso",pois:[{n:"Mui Ne dunas rojas",lat:10.947,lng:108.286},{n:"Fairy Stream Mui Ne",lat:10.933,lng:108.272},{n:"Hoan Kiem cierre",lat:21.028,lng:105.852},{n:"Bún chả Obama",lat:21.022,lng:105.845},{n:"Bia Hoi 20 céntimos",lat:21.034,lng:105.851},{n:"Venta moto Hanoi",lat:21.030,lng:105.848}]},
+];
+let dayMapInstance = null;
+let dayMarkers = [];
+let dayMapsInited = false;
+
+function initDayMaps() {
+  if (dayMapsInited) return;
+  dayMapsInited = true;
+  const tabsEl = document.getElementById('day-tabs-demo');
+  if (!tabsEl) return;
+  tabsEl.innerHTML = DEMO_DAYS.map((d,i) => `<div onclick="showDayMap(${i})" id="dtab-${i}" style="font-family:'Space Mono',monospace;font-size:10px;padding:6px 12px;border:1px solid var(--gris2);cursor:pointer;color:var(--crema);opacity:.7;letter-spacing:1px;">${d.label}</div>`).join('');
+  showDayMap(0);
+}
+
+function showDayMap(idx) {
+  document.querySelectorAll('[id^="dtab-"]').forEach((t,i) => {
+    t.style.borderColor = i===idx ? 'var(--dorado)' : 'var(--gris2)';
+    t.style.color = i===idx ? 'var(--dorado)' : 'var(--crema)';
+    t.style.opacity = i===idx ? '1' : '.7';
+  });
+  const day = DEMO_DAYS[idx];
+  const mapEl = document.getElementById('day-map-demo');
+  if (!mapEl) return;
+  if (dayMapInstance) { dayMapInstance.remove(); dayMapInstance = null; }
+  const center = [day.pois[0].lat, day.pois[0].lng];
+  dayMapInstance = L.map('day-map-demo', {zoomControl:false}).setView(center, 11);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:18}).addTo(dayMapInstance);
+  day.pois.forEach(poi => {
+    const icon = L.divIcon({html:`<div style="background:#0a0908;border:2px solid #c8930f;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#c8930f;font-family:Space Mono,monospace;box-shadow:0 2px 8px rgba(0,0,0,.5);">📍</div>`,className:'',iconSize:[24,24],iconAnchor:[12,12]});
+    L.marker([poi.lat,poi.lng],{icon}).addTo(dayMapInstance)
+      .bindPopup(`<div style="font-family:DM Sans,sans-serif;"><strong style="color:#c8930f;">${poi.n}</strong><br><a href="https://www.google.com/maps/search/${encodeURIComponent(poi.n)}+Vietnam" target="_blank" style="font-size:11px;color:#c8930f;">Abrir en Google Maps →</a></div>`);
+  });
+  const poisEl = document.getElementById('day-pois-demo');
+  if (poisEl) poisEl.innerHTML = day.pois.map(p=>`<a href="https://www.google.com/maps/search/${encodeURIComponent(p.n)}+Vietnam" target="_blank" style="font-family:'Space Mono',monospace;font-size:9px;background:rgba(200,147,15,.1);color:var(--dorado);padding:5px 10px;border:1px solid rgba(200,147,15,.3);text-decoration:none;letter-spacing:1px;">${p.n} ↗</a>`).join('');
+}
+window.showDayMap = showDayMap;
+
+// ===== DEMO MAIN MAP INIT =====
+function initDemoMap() {
+  const el = document.getElementById('demo-leaflet-map');
+  if (!el || el._leaflet_id) return;
+  const demoMap = L.map('demo-leaflet-map', {zoomControl:false, scrollWheelZoom:false}).setView([16.5,106.5], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:18}).addTo(demoMap);
+  const route = [[21.028,105.834],[23.278,105.362],[20.253,105.975],[17.551,106.081],[16.463,107.590],[15.880,108.338],[12.238,109.197],[11.934,108.442],[21.028,105.834]];
+  L.polyline(route, {color:'#c8930f',weight:2,opacity:.7,dashArray:'8,6'}).addTo(demoMap);
+  const stops = [{n:'Hanoi',lat:21.028,lng:105.834},{n:'Ha Giang',lat:23.278,lng:105.362},{n:'Ninh Binh',lat:20.253,lng:105.975},{n:'Phong Nha',lat:17.551,lng:106.081},{n:'Huế',lat:16.463,lng:107.590},{n:'Hội An',lat:15.880,lng:108.338},{n:'Nha Trang',lat:12.238,lng:109.197},{n:'Đà Lạt',lat:11.934,lng:108.442}];
+  stops.forEach(s => {
+    const icon = L.divIcon({html:`<div style="background:#c8930f;border-radius:50%;width:10px;height:10px;box-shadow:0 0 0 3px rgba(200,147,15,.3);"></div>`,className:'',iconSize:[10,10],iconAnchor:[5,5]});
+    L.marker([s.lat,s.lng],{icon}).addTo(demoMap).bindTooltip(s.n,{permanent:false,direction:'right',className:'hero-tooltip'});
+  });
+}
+window.initDemoMap = initDemoMap;
+function toggleUserMenu() {
+  const menu = document.getElementById('user-menu');
+  if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+window.toggleUserMenu = toggleUserMenu;
+
+function verRuta(id, nombre) {
+  if (!currentUser) return;
+  setTimeout(() => {
+    db.collection('users').doc(currentUser.uid).collection('maps').doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      const r = doc.data();
+      let modal = document.getElementById('modal-editar-ruta');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-editar-ruta';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = `
+        <div style="background:#111;border:1px solid var(--gris2);padding:32px;max-width:480px;width:100%;margin:auto;" onclick="event.stopPropagation()">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:2px;">EDITAR RUTA</div>
+            <div onclick="document.getElementById('modal-editar-ruta').style.display='none'" style="cursor:pointer;color:var(--crema);opacity:.5;font-size:20px;">✕</div>
+          </div>
+          <label class="form-label">Nombre</label>
+          <input class="form-input" id="edit-ruta-nombre" value="${(r.nombre||'').replace(/"/g,'&quot;')}">
+          <label class="form-label">Destino</label>
+          <input class="form-input" id="edit-ruta-destino" value="${(r.destino||'').replace(/"/g,'&quot;')}">
+          <label class="form-label">Días</label>
+          <input class="form-input" id="edit-ruta-dias" type="number" value="${r.dias||0}">
+          <label class="form-label">Descripción</label>
+          <textarea class="form-input" id="edit-ruta-desc" style="height:80px;resize:none;font-family:'DM Sans',sans-serif;">${r.desc||''}</textarea>
+          <label class="form-label">Notas / Presupuesto</label>
+          <textarea class="form-input" id="edit-ruta-notas" style="height:80px;resize:none;font-family:'DM Sans',sans-serif;" placeholder="Presupuesto, notas importantes...">${r.notas||''}</textarea>
+          ${r.itinerarioIA ? `
+          <div style="border-top:1px solid var(--gris2);margin:16px 0;padding-top:16px;">
+            <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:1px;margin-bottom:8px;">ITINERARIO GENERADO POR SALMA</div>
+            <div style="font-size:13px;color:var(--crema);opacity:.75;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;background:var(--negro);padding:12px;border:1px solid var(--gris2);">${r.itinerarioIA}</div>
+          </div>` : ''}
+          <div style="display:flex;gap:12px;margin-top:8px;">
+            <button onclick="document.getElementById('modal-editar-ruta').style.display='none'" style="flex:1;background:transparent;border:1px solid var(--gris2);color:var(--crema);padding:12px;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;">CANCELAR</button>
+            <button onclick="guardarEdicionRuta('${id}')" style="flex:2;background:var(--dorado);border:none;color:var(--negro);padding:12px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;">GUARDAR →</button>
+          </div>
+        </div>`;
+      modal.style.display = 'flex';
+    }).catch(e => showToast('Error: ' + e.message));
+  }, 50);
+}
+window.verRuta = verRuta;
+
+async function guardarEdicionRuta(id) {
+  const nombre = document.getElementById('edit-ruta-nombre').value.trim();
+  const destino = document.getElementById('edit-ruta-destino').value.trim();
+  const dias = parseInt(document.getElementById('edit-ruta-dias').value) || 0;
+  const desc = document.getElementById('edit-ruta-desc').value.trim();
+  const notas = document.getElementById('edit-ruta-notas').value.trim();
+  if (!nombre || !currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('maps').doc(id).update({
+      nombre, destino, dias, desc, notas,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('modal-editar-ruta').style.display = 'none';
+    showToast('Ruta actualizada ✓');
+    loadUserMaps();
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+window.guardarEdicionRuta = guardarEdicionRuta;
+
+// Cerrar menú usuario al hacer click fuera
+document.addEventListener('click', function(e) {
+  const avatar = document.getElementById('nav-avatar');
+  const menu = document.getElementById('user-menu');
+  if (menu && menu.style.display !== 'none' && avatar && !avatar.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+function setDashTab(tab, el) {
+  // Ocultar todos los tabs
+  document.querySelectorAll(".dash-content").forEach(c => c.style.display = "none");
+  // Mostrar el tab correcto
+  const target = document.getElementById("dash-tab-" + tab);
+  if (target) target.style.display = "block";
+  // Actualizar sidebar
+  document.querySelectorAll(".sidebar-item").forEach(i => i.classList.remove("active"));
+  // Actualizar mobile nav
+  document.querySelectorAll(".mobile-nav-item").forEach(i => i.classList.remove("active"));
+  if (el) el.classList.add("active");
+}
+window.setDashTab = setDashTab;
+
+// ===== MAP EDITOR =====
+function initMap() {
+  if (map) { map.remove(); map = null; }
+  const el = document.getElementById("leaflet-map");
+  if (!el) return;
+  map = L.map("leaflet-map", {zoomControl: false}).setView([16.5, 106.5], 6);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: "CartoDB", maxZoom: 18
+  }).addTo(map);
+  polyline = L.polyline(ROUTE_COORDS, {
+    color: "#c8930f", weight: 3, opacity: 0.7, dashArray: "8,6"
+  }).addTo(map);
+  renderMapMarkers();
+  renderPoiList();
+}
+
+function renderMapMarkers() {
+  markers.forEach(m => m.remove()); markers = [];
+  poiList.forEach(poi => {
+    const icon = L.divIcon({
+      html: `<div style="background:#0a0908;border:2px solid #c8930f;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.5);">${poi.type}</div>`,
+      className: "", iconSize: [28,28], iconAnchor: [14,14]
+    });
+    const m = L.marker([poi.lat, poi.lng], {icon}).addTo(map)
+      .bindPopup(`<div style="font-family:DM Sans,sans-serif;min-width:140px;"><strong style="color:#c8930f;">${poi.type} ${poi.name}</strong><br><span style="font-size:12px;opacity:.7;">${poi.note||""}</span></div>`);
+    markers.push(m);
+  });
+}
+
+const BOOKING_LINKS = {
+  1:  {city:"Hanoi",     url:"https://www.booking.com/searchresults.es.html?ss=Hanoi&nflt=price%3D1-20"},
+  2:  {city:"Hanoi",     url:"https://www.booking.com/searchresults.es.html?ss=Hanoi&nflt=price%3D1-20"},
+  3:  {city:"Ha Giang",  url:"https://www.booking.com/searchresults.es.html?ss=Ha+Giang&nflt=price%3D1-20"},
+  4:  {city:"Ninh Binh", url:"https://www.booking.com/searchresults.es.html?ss=Ninh+Binh&nflt=price%3D1-20"},
+  5:  {city:"Phong Nha", url:"https://www.booking.com/searchresults.es.html?ss=Phong+Nha&nflt=price%3D1-20"},
+  6:  {city:"Hue",       url:"https://www.booking.com/searchresults.es.html?ss=Hue+Vietnam&nflt=price%3D1-20"},
+  7:  {city:"Hoi An",    url:"https://www.booking.com/searchresults.es.html?ss=Hoi+An&nflt=price%3D1-20"},
+  8:  {city:"Da Nang",   url:"https://www.booking.com/searchresults.es.html?ss=Da+Nang&nflt=price%3D1-20"},
+  9:  {city:"Nha Trang", url:"https://www.booking.com/searchresults.es.html?ss=Nha+Trang&nflt=price%3D1-20"},
+  10: {city:"Mui Ne",    url:"https://www.booking.com/searchresults.es.html?ss=Mui+Ne&nflt=price%3D1-20"},
+  11: {city:"Ho Chi Minh",url:"https://www.booking.com/searchresults.es.html?ss=Ho+Chi+Minh&nflt=price%3D1-20"},
+  12: {city:"Ho Chi Minh",url:"https://www.booking.com/searchresults.es.html?ss=Ho+Chi+Minh&nflt=price%3D1-20"},
+};
+
+function renderPoiList() {
+  const el = document.getElementById("poi-list-editor");
+  if (!el) return;
+  // Group by day
+  const days = [...new Set(poiList.map(p => p.day))].sort((a,b) => a-b);
+  el.innerHTML = days.map(day => {
+    const booking = BOOKING_LINKS[day];
+    const pois = poiList.filter(p => p.day === day);
+    return `
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--gris2);">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--dorado);letter-spacing:1px;">DÍA ${day}${booking ? " · " + booking.city : ""}</div>
+          ${booking ? `<a href="${booking.url}" target="_blank" style="font-family:'Space Mono',monospace;font-size:9px;color:var(--negro);background:var(--dorado);padding:3px 8px;text-decoration:none;letter-spacing:1px;">🏨 BOOKING</a>` : ""}
+        </div>
+        ${pois.map(poi => `
+          <div class="poi-item-editor">
+            <div class="poi-emoji">${poi.type}</div>
+            <div class="poi-info-editor">
+              <div class="poi-name-editor">${poi.name}</div>
+              <div class="poi-meta-editor">${poi.note||"Sin nota"}</div>
+            </div>
+            <button class="poi-del" onclick="deletePoi(${poi.id})">x</button>
+          </div>`).join("")}
+      </div>`;
+  }).join("");
+}
+
+function deletePoi(id) {
+  poiList = poiList.filter(p => p.id !== id);
+  renderMapMarkers(); renderPoiList();
+  showToast("Punto eliminado");
+}
+window.deletePoi = deletePoi;
+
+function setDay(el, day) {
+  document.querySelectorAll(".day-tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  showToast("Dia " + (day === 0 ? "completo" : day) + " seleccionado");
+}
+window.setDay = setDay;
+
+function mapZoom(dir) { if (map) map.setZoom(map.getZoom() + dir); }
+window.initMap = initMap;
+window.mapZoom = mapZoom;
+
+function centerMap() {
+  if (map && polyline) map.fitBounds(polyline.getBounds(), {padding:[40,40]});
+}
+window.centerMap = centerMap;
+
+// ===== POI MODAL =====
+function openPoiModal() {
+  document.getElementById("poi-modal").classList.add("active");
+  document.getElementById("poi-name-input").value = "";
+  document.getElementById("poi-note-input").value = "";
+}
+function closePoiModal() {
+  document.getElementById("poi-modal").classList.remove("active");
+}
+window.openPoiModal = openPoiModal;
+window.closePoiModal = closePoiModal;
+
+async function addPoi() {
+  const name = document.getElementById("poi-name-input").value.trim();
+  if (!name) { showToast("Escribe el nombre del lugar"); return; }
+  const type = document.getElementById("poi-type-input").value;
+  const note = document.getElementById("poi-note-input").value.trim();
+  const center = map ? map.getCenter() : {lat:16.5,lng:106.5};
+  const newPoi = {
+    id: nextPoiId++, name, type, note, day: 1,
+    lat: center.lat + (Math.random()-.5)*.5,
+    lng: center.lng + (Math.random()-.5)*.5
+  };
+  poiList.push(newPoi);
+
+  // Save to Firestore if logged in
+  if (currentUser) {
+    try {
+      await addDoc(collection(db, "users", currentUser.uid, "pois"), {
+        name, type, note, day: 1,
+        lat: newPoi.lat, lng: newPoi.lng,
+        createdAt: serverTimestamp()
+      });
+    } catch(e) { console.error("Error saving poi:", e); }
+  }
+
+  renderMapMarkers(); renderPoiList();
+  closePoiModal();
+  showToast("📍 " + name + " anadido al mapa");
+}
+window.addPoi = addPoi;
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+window.showToast = showToast;
+
+function showError(el, msg) {
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 4000);
+}
+
+function scrollTo(selector) {
+  const el = document.querySelector(selector);
+  if (el) el.scrollIntoView({behavior:"smooth"});
+}
+window.scrollTo2 = scrollTo;
+
+
+// ===== HERO MAP =====
+function initHeroMap() {
+  // Usar imagen estática como fondo del hero
+  const el = document.getElementById("hero-map");
+  if (!el) return;
+  el.style.backgroundImage = "url('https://raw.githubusercontent.com/borradodelmapa/borradodelmapa/main/mapa.png')";
+  el.style.backgroundSize = "cover";
+  el.style.backgroundPosition = "center";
+  el.style.filter = "brightness(0.55)";
+}
+initHeroMap();
+
+// ===== KEYBOARD =====
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { closeModal(); closePoiModal(); }
+});
+document.getElementById("modal-auth").addEventListener("click", function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById("poi-modal").addEventListener("click", function(e) {
+  if (e.target === this) closePoiModal();
+});
+}; // end window.onload
+</script>
+<div style="background:var(--negro);border-top:1px solid var(--gris2);padding:20px 32px;text-align:center;position:relative;z-index:100;">
+  <div style="display:flex;justify-content:center;gap:28px;margin-bottom:12px;flex-wrap:wrap;">
+    <a class="footer-link" href="https://instagram.com/borradodelmapa" target="_blank">@borradodelmapa</a>
+    <a class="footer-link" onclick="showPage('blog')" style="cursor:pointer;">Blog</a>
+    <a class="footer-link" onclick="showPage('terminos')" style="cursor:pointer;">Términos</a>
+    <a class="footer-link" onclick="showPage('privacidad')" style="cursor:pointer;">Privacidad</a>
+  </div>
+  <div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,0.6);">© 2025 borradodelmapa · <span style="color:#e74c3c;">♥</span> Hecho con amor desde una hamaca en Koh Samui, Tailandia. App inspirada por Salma Pernia.</div>
+</div>
+
+<!-- ===== SALMA CHAT WIDGET ===== -->
+
+<style>
+#salma-btn{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  width:60px;height:60px;border-radius:50%;border:2px solid #c8930f;
+  background:#0a0908;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);transition:transform .2s,box-shadow .2s;
+}
+#salma-btn:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(200,147,15,.3);}
+#salma-btn svg{width:40px;height:40px;}
+#salma-btn .salma-pulse{
+  position:absolute;inset:-4px;border-radius:50%;border:2px solid #c8930f;
+  animation:salma-ping 2s cubic-bezier(0,0,.2,1) infinite;opacity:0;
+}
+@keyframes salma-ping{0%{transform:scale(1);opacity:.6;}100%{transform:scale(1.5);opacity:0;}}
+
+#salma-chat{
+  position:fixed;bottom:96px;right:24px;z-index:9998;
+  width:340px;max-width:calc(100vw - 32px);height:480px;max-height:calc(100vh - 120px);
+  background:#0a0908;border:1px solid #2a2826;border-radius:16px;
+  display:none;flex-direction:column;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);
+  animation:salma-slideUp .25s ease-out;
+}
+@keyframes salma-slideUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+#salma-chat.open{display:flex;}
+
+#salma-chat-header{
+  padding:16px 20px;border-bottom:1px solid #2a2826;display:flex;align-items:center;gap:12px;
+  background:#0a0908;flex-shrink:0;
+}
+#salma-chat-header .salma-avatar-sm{width:36px;height:36px;border-radius:50%;border:1.5px solid #c8930f;overflow:hidden;flex-shrink:0;background:#1a1816;}
+#salma-chat-header .salma-info{flex:1;}
+#salma-chat-header .salma-name{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#fff;letter-spacing:1px;}
+#salma-chat-header .salma-status{font-family:'Space Mono',monospace;font-size:9px;color:#c8930f;letter-spacing:2px;text-transform:uppercase;}
+#salma-chat-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;opacity:.5;transition:opacity .2s;padding:4px 8px;}
+#salma-chat-close:hover{opacity:1;}
+
+#salma-messages{
+  flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;
+  scrollbar-width:thin;scrollbar-color:#2a2826 transparent;
+}
+#salma-messages::-webkit-scrollbar{width:4px;}
+#salma-messages::-webkit-scrollbar-thumb{background:#2a2826;border-radius:2px;}
+
+.salma-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.5;word-wrap:break-word;}
+.salma-msg.bot{background:#1a1816;color:#f5f0e8;border-bottom-left-radius:4px;align-self:flex-start;border:1px solid #2a2826;}
+.salma-msg.user{background:#c8930f;color:#0a0908;border-bottom-right-radius:4px;align-self:flex-end;font-weight:500;}
+.salma-msg.typing{color:#c8930f;font-style:italic;font-size:13px;background:transparent;border:none;padding:4px 0;}
+
+#salma-input-area{
+  padding:12px 16px;border-top:1px solid #2a2826;display:flex;gap:8px;
+  background:#0a0908;flex-shrink:0;
+}
+#salma-input{
+  flex:1;background:#1a1816;border:1px solid #2a2826;border-radius:24px;
+  padding:10px 18px;color:#f5f0e8;font-family:'DM Sans',sans-serif;font-size:14px;
+  outline:none;transition:border-color .2s;
+}
+#salma-input::placeholder{color:rgba(245,240,232,.3);}
+#salma-input:focus{border-color:#c8930f;}
+#salma-send{
+  width:40px;height:40px;border-radius:50%;background:#c8930f;border:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .2s;flex-shrink:0;
+}
+#salma-send:hover{background:#e8b040;}
+#salma-send svg{width:18px;height:18px;fill:#0a0908;}
+
+@media(max-width:480px){
+  #salma-chat{bottom:80px;right:12px;width:calc(100vw - 24px);height:auto;max-height:50vh;border-radius:12px;max-width:calc(100vw - 24px);}
+  #salma-btn{bottom:16px;right:16px;width:54px;height:54px;}
+  #salma-messages{max-height:30vh;min-height:60px;}
+}
+</style>
+
+<!-- Botón flotante de Salma -->
+<div id="salma-btn" onclick="salmaToggle()" title="Habla con Salma">
+  <div class="salma-pulse"></div>
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="38" fill="#1a1816" stroke="#c8930f" stroke-width="2"/>
+    <path d="M20,42 Q22,18 50,15 Q78,18 80,42 Q82,32 75,24 Q65,12 50,10 Q35,12 25,24 Q18,32 20,42Z" fill="#6B4226"/>
+    <path d="M18,44 Q16,38 20,30 Q19,40 22,44Z" fill="#6B4226"/>
+    <path d="M82,44 Q84,38 80,30 Q81,40 78,44Z" fill="#6B4226"/>
+    <rect x="30" y="38" width="16" height="12" rx="3" fill="none" stroke="#8B6914" stroke-width="2"/>
+    <rect x="54" y="38" width="16" height="12" rx="3" fill="none" stroke="#8B6914" stroke-width="2"/>
+    <line x1="46" y1="43" x2="54" y2="43" stroke="#8B6914" stroke-width="1.5"/>
+    <circle cx="38" cy="44" r="2.5" fill="#f5f0e8"/>
+    <circle cx="62" cy="44" r="2.5" fill="#f5f0e8"/>
+    <path d="M40,56 Q50,64 60,56" fill="none" stroke="#f5f0e8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="38" y1="70" x2="42" y2="80" stroke="#333" stroke-width="2.5"/>
+    <line x1="62" y1="70" x2="58" y2="80" stroke="#333" stroke-width="2.5"/>
+    <path d="M18,58 Q14,58 14,62 Q14,66 18,66" fill="none" stroke="#e05252" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<!-- Ventana del chat -->
+<div id="salma-chat">
+  <div id="salma-chat-header">
+    <div class="salma-avatar-sm">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+        <circle cx="50" cy="50" r="38" fill="#1a1816" stroke="#c8930f" stroke-width="2"/>
+        <path d="M20,42 Q22,18 50,15 Q78,18 80,42 Q82,32 75,24 Q65,12 50,10 Q35,12 25,24 Q18,32 20,42Z" fill="#6B4226"/>
+        <rect x="30" y="38" width="16" height="12" rx="3" fill="none" stroke="#8B6914" stroke-width="2"/>
+        <rect x="54" y="38" width="16" height="12" rx="3" fill="none" stroke="#8B6914" stroke-width="2"/>
+        <line x1="46" y1="43" x2="54" y2="43" stroke="#8B6914" stroke-width="1.5"/>
+        <circle cx="38" cy="44" r="2.5" fill="#f5f0e8"/>
+        <circle cx="62" cy="44" r="2.5" fill="#f5f0e8"/>
+        <path d="M40,56 Q50,64 60,56" fill="none" stroke="#f5f0e8" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="salma-info">
+      <div class="salma-name">SALMA</div>
+      <div class="salma-status">Tu guía de viajes</div>
+    </div>
+    <button id="salma-chat-close" onclick="salmaToggle()">✕</button>
+  </div>
+
+  <div id="salma-messages">
+    <div class="salma-msg bot">¡Buenaaas! Soy Salma, tu compañera de viajes. ¿A dónde quieres ir? Cuéntame y te ayudo a montar la ruta perfecta. 🌍</div>
+  </div>
+
+  <div id="salma-input-area">
+    <input type="text" id="salma-input" placeholder="Escríbele a Salma..." autocomplete="off">
+    <button id="salma-send" onclick="salmaSend()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
   </div>
 </div>
 
 <script>
-const categories = ["desarrollo","marketing","finanzas","diseno","seguridad","metricas", "planhoy"];
-let currentFilter = null;
-let editingKey = null;
-let expandedKey = null;
+const SALMA_API = window.SALMA_API; // configurable via localStorage.setItem('salma_api_url', 'https://tu-endpoint')
+let salmaHistory = [];
 
-const STORAGE_KEY = "borradodelmapa_admin_data";
-const PROVIDER_KEY = "borradodelmapa_provider_links_v1";
-
-function normalizeData(data){
-  if (Array.isArray(data.infraestructura) && !Array.isArray(data.diseno)) {
-    data.diseno = data.infraestructura;
-  } else if (Array.isArray(data.infraestructura) && Array.isArray(data.diseno)) {
-    data.diseno = data.diseno.concat(data.infraestructura);
-  }
-  delete data.infraestructura;
-  categories.forEach(cat=>{
-    if(!Array.isArray(data[cat])) data[cat] = [];
-    data[cat] = data[cat].map(item => {
-      if(typeof item === "string") return {text:item, done:false, idea:false, prompt:""};
-      return {text:item.text || "", done:Boolean(item.done), idea:Boolean(item.idea), prompt:item.prompt || ""};
-    });
-  });
-  return data;
-}
-function migrateLegacyData(){
-  const current = localStorage.getItem(STORAGE_KEY);
-  if(!current){
-    const legacy = localStorage.getItem("bdm_data");
-    if(legacy){
-      localStorage.setItem(STORAGE_KEY, legacy);
-    }
-  }
-  const providers = localStorage.getItem(PROVIDER_KEY);
-  if(!providers){
-    const legacyProviders = localStorage.getItem("bdm_provider_links");
-    if(legacyProviders){
-      localStorage.setItem(PROVIDER_KEY, legacyProviders);
-    }
-  }
-}
-function getData(){
-  migrateLegacyData();
-  return normalizeData(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"));
-}
-function saveData(data){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-function exportBackup(){
-  const payload = {
-    version: 1,
-    exported_at: new Date().toISOString(),
-    data: getData(),
-    providers: getProviderLinks()
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "borradodelmapa_backup.json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-function triggerImport(){
-  document.getElementById("importBackupInput").click();
-}
-function importBackup(event){
-  const file = event.target.files && event.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      const parsed = JSON.parse(String(e.target.result || "{}"));
-      if(parsed.data){
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed.data));
-      }
-      if(Array.isArray(parsed.providers)){
-        localStorage.setItem(PROVIDER_KEY, JSON.stringify(parsed.providers));
-      }
-      render();
-      alert("Backup importado");
-    }catch(err){
-      alert("Backup no válido");
-    }finally{
-      event.target.value = "";
-    }
-  };
-  reader.readAsText(file);
+function salmaToggle() {
+  const chat = document.getElementById("salma-chat");
+  chat.classList.toggle("open");
+  if (chat.classList.contains("open")) document.getElementById("salma-input").focus();
 }
 
-function getProviderLinks(){
-  const defaults = [
-    {name:"Firebase", url:"https://console.firebase.google.com/"},
-    {name:"GitHub", url:"https://github.com/"}
-  ];
-  const saved = JSON.parse(localStorage.getItem(PROVIDER_KEY) || "null");
-  return saved && Array.isArray(saved) ? saved : defaults;
-}
-function saveProviderLinks(links){
-  localStorage.setItem(PROVIDER_KEY, JSON.stringify(links));
-}
-function renderProviders(){
-  const wrap = document.getElementById("providersList");
-  const links = getProviderLinks();
-  wrap.innerHTML = links.map((link, i) => `
-    <div class="link-item">
-      <a href="${escapeAttr(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.name)}</a>
-      <button class="red" onclick="removeProviderLink(${i})">Borrar</button>
-    </div>
-  `).join("");
-}
-function toggleProviders(){
-  const box = document.getElementById("providersBox");
-  box.style.display = box.style.display === "none" ? "block" : "none";
-  if(box.style.display === "block") renderProviders();
-}
-function addProviderLink(){
-  const nameEl = document.getElementById("newLinkName");
-  const urlEl = document.getElementById("newLinkUrl");
-  const name = nameEl.value.trim();
-  const url = urlEl.value.trim();
-  if(!name || !url) return;
-  const links = getProviderLinks();
-  links.push({name, url});
-  saveProviderLinks(links);
-  nameEl.value = "";
-  urlEl.value = "";
-  renderProviders();
-}
-function removeProviderLink(i){
-  const links = getProviderLinks();
-  links.splice(i,1);
-  saveProviderLinks(links);
-  renderProviders();
-}
-function capitalize(str){
-  const map = {desarrollo:"Desarrollo",marketing:"Marketing",finanzas:"Finanzas",diseno:"Diseño",seguridad:"Seguridad",metricas:"Métricas",planhoy:"Plan de trabajo hoy"};
-  return map[str] || str;
-}
-function escapeHtml(str){
-  return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-}
-function escapeAttr(str){
-  return String(str).replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-}
-function getAllTasks(){
-  const data = getData();
-  const all = [];
-  categories.forEach(cat=>{
-    data[cat].forEach((task, index)=>{ all.push({...task, category:cat, index}); });
-  });
-  return all;
-}
-function getPreviewText(text){
-  const clean = String(text).trim().replace(/\s+/g, " ");
-  if(clean.length <= 140) return clean;
-  return clean.slice(0, 140).trimEnd() + "...";
-}
-function goHome(){
-  currentFilter = null;
-  editingKey = null;
-  expandedKey = null;
-  document.getElementById("cardsSection").style.display = "none";
-  document.getElementById("providersBox").style.display = "none";
-  document.getElementById("iaPanel").classList.remove("open");
-  const cards = document.getElementById("cards");
-  if(cards) cards.innerHTML = "";
-  window.scrollTo({top:0, behavior:"smooth"});
-}
-function addTask(isIdea, category=null, text=null){
-  const cat = category || document.getElementById("categorySelect").value;
-  const input = document.getElementById("taskInput");
-  const taskText = text || input.value.trim();
-  if(!taskText) return;
-  const data = getData();
-  data[cat].push({
-    text:isIdea && !taskText.startsWith("[Idea IA]") ? "[Idea IA] " + taskText : taskText,
-    done:false,
-    idea:Boolean(isIdea),
-    prompt:""
-  });
-  saveData(data);
-  if(!text) input.value = "";
-  render();
-}
-function toggleTask(cat, index){
-  const data = getData();
-  if(!data[cat] || !data[cat][index]) return;
-  data[cat][index].done = !data[cat][index].done;
-  saveData(data);
-  render();
-}
-function startEdit(cat, index){
-  editingKey = `${cat}-${index}`;
-  expandedKey = `${cat}-${index}`;
-  renderCards();
-}
-function cancelEdit(){
-  editingKey = null;
-  renderCards();
-}
-function toggleExpand(cat, index){
-  const key = `${cat}-${index}`;
-  expandedKey = expandedKey === key ? null : key;
-  renderCards();
-}
-function saveEdit(cat, index){
-  const textarea = document.getElementById(`edit-${cat}-${index}`);
-  if(!textarea) return;
-  const value = textarea.value.trim();
-  if(!value) return;
-  const data = getData();
-  if(!data[cat] || !data[cat][index]) return;
-  data[cat][index].text = value;
-  saveData(data);
-  editingKey = null;
-  render();
-}
-function generatePrompt(cat, index){
-  const data = getData();
-  const task = data[cat][index];
-  if(!task) return;
-  expandedKey = `${cat}-${index}`;
-  task.prompt = `Actúa como especialista senior en ${capitalize(cat).toLowerCase()} para el proyecto borradodelmapa.
-
-Objetivo:
-${task.text.replace("[Idea IA] ","")}
-
-Instrucciones:
-- Prioriza simplicidad, utilidad real y foco en usuarios recurrentes.
-- Propón una solución clara y ejecutable.
-- Señala riesgos, dependencias y siguiente paso lógico.
-- Da una respuesta estructurada lista para trabajar.
-
-Formato de salida:
-1. Enfoque recomendado
-2. Pasos de ejecución
-3. Riesgos
-4. Mejora opcional`;
-  saveData(data);
-  render();
-}
-async function copyPrompt(cat, index){
-  const data = getData();
-  const task = data[cat] && data[cat][index];
-  if(!task || !task.prompt) return;
-
-  const msg = document.getElementById(`copy-msg-${cat}-${index}`);
-  const text = task.prompt;
-
-  try{
-    if(navigator.clipboard && window.isSecureContext){
-      await navigator.clipboard.writeText(text);
-    }else{
-      fallbackCopyText(text);
-    }
-    if(msg){
-      msg.textContent = "Copiado";
-      setTimeout(()=>{ msg.textContent = ""; }, 1500);
-    }
-  }catch(e){
-    try{
-      fallbackCopyText(text);
-      if(msg){
-        msg.textContent = "Copiado";
-        setTimeout(()=>{ msg.textContent = ""; }, 1500);
-      }
-    }catch(err){
-      if(msg){
-        msg.textContent = "No se pudo copiar";
-        setTimeout(()=>{ msg.textContent = ""; }, 1500);
-      }
-    }
-  }
-}
-function fallbackCopyText(text){
-  const temp = document.createElement("textarea");
-  temp.value = text;
-  temp.setAttribute("readonly", "");
-  temp.style.position = "fixed";
-  temp.style.opacity = "0";
-  temp.style.left = "-9999px";
-  document.body.appendChild(temp);
-  temp.focus();
-  temp.select();
-  temp.setSelectionRange(0, 999999);
-  const ok = document.execCommand("copy");
-  document.body.removeChild(temp);
-  if(!ok) throw new Error("copy failed");
-}
-function deleteTask(cat, index){
-  const data = getData();
-  data[cat].splice(index,1);
-  saveData(data);
-  if(editingKey === `${cat}-${index}`) editingKey = null;
-  if(expandedKey === `${cat}-${index}`) expandedKey = null;
-  render();
-}
-function setFilter(filter){
-  currentFilter = filter;
-  editingKey = null;
-  expandedKey = null;
-  const titles = {
-    pending:"Tareas pendientes",
-    done:"Tareas finalizadas",
-    planhoy:"Plan de trabajo hoy"
-  };
-  document.getElementById("cardsTitle").innerText = titles[filter] || "Tareas";
-  document.getElementById("cardsSection").style.display = "block";
-  renderCards();
-  document.getElementById("cardsSection").scrollIntoView({behavior:"smooth", block:"start"});
-}
-function hideCards(){
-  currentFilter = null;
-  editingKey = null;
-  expandedKey = null;
-  document.getElementById("cardsSection").style.display = "none";
-}
-function render(){
-  const all = getAllTasks();
-  renderProviders();
-  document.getElementById("totalTasks").innerText = all.length;
-  document.getElementById("pendingCount").innerText = all.filter(t=>!t.done).length;
-  document.getElementById("doneCount").innerText = all.filter(t=>t.done).length;
-  if(currentFilter){ renderCards(); }
-}
-function renderCards(){
-  const wrap = document.getElementById("cards");
-  const all = getAllTasks();
-  let filtered = [];
-  if(currentFilter === "pending") filtered = all.filter(t=>!t.done);
-  if(currentFilter === "done") filtered = all.filter(t=>t.done);
-  if(currentFilter === "planhoy") filtered = all.filter(t=>t.category === "planhoy");
-
-  if(filtered.length === 0){
-    wrap.innerHTML = '<div class="empty">Sin tareas.</div>';
-    return;
-  }
-
-  wrap.innerHTML = filtered.map(task => {
-    const key = `${task.category}-${task.index}`;
-    const isEditing = editingKey === key;
-    const isExpanded = expandedKey === key;
-    return `
-    <div class="task-card" onclick="toggleExpand('${task.category}', ${task.index})">
-      <div class="category">${escapeHtml(task.category === 'planhoy' ? 'Plan de trabajo hoy' : capitalize(task.category))}</div>
-      <div class="task-preview">${escapeHtml(isExpanded ? task.text : getPreviewText(task.text))}</div>
-      <div class="task-meta">
-        <span class="pill ${task.done ? 'done' : 'pending'}">${task.done ? 'Finalizada' : 'Pendiente'}</span>
-        ${task.idea ? '<span class="pill idea">Idea IA</span>' : ''}
-      </div>
-
-      ${isExpanded ? `
-      <div onclick="event.stopPropagation()">
-        <div class="card-actions">
-          <button class="${task.done ? 'warn' : 'green'}" onclick="toggleTask('${task.category}', ${task.index})">${task.done ? 'Marcar pendiente' : 'Marcar finalizada'}</button>
-          <button class="secondary" onclick="startEdit('${task.category}', ${task.index})">Editar tarea</button>
-          <button class="secondary" onclick="generatePrompt('${task.category}', ${task.index})">Convertir en prompt</button>
-          <button class="red" onclick="deleteTask('${task.category}', ${task.index})">Borrar</button>
-        </div>
-        ${isEditing ? `<div class="edit-box">
-          <h4>Editar tarea</h4>
-          <textarea id="edit-${task.category}-${task.index}">${escapeHtml(task.text)}</textarea>
-          <div class="card-actions">
-            <button class="green" onclick="saveEdit('${task.category}', ${task.index})">Guardar cambios</button>
-            <button class="secondary" onclick="cancelEdit()">Cancelar</button>
-          </div>
-        </div>` : ''}
-        ${task.prompt ? `<div class="prompt-box">
-          <h4>Prompt generado</h4>
-          <textarea readonly>${escapeHtml(task.prompt)}</textarea>
-          <div class="prompt-actions">
-            <button class="copy" onclick="copyPrompt('${task.category}', ${task.index})">Copiar prompt</button>
-            <span class="copy-msg" id="copy-msg-${task.category}-${task.index}"></span>
-          </div>
-        </div>` : ''}
-      </div>` : ''}
-    </div>`;
-  }).join("");
-}
-
-
-function openPendingCategories(){
-  const all = getAllTasks().filter(t => !t.done);
-  const counts = {};
-  all.forEach(t => { counts[t.category] = (counts[t.category] || 0) + 1; });
-
-  const content = document.getElementById("pendingCategoriesContent");
-  const keys = Object.keys(counts);
-
-  if(keys.length === 0){
-    content.innerHTML = '<div class="empty">No hay tareas pendientes.</div>';
-  } else {
-    content.innerHTML = keys.map(cat => `
-      <div class="link-item">
-        <a href="#" onclick="openCategoryTasks(event, '${cat}')">${escapeHtml(capitalize(cat))}</a>
-        <span class="pill pending">${counts[cat]}</span>
-      </div>
-    `).join("");
-  }
-
-  document.getElementById("pendingCategoriesModal").style.display = "flex";
-}
-function closePendingCategories(){
-  document.getElementById("pendingCategoriesModal").style.display = "none";
-}
-function openCategoryTasks(event, cat){
-  event.preventDefault();
-  closePendingCategories();
-  setFilter('pending');
-  setTimeout(() => {
-    const cards = document.getElementById("cards");
-    const all = getAllTasks().filter(t => !t.done && t.category === cat);
-    document.getElementById("cardsTitle").innerText = "Pendientes — " + capitalize(cat);
-    if(all.length === 0){
-      cards.innerHTML = '<div class="empty">Sin tareas.</div>';
-      return;
-    }
-    cards.innerHTML = all.map(task => {
-      const key = `${task.category}-${task.index}`;
-      const isEditing = editingKey === key;
-      const isExpanded = expandedKey === key;
-      return `
-      <div class="task-card" onclick="toggleExpand('${task.category}', ${task.index})">
-        <div class="category">${escapeHtml(capitalize(task.category))}</div>
-        <div class="task-preview">${escapeHtml(isExpanded ? task.text : getPreviewText(task.text))}</div>
-        <div class="task-meta">
-          <span class="pill ${task.done ? 'done' : 'pending'}">${task.done ? 'Finalizada' : 'Pendiente'}</span>
-          ${task.idea ? '<span class="pill idea">Idea IA</span>' : ''}
-        </div>
-        ${isExpanded ? `
-        <div onclick="event.stopPropagation()">
-          <div class="card-actions">
-            <button class="${task.done ? 'warn' : 'green'}" onclick="toggleTask('${task.category}', ${task.index})">${task.done ? 'Marcar pendiente' : 'Marcar finalizada'}</button>
-            <button class="secondary" onclick="startEdit('${task.category}', ${task.index})">Editar tarea</button>
-            <button class="secondary" onclick="generatePrompt('${task.category}', ${task.index})">Convertir en prompt</button>
-            <button class="red" onclick="deleteTask('${task.category}', ${task.index})">Borrar</button>
-          </div>
-          ${isEditing ? `<div class="edit-box">
-            <h4>Editar tarea</h4>
-            <textarea id="edit-${task.category}-${task.index}">${escapeHtml(task.text)}</textarea>
-            <div class="card-actions">
-              <button class="green" onclick="saveEdit('${task.category}', ${task.index})">Guardar cambios</button>
-              <button class="secondary" onclick="cancelEdit()">Cancelar</button>
-            </div>
-          </div>` : ''}
-          ${task.prompt ? `<div class="prompt-box">
-            <h4>Prompt generado</h4>
-            <textarea readonly>${escapeHtml(task.prompt)}</textarea>
-            <div class="prompt-actions">
-              <button class="copy" onclick="copyPrompt('${task.category}', ${task.index})">Copiar prompt</button>
-              <span class="copy-msg" id="copy-msg-${task.category}-${task.index}"></span>
-            </div>
-          </div>` : ''}
-        </div>` : ''}
-      </div>`;
-    }).join("");
-  }, 0);
-}
-
-function openPlanHoy(){ setFilter("planhoy"); }
-function openRoadmap(){ document.getElementById("roadmapModal").style.display = "flex"; }
-function closeRoadmap(){ document.getElementById("roadmapModal").style.display = "none"; }
-function toggleIA(){ document.getElementById("iaPanel").classList.toggle("open"); }
-function pushAI(role, text){
-  const chat = document.getElementById("aiChat");
+function salmaAddMsg(text, who) {
+  const container = document.getElementById("salma-messages");
   const div = document.createElement("div");
-  div.className = "msg " + role;
-  div.innerHTML = `<div class="msg-title">${role === 'ai' ? 'Asistente IA' : 'Tú'}</div>${escapeHtml(text)}`;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+  div.className = "salma-msg " + who;
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
 }
-function aiStateSummary(){
-  const tasks = getAllTasks();
-  const pending = tasks.filter(t=>!t.done);
-  const done = tasks.filter(t=>t.done);
-  const byCat = {};
-  categories.forEach(c => byCat[c] = tasks.filter(t=>t.category===c).length);
-  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
-  return `Resumen actual:
-- Total tareas: ${tasks.length}
-- Pendientes: ${pending.length}
-- Finalizadas: ${done.length}
-- Categoría más cargada: ${capitalize(topCat[0])} (${topCat[1]})
 
-Foco recomendado:
-Cierra primero lo que desbloquea producto útil y repetición de uso.`;
-}
-function aiPriorities(){
-  const pending = getAllTasks().filter(t=>!t.done);
-  const order = ["desarrollo","diseno","seguridad","marketing","metricas","finanzas"];
-  const sorted = pending.sort((a,b)=>order.indexOf(a.category)-order.indexOf(b.category)).slice(0,5);
-  if(sorted.length===0) return "Ahora mismo no hay tareas pendientes.";
-  return `Prioridades sugeridas:
-${sorted.map((t,i)=>`${i+1}. ${capitalize(t.category)} — ${t.text}`).join("\n")}
+async function salmaSend() {
+  const input = document.getElementById("salma-input");
+  const msg = input.value.trim();
+  if (!msg) return;
 
-Criterio:
-Primero lo que mejora producto base, luego estabilidad, luego crecimiento.`;
-}
-function aiImprovements(){
-  return `Mejoras sugeridas:
-1. Define una tarea MVP crítica por categoría.
-2. Reduce tareas ambiguas y conviértelas en acciones concretas.
-3. Marca finalizadas en cuanto cierres algo para mantener foco visual.
-4. Usa [Idea IA] solo para ideas que merecen validación real.`;
-}
-function aiCreateIdeaFromText(text){
-  const lower = text.toLowerCase();
-  let category = "desarrollo";
-  if(lower.includes("marketing")) category = "marketing";
-  if(lower.includes("finanza")) category = "finanzas";
-  if(lower.includes("infra")) category = "diseno";
-  if(lower.includes("seguridad")) category = "seguridad";
-  if(lower.includes("métrica") || lower.includes("metrica")) category = "metricas";
-  const clean = text.replace(/crear tarea idea ia[:\-]*/i,'').trim() || "Nueva idea IA";
-  addTask(true, category, clean);
-  return `He creado una tarea en ${capitalize(category)} con prefijo [Idea IA].`;
-}
-function sendAI(){
-  const input = document.getElementById("aiInput");
-  const text = input.value.trim();
-  if(!text) return;
-  pushAI("user", text);
-  let reply = "";
-  const lower = text.toLowerCase();
+  salmaAddMsg(msg, "user");
+  input.value = "";
+  input.disabled = true;
 
-  if(lower.includes("resum")) reply = aiStateSummary();
-  else if(lower.includes("prior")) reply = aiPriorities();
-  else if(lower.includes("mejora")) reply = aiImprovements();
-  else if(lower.includes("crear tarea") || lower.includes("idea ia")) reply = aiCreateIdeaFromText(text);
-  else {
-    reply = `Te sugiero esto:
-- Si buscas claridad, usa "Resumir estado".
-- Si buscas foco, usa "Sugerir prioridades".
-- Si quieres una nueva línea de trabajo, pídeme "crear tarea idea IA: ..."
+  const typing = salmaAddMsg("Salma está escribiendo...", "typing");
 
-Lectura rápida:
-${aiStateSummary()}`;
+  try {
+    const data = await callSalmaAPI(msg, salmaHistory);
+    typing.remove();
+
+    if (data.reply) {
+      salmaAddMsg(data.reply, "bot");
+      salmaHistory.push({ role: "user", content: msg });
+      salmaHistory.push({ role: "assistant", content: data.reply });
+      if (salmaHistory.length > 20) salmaHistory = salmaHistory.slice(-20);
+    } else {
+      salmaAddMsg("Uy, algo ha fallado. ¿Puedes repetir?", "bot");
+    }
+  } catch (err) {
+    typing.remove();
+    salmaAddMsg("No puedo conectar ahora mismo. Inténtalo en un momento.", "bot");
   }
 
-  pushAI("ai", reply);
-  input.value = "";
-}
-function aiQuick(type){
-  if(type === "summary") pushAI("ai", aiStateSummary());
-  if(type === "priorities") pushAI("ai", aiPriorities());
-  if(type === "improvements") pushAI("ai", aiImprovements());
+  input.disabled = false;
+  input.focus();
 }
 
-migrateLegacyData();
-render();
-
-const pendingModal = document.getElementById("pendingCategoriesModal");
-if (pendingModal) {
-  pendingModal.addEventListener("click", function(e){
-    if(e.target === this) closePendingCategories();
-  });
-}
-
-pushAI("ai","Listo. Estoy dentro del admin para asesorarte, resumir estado, sugerir prioridades y crear tareas [Idea IA].");
+document.getElementById("salma-input").addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); salmaSend(); }
+});
 </script>
-
-<div class="modal-backdrop" id="pendingCategoriesModal">
-  <div class="modal">
-    <h3>Categorías con tareas pendientes</h3>
-    <div id="pendingCategoriesContent"></div>
-    <div class="close-row"><button class="secondary" onclick="closePendingCategories()">Cerrar</button></div>
-  </div>
-</div>
-
 </body>
-</html>
