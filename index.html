@@ -1,1 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Borrado del Mapa — Admin v10</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --negro:#0a0908;
+  --negro-2:#050505;
+  --dorado:#d4a017;
+  --dorado-2:#e8b040;
+  --crema:#f5f0e8;
+  --blanco:#ffffff;
+  --gris:#161311;
+  --gris-2:#201c19;
+  --gris-3:#322c28;
+  --line:rgba(212,160,23,.22);
+  --line-soft:rgba(245,240,232,.08);
+  --done:#7ff0c7;
+  --donebg:#103328;
+  --pendingbg:#41330d;
+  --danger:#dc2626;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Inter',sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(212,160,23,.10), transparent 18%),
+    radial-gradient(circle at 80% 0%, rgba(212,160,23,.06), transparent 16%),
+    linear-gradient(180deg,var(--negro-2) 0%, var(--negro) 100%);
+  color:var(--crema);
+  font-size:18px;
+  line-height:1.55;
+}
+.container{max-width:1180px;margin:auto;padding:32px 24px 80px}
+.hero,
+.cards-section,
+.stat,
+.modal,
+.sidepanel{
+  background:var(--negro-2);
+  border:1px solid var(--line);
+  box-shadow:none;
+}
+.hero{
+  margin:10px 0 28px;
+  padding:32px 24px 24px;
+  border-radius:28px;
+  text-align:center;
+}
+.logo-box{
+  display:inline-flex;align-items:center;justify-content:center;width:min(100%,860px);
+  min-height:110px;border:1px solid var(--dorado);padding:18px 20px;border-radius:24px;
+  background:var(--negro-2);
+}
+.logo-image{display:block;width:min(100%,980px);height:auto;border-radius:20px}
+.hero-sub{margin-top:12px;font-size:14px;color:rgba(245,240,232,.62);letter-spacing:.02em}
+.hero-sub strong{display:block;font-size:18px;color:var(--blanco)}
+.top-actions{display:flex;justify-content:center;gap:12px;margin-top:20px;flex-wrap:wrap}
+button{
+  appearance:none;
+  min-height:48px;
+  padding:14px 20px;
+  border-radius:0;
+  border:1px solid var(--dorado);
+  background:var(--dorado);
+  color:var(--negro);
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:1.6px;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease;
+}
+button:hover{background:var(--dorado-2);border-color:var(--dorado-2);transform:translateY(-1px)}
+button.secondary,
+button.copy{
+  background:transparent;
+  color:var(--crema);
+  border-color:var(--gris-3);
+}
+button.secondary:hover,
+button.copy:hover{border-color:var(--dorado);color:var(--dorado);background:transparent}
+button.green{background:#165c3d;border-color:#165c3d;color:#fff}
+button.green:hover{background:#1d744d;border-color:#1d744d}
+button.warn{background:#6b5410;border-color:#6b5410;color:#fff}
+button.warn:hover{background:#836714;border-color:#836714}
+button.red{background:#7a2323;border-color:#7a2323;color:#fff}
+button.red:hover{background:#922b2b;border-color:#922b2b}
+.top-actions button{min-width:188px}
+.task-input-box,
+.edit-box,
+.prompt-box{
+  margin-top:18px;
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:rgba(255,255,255,.02);
+}
+.edit-box h4,
+.prompt-box h4{
+  margin:0 0 12px 0;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:1.8px;
+  color:var(--dorado);
+}
+select, textarea, input{
+  width:100%;
+  padding:14px 16px;
+  font-size:16px;
+  border-radius:0;
+  border:1px solid var(--gris-3);
+  background:#0d0d0d;
+  color:var(--crema);
+  margin-bottom:12px;
+  font-family:'Inter',sans-serif;
+}
+select:focus, textarea:focus, input:focus{outline:none;border-color:var(--dorado)}
+textarea{min-height:120px;resize:vertical}
+.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.stat{border-radius:24px;padding:22px;text-align:center;cursor:pointer;transition:border-color .2s ease,transform .2s ease}
+.stat:hover{border-color:rgba(212,160,23,.45);transform:translateY(-1px)}
+.stat .label{
+  color:rgba(245,240,232,.62);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:1.8px;
+}
+.stat .value{font-size:36px;font-weight:800;margin-top:6px;color:var(--blanco)}
+.cards-section{display:none;border-radius:28px;padding:22px}
+.cards-header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.cards-header h2,
+.modal h3,
+.ai-header h3{
+  margin:0;
+  font-family:'Playfair Display',serif;
+  font-size:clamp(28px,3vw,40px);
+  line-height:1.1;
+  color:var(--blanco);
+}
+.cards{margin-top:8px}
+.task-card{padding:24px 0 26px;border-bottom:1px solid var(--line-soft)}
+.task-card:last-child{border-bottom:none}
+.category{
+  font-size:11px;
+  color:var(--dorado);
+  font-family:'Space Mono',monospace;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:1.7px;
+  margin-bottom:10px;
+}
+.task-text{font-size:28px;line-height:1.3;color:var(--blanco);margin-bottom:14px;font-weight:700}
+.task-meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:700;border:1px solid var(--line-soft);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.8px}
+.pill.pending{color:var(--dorado-2);background:var(--pendingbg);border-color:rgba(232,176,64,.24)}
+.pill.done{color:var(--done);background:var(--donebg);border-color:rgba(127,240,199,.24)}
+.pill.idea{color:#fff;background:#222}
+.card-actions,.prompt-actions{display:flex;gap:10px;flex-wrap:wrap}
+.card-actions button,.prompt-actions button{min-width:180px}
+.copy-msg{font-size:14px;color:var(--done);align-self:center}
+.link-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.link-item:last-child{border-bottom:none}
+.link-item a{color:var(--blanco);text-decoration:none;word-break:break-all}
+.link-item a:hover{color:var(--dorado)}
+.empty{opacity:.72;padding:12px 0}
+.fab{
+  position:fixed;right:18px;bottom:18px;width:68px;height:68px;border-radius:999px;
+  font-size:14px;z-index:1001;box-shadow:none;
+}
+.sidepanel{
+  position:fixed;top:0;right:-430px;width:min(430px,100vw);height:100vh;
+  border-left:1px solid var(--line);z-index:1000;transition:right .25s ease;display:flex;flex-direction:column;
+}
+.sidepanel.open{right:0}
+.ai-header{padding:20px;border-bottom:1px solid var(--line-soft)}
+.ai-header p{margin:6px 0 0;color:rgba(245,240,232,.62);font-size:14px;line-height:1.5}
+.ai-actions{padding:14px 20px 8px;display:grid;grid-template-columns:1fr;gap:8px}
+.ai-chat{flex:1;overflow:auto;padding:12px 20px 18px}
+.msg{margin-bottom:12px;padding:14px 16px;border-radius:18px;line-height:1.6;white-space:pre-wrap}
+.msg.user{background:#181818;border:1px solid rgba(255,255,255,.06)}
+.msg.ai{background:#111;border:1px solid rgba(212,160,23,.18)}
+.msg-title{font-size:11px;color:var(--dorado);font-family:'Space Mono',monospace;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:1.4px}
+.ai-input{border-top:1px solid var(--line-soft);padding:14px 20px 18px}
+.ai-input textarea{min-height:90px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;padding:18px;z-index:999}
+.modal{width:min(860px,100%);max-height:88vh;overflow:auto;border-radius:28px;padding:24px}
+.modal .close-row{display:flex;justify-content:flex-end;margin-top:16px}
+@media(max-width:900px){
+  .dashboard{grid-template-columns:1fr}
+  .top-actions button,
+  .card-actions button,
+  .prompt-actions button{min-width:auto;width:100%}
+  .task-text{font-size:24px}
+  .container{padding:20px 16px 72px}
+  .hero{padding:24px 16px 18px}
+  .logo-box{border-radius:20px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <section class="hero">
+    <div class="logo-box" onclick="goHome()" title="Volver al inicio"><img class="logo-image" src="data:image/svg+xml;utf8,%0A%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%201400%20520%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22gold%22%20x1%3D%220%22%20x2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23f2c318%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23ffd84d%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%20%20%3Cfilter%20id%3D%22softShadow%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%3E%0A%20%20%20%20%20%20%3CfeDropShadow%20dx%3D%220%22%20dy%3D%228%22%20stdDeviation%3D%2214%22%20flood-color%3D%22%23000000%22%20flood-opacity%3D%22.45%22/%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%0A%20%20%3Crect%20width%3D%221400%22%20height%3D%22520%22%20fill%3D%22transparent%22/%3E%0A%0A%20%20%3Cg%20filter%3D%22url%28%23softShadow%29%22%3E%0A%20%20%20%20%3Crect%20x%3D%22210%22%20y%3D%2295%22%20width%3D%22980%22%20height%3D%22150%22%20rx%3D%2226%22%20fill%3D%22%23050505%22%20stroke%3D%22url%28%23gold%29%22%20stroke-width%3D%2214%22/%3E%0A%0A%20%20%20%20%3Ctext%20x%3D%22270%22%20y%3D%22196%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2288%22%20fill%3D%22%23f1f1f1%22%3EBORRADO%3C/text%3E%0A%20%20%20%20%3Ctext%20x%3D%22730%22%20y%3D%22196%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2288%22%20fill%3D%22url%28%23gold%29%22%3EDEL%3C/text%3E%0A%20%20%20%20%3Ctext%20x%3D%22890%22%20y%3D%22196%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2288%22%20fill%3D%22%23f1f1f1%22%3EMAPA%3C/text%3E%0A%0A%20%20%20%20%3Ctext%20x%3D%22450%22%20y%3D%22355%22%20font-family%3D%22Arial%2C%20Helvetica%2C%20sans-serif%22%20font-weight%3D%22800%22%20font-size%3D%2268%22%20fill%3D%22%23f1f1f1%22%3ENacidos%20para%20el%20ocio%3C/text%3E%0A%0A%20%20%20%20%3Cg%20transform%3D%22translate%28878%2C260%29%22%3E%0A%20%20%20%20%20%20%3Ccircle%20cx%3D%220%22%20cy%3D%2222%22%20r%3D%2226%22%20fill%3D%22%23d81818%22/%3E%0A%20%20%20%20%20%20%3Ccircle%20cx%3D%22-7%22%20cy%3D%2215%22%20r%3D%229%22%20fill%3D%22%23ffffff%22%20opacity%3D%22.7%22/%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M0%2C42%20C13%2C76%2014%2C101%200%2C135%20C-14%2C101%20-13%2C76%200%2C42Z%22%20fill%3D%22%23d81818%22/%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M4%2C42%20C13%2C73%2013%2C98%204%2C129%20C8%2C101%206%2C72%200%2C42Z%22%20fill%3D%22%23ffffff%22%20opacity%3D%22.92%22/%3E%0A%20%20%20%20%3C/g%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A" alt="Logo Borrado del Mapa"></div>
+    <p class="hero-sub"><span style="font-size:13px;opacity:.75">Pulsa el logo para volver al inicio</span></p>
+    <div class="top-actions">
+      <button onclick="openRoadmap()">Roadmap</button>
+      <button onclick="openPlanHoy()">📌 Plan de trabajo hoy</button>
+      <button class="secondary" onclick="toggleProviders()">Proveedores</button>
+            <button class="secondary" onclick="toggleIA()">Asistente IA</button>
+      <input type="file" id="importBackupInput" accept=".json,application/json" style="display:none" onchange="importBackup(event)">
+    </div>
+    <div class="edit-box" id="providersBox" style="display:none; text-align:left;">
+      <h4>Proveedores y enlaces</h4>
+      <div id="providersList"></div>
+      <input id="newLinkName" placeholder="Nombre del enlace">
+      <input id="newLinkUrl" placeholder="https://...">
+      <button onclick="addProviderLink()">Añadir enlace</button>
+      <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0;"></div>
+      <div class="card-actions">
+        <button class="secondary" onclick="exportBackup()">Exportar backup</button>
+        <button class="secondary" onclick="triggerImport()">Importar backup</button>
+      </div>
+    </div>
 
+    <div class="task-input-box">
+      <select id="categorySelect">
+        <option value="desarrollo">Desarrollo</option>
+        <option value="marketing">Marketing</option>
+        <option value="finanzas">Finanzas</option>
+        <option value="diseno">Diseño</option>
+        <option value="seguridad">Seguridad</option>
+        <option value="metricas">Métricas</option>
+        <option value="planhoy">Plan de trabajo hoy</option>
+      </select>
+      <textarea id="taskInput" placeholder="Escribe la tarea..."></textarea>
+      <button onclick="addTask(false)">Guardar tarea</button>
+    </div>
+  </section>
+
+  <div class="dashboard">
+    <div class="stat" onclick="openPendingCategories()"><div class="label">Total tareas</div><div class="value" id="totalTasks">0</div></div>
+    <div class="stat" onclick="setFilter('pending')"><div class="label">Pendientes</div><div class="value" id="pendingCount">0</div></div>
+    <div class="stat" onclick="setFilter('done')"><div class="label">Finalizadas</div><div class="value" id="doneCount">0</div></div>
+  </div>
+
+  <section class="cards-section" id="cardsSection">
+    <div class="cards-header">
+      <h2 id="cardsTitle">Tareas</h2>
+      <button class="secondary" onclick="hideCards()">Ocultar</button>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+</div>
+
+<button class="fab" onclick="toggleIA()">IA</button>
+
+<aside class="sidepanel" id="iaPanel">
+  <div class="ai-header">
+    <h3>Asistente IA</h3>
+    <p>Asesor colaborativo · diseño · informática · priorización</p>
+  </div>
+  <div class="ai-actions">
+    <button onclick="aiQuick('summary')">Resumir estado</button>
+    <button onclick="aiQuick('priorities')">Sugerir prioridades</button>
+    <button onclick="aiQuick('improvements')">Proponer mejoras</button>
+  </div>
+  <div class="ai-chat" id="aiChat"></div>
+  <div class="ai-input">
+    <textarea id="aiInput" placeholder="Pide consejo, prioridades o una tarea IA..."></textarea>
+    <button onclick="sendAI()">Enviar</button>
+  </div>
+</aside>
+
+<div class="modal-backdrop" id="roadmapModal">
+  <div class="modal">
+    <h3>Roadmap</h3>
+    <p><strong>Descripción:</strong> Plan estratégico de qué se construye y en qué orden.</p>
+    <p><strong>Fase 1:</strong> Producto útil.</p>
+    <p><strong>Fase 2:</strong> Compartir y optimizar.</p>
+    <p><strong>Fase 3:</strong> Escalar y monetizar.</p>
+    <div class="close-row"><button class="secondary" onclick="closeRoadmap()">Cerrar</button></div>
+  </div>
+</div>
+
+
+<div class="modal-backdrop" id="pendingCategoriesModal">
+  <div class="modal">
+    <h3>Categorías con tareas pendientes</h3>
+    <div id="pendingCategoriesContent"></div>
+    <div class="close-row"><button class="secondary" onclick="closePendingCategories()">Cerrar</button></div>
+  </div>
+</div>
+
+<script>
+const categories = ["desarrollo","marketing","finanzas","diseno","seguridad","metricas", "planhoy"];
+let currentFilter = null;
+let editingKey = null;
+let expandedKey = null;
+
+const STORAGE_KEY = "borradodelmapa_admin_data";
+const PROVIDER_KEY = "borradodelmapa_provider_links_v1";
+
+function normalizeData(data){
+  if (Array.isArray(data.infraestructura) && !Array.isArray(data.diseno)) {
+    data.diseno = data.infraestructura;
+  } else if (Array.isArray(data.infraestructura) && Array.isArray(data.diseno)) {
+    data.diseno = data.diseno.concat(data.infraestructura);
+  }
+  delete data.infraestructura;
+  categories.forEach(cat=>{
+    if(!Array.isArray(data[cat])) data[cat] = [];
+    data[cat] = data[cat].map(item => {
+      if(typeof item === "string") return {text:item, done:false, idea:false, prompt:""};
+      return {text:item.text || "", done:Boolean(item.done), idea:Boolean(item.idea), prompt:item.prompt || ""};
+    });
+  });
+  return data;
+}
+function migrateLegacyData(){
+  const current = localStorage.getItem(STORAGE_KEY);
+  if(!current){
+    const legacy = localStorage.getItem("bdm_data");
+    if(legacy){
+      localStorage.setItem(STORAGE_KEY, legacy);
+    }
+  }
+  const providers = localStorage.getItem(PROVIDER_KEY);
+  if(!providers){
+    const legacyProviders = localStorage.getItem("bdm_provider_links");
+    if(legacyProviders){
+      localStorage.setItem(PROVIDER_KEY, legacyProviders);
+    }
+  }
+}
+function getData(){
+  migrateLegacyData();
+  return normalizeData(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"));
+}
+function saveData(data){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function exportBackup(){
+  const payload = {
+    version: 1,
+    exported_at: new Date().toISOString(),
+    data: getData(),
+    providers: getProviderLinks()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "borradodelmapa_backup.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function triggerImport(){
+  document.getElementById("importBackupInput").click();
+}
+function importBackup(event){
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const parsed = JSON.parse(String(e.target.result || "{}"));
+      if(parsed.data){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed.data));
+      }
+      if(Array.isArray(parsed.providers)){
+        localStorage.setItem(PROVIDER_KEY, JSON.stringify(parsed.providers));
+      }
+      render();
+      alert("Backup importado");
+    }catch(err){
+      alert("Backup no válido");
+    }finally{
+      event.target.value = "";
+    }
+  };
+  reader.readAsText(file);
+}
+
+function getProviderLinks(){
+  const defaults = [
+    {name:"Firebase", url:"https://console.firebase.google.com/"},
+    {name:"GitHub", url:"https://github.com/"}
+  ];
+  const saved = JSON.parse(localStorage.getItem(PROVIDER_KEY) || "null");
+  return saved && Array.isArray(saved) ? saved : defaults;
+}
+function saveProviderLinks(links){
+  localStorage.setItem(PROVIDER_KEY, JSON.stringify(links));
+}
+function renderProviders(){
+  const wrap = document.getElementById("providersList");
+  const links = getProviderLinks();
+  wrap.innerHTML = links.map((link, i) => `
+    <div class="link-item">
+      <a href="${escapeAttr(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.name)}</a>
+      <button class="red" onclick="removeProviderLink(${i})">Borrar</button>
+    </div>
+  `).join("");
+}
+function toggleProviders(){
+  const box = document.getElementById("providersBox");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+  if(box.style.display === "block") renderProviders();
+}
+function addProviderLink(){
+  const nameEl = document.getElementById("newLinkName");
+  const urlEl = document.getElementById("newLinkUrl");
+  const name = nameEl.value.trim();
+  const url = urlEl.value.trim();
+  if(!name || !url) return;
+  const links = getProviderLinks();
+  links.push({name, url});
+  saveProviderLinks(links);
+  nameEl.value = "";
+  urlEl.value = "";
+  renderProviders();
+}
+function removeProviderLink(i){
+  const links = getProviderLinks();
+  links.splice(i,1);
+  saveProviderLinks(links);
+  renderProviders();
+}
+function capitalize(str){
+  const map = {desarrollo:"Desarrollo",marketing:"Marketing",finanzas:"Finanzas",diseno:"Diseño",seguridad:"Seguridad",metricas:"Métricas",planhoy:"Plan de trabajo hoy"};
+  return map[str] || str;
+}
+function escapeHtml(str){
+  return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function escapeAttr(str){
+  return String(str).replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+function getAllTasks(){
+  const data = getData();
+  const all = [];
+  categories.forEach(cat=>{
+    data[cat].forEach((task, index)=>{ all.push({...task, category:cat, index}); });
+  });
+  return all;
+}
+function getPreviewText(text){
+  const clean = String(text).trim().replace(/\s+/g, " ");
+  if(clean.length <= 140) return clean;
+  return clean.slice(0, 140).trimEnd() + "...";
+}
+function goHome(){
+  currentFilter = null;
+  editingKey = null;
+  expandedKey = null;
+  document.getElementById("cardsSection").style.display = "none";
+  document.getElementById("providersBox").style.display = "none";
+  document.getElementById("iaPanel").classList.remove("open");
+  const cards = document.getElementById("cards");
+  if(cards) cards.innerHTML = "";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function addTask(isIdea, category=null, text=null){
+  const cat = category || document.getElementById("categorySelect").value;
+  const input = document.getElementById("taskInput");
+  const taskText = text || input.value.trim();
+  if(!taskText) return;
+  const data = getData();
+  data[cat].push({
+    text:isIdea && !taskText.startsWith("[Idea IA]") ? "[Idea IA] " + taskText : taskText,
+    done:false,
+    idea:Boolean(isIdea),
+    prompt:""
+  });
+  saveData(data);
+  if(!text) input.value = "";
+  render();
+}
+function toggleTask(cat, index){
+  const data = getData();
+  if(!data[cat] || !data[cat][index]) return;
+  data[cat][index].done = !data[cat][index].done;
+  saveData(data);
+  render();
+}
+function startEdit(cat, index){
+  editingKey = `${cat}-${index}`;
+  expandedKey = `${cat}-${index}`;
+  renderCards();
+}
+function cancelEdit(){
+  editingKey = null;
+  renderCards();
+}
+function toggleExpand(cat, index){
+  const key = `${cat}-${index}`;
+  expandedKey = expandedKey === key ? null : key;
+  renderCards();
+}
+function saveEdit(cat, index){
+  const textarea = document.getElementById(`edit-${cat}-${index}`);
+  if(!textarea) return;
+  const value = textarea.value.trim();
+  if(!value) return;
+  const data = getData();
+  if(!data[cat] || !data[cat][index]) return;
+  data[cat][index].text = value;
+  saveData(data);
+  editingKey = null;
+  render();
+}
+function generatePrompt(cat, index){
+  const data = getData();
+  const task = data[cat][index];
+  if(!task) return;
+  expandedKey = `${cat}-${index}`;
+  task.prompt = `Actúa como especialista senior en ${capitalize(cat).toLowerCase()} para el proyecto borradodelmapa.
+
+Objetivo:
+${task.text.replace("[Idea IA] ","")}
+
+Instrucciones:
+- Prioriza simplicidad, utilidad real y foco en usuarios recurrentes.
+- Propón una solución clara y ejecutable.
+- Señala riesgos, dependencias y siguiente paso lógico.
+- Da una respuesta estructurada lista para trabajar.
+
+Formato de salida:
+1. Enfoque recomendado
+2. Pasos de ejecución
+3. Riesgos
+4. Mejora opcional`;
+  saveData(data);
+  render();
+}
+async function copyPrompt(cat, index){
+  const data = getData();
+  const task = data[cat] && data[cat][index];
+  if(!task || !task.prompt) return;
+
+  const msg = document.getElementById(`copy-msg-${cat}-${index}`);
+  const text = task.prompt;
+
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+    }else{
+      fallbackCopyText(text);
+    }
+    if(msg){
+      msg.textContent = "Copiado";
+      setTimeout(()=>{ msg.textContent = ""; }, 1500);
+    }
+  }catch(e){
+    try{
+      fallbackCopyText(text);
+      if(msg){
+        msg.textContent = "Copiado";
+        setTimeout(()=>{ msg.textContent = ""; }, 1500);
+      }
+    }catch(err){
+      if(msg){
+        msg.textContent = "No se pudo copiar";
+        setTimeout(()=>{ msg.textContent = ""; }, 1500);
+      }
+    }
+  }
+}
+function fallbackCopyText(text){
+  const temp = document.createElement("textarea");
+  temp.value = text;
+  temp.setAttribute("readonly", "");
+  temp.style.position = "fixed";
+  temp.style.opacity = "0";
+  temp.style.left = "-9999px";
+  document.body.appendChild(temp);
+  temp.focus();
+  temp.select();
+  temp.setSelectionRange(0, 999999);
+  const ok = document.execCommand("copy");
+  document.body.removeChild(temp);
+  if(!ok) throw new Error("copy failed");
+}
+function deleteTask(cat, index){
+  const data = getData();
+  data[cat].splice(index,1);
+  saveData(data);
+  if(editingKey === `${cat}-${index}`) editingKey = null;
+  if(expandedKey === `${cat}-${index}`) expandedKey = null;
+  render();
+}
+function setFilter(filter){
+  currentFilter = filter;
+  editingKey = null;
+  expandedKey = null;
+  const titles = {
+    pending:"Tareas pendientes",
+    done:"Tareas finalizadas",
+    planhoy:"Plan de trabajo hoy"
+  };
+  document.getElementById("cardsTitle").innerText = titles[filter] || "Tareas";
+  document.getElementById("cardsSection").style.display = "block";
+  renderCards();
+  document.getElementById("cardsSection").scrollIntoView({behavior:"smooth", block:"start"});
+}
+function hideCards(){
+  currentFilter = null;
+  editingKey = null;
+  expandedKey = null;
+  document.getElementById("cardsSection").style.display = "none";
+}
+function render(){
+  const all = getAllTasks();
+  renderProviders();
+  document.getElementById("totalTasks").innerText = all.length;
+  document.getElementById("pendingCount").innerText = all.filter(t=>!t.done).length;
+  document.getElementById("doneCount").innerText = all.filter(t=>t.done).length;
+  if(currentFilter){ renderCards(); }
+}
+function renderCards(){
+  const wrap = document.getElementById("cards");
+  const all = getAllTasks();
+  let filtered = [];
+  if(currentFilter === "pending") filtered = all.filter(t=>!t.done);
+  if(currentFilter === "done") filtered = all.filter(t=>t.done);
+  if(currentFilter === "planhoy") filtered = all.filter(t=>t.category === "planhoy");
+
+  if(filtered.length === 0){
+    wrap.innerHTML = '<div class="empty">Sin tareas.</div>';
+    return;
+  }
+
+  wrap.innerHTML = filtered.map(task => {
+    const key = `${task.category}-${task.index}`;
+    const isEditing = editingKey === key;
+    const isExpanded = expandedKey === key;
+    return `
+    <div class="task-card" onclick="toggleExpand('${task.category}', ${task.index})">
+      <div class="category">${escapeHtml(task.category === 'planhoy' ? 'Plan de trabajo hoy' : capitalize(task.category))}</div>
+      <div class="task-preview">${escapeHtml(isExpanded ? task.text : getPreviewText(task.text))}</div>
+      <div class="task-meta">
+        <span class="pill ${task.done ? 'done' : 'pending'}">${task.done ? 'Finalizada' : 'Pendiente'}</span>
+        ${task.idea ? '<span class="pill idea">Idea IA</span>' : ''}
+      </div>
+
+      ${isExpanded ? `
+      <div onclick="event.stopPropagation()">
+        <div class="card-actions">
+          <button class="${task.done ? 'warn' : 'green'}" onclick="toggleTask('${task.category}', ${task.index})">${task.done ? 'Marcar pendiente' : 'Marcar finalizada'}</button>
+          <button class="secondary" onclick="startEdit('${task.category}', ${task.index})">Editar tarea</button>
+          <button class="secondary" onclick="generatePrompt('${task.category}', ${task.index})">Convertir en prompt</button>
+          <button class="red" onclick="deleteTask('${task.category}', ${task.index})">Borrar</button>
+        </div>
+        ${isEditing ? `<div class="edit-box">
+          <h4>Editar tarea</h4>
+          <textarea id="edit-${task.category}-${task.index}">${escapeHtml(task.text)}</textarea>
+          <div class="card-actions">
+            <button class="green" onclick="saveEdit('${task.category}', ${task.index})">Guardar cambios</button>
+            <button class="secondary" onclick="cancelEdit()">Cancelar</button>
+          </div>
+        </div>` : ''}
+        ${task.prompt ? `<div class="prompt-box">
+          <h4>Prompt generado</h4>
+          <textarea readonly>${escapeHtml(task.prompt)}</textarea>
+          <div class="prompt-actions">
+            <button class="copy" onclick="copyPrompt('${task.category}', ${task.index})">Copiar prompt</button>
+            <span class="copy-msg" id="copy-msg-${task.category}-${task.index}"></span>
+          </div>
+        </div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join("");
+}
+
+
+function openPendingCategories(){
+  const all = getAllTasks().filter(t => !t.done);
+  const counts = {};
+  all.forEach(t => { counts[t.category] = (counts[t.category] || 0) + 1; });
+
+  const content = document.getElementById("pendingCategoriesContent");
+  const keys = Object.keys(counts);
+
+  if(keys.length === 0){
+    content.innerHTML = '<div class="empty">No hay tareas pendientes.</div>';
+  } else {
+    content.innerHTML = keys.map(cat => `
+      <div class="link-item">
+        <a href="#" onclick="openCategoryTasks(event, '${cat}')">${escapeHtml(capitalize(cat))}</a>
+        <span class="pill pending">${counts[cat]}</span>
+      </div>
+    `).join("");
+  }
+
+  document.getElementById("pendingCategoriesModal").style.display = "flex";
+}
+function closePendingCategories(){
+  document.getElementById("pendingCategoriesModal").style.display = "none";
+}
+function openCategoryTasks(event, cat){
+  event.preventDefault();
+  closePendingCategories();
+  setFilter('pending');
+  setTimeout(() => {
+    const cards = document.getElementById("cards");
+    const all = getAllTasks().filter(t => !t.done && t.category === cat);
+    document.getElementById("cardsTitle").innerText = "Pendientes — " + capitalize(cat);
+    if(all.length === 0){
+      cards.innerHTML = '<div class="empty">Sin tareas.</div>';
+      return;
+    }
+    cards.innerHTML = all.map(task => {
+      const key = `${task.category}-${task.index}`;
+      const isEditing = editingKey === key;
+      const isExpanded = expandedKey === key;
+      return `
+      <div class="task-card" onclick="toggleExpand('${task.category}', ${task.index})">
+        <div class="category">${escapeHtml(capitalize(task.category))}</div>
+        <div class="task-preview">${escapeHtml(isExpanded ? task.text : getPreviewText(task.text))}</div>
+        <div class="task-meta">
+          <span class="pill ${task.done ? 'done' : 'pending'}">${task.done ? 'Finalizada' : 'Pendiente'}</span>
+          ${task.idea ? '<span class="pill idea">Idea IA</span>' : ''}
+        </div>
+        ${isExpanded ? `
+        <div onclick="event.stopPropagation()">
+          <div class="card-actions">
+            <button class="${task.done ? 'warn' : 'green'}" onclick="toggleTask('${task.category}', ${task.index})">${task.done ? 'Marcar pendiente' : 'Marcar finalizada'}</button>
+            <button class="secondary" onclick="startEdit('${task.category}', ${task.index})">Editar tarea</button>
+            <button class="secondary" onclick="generatePrompt('${task.category}', ${task.index})">Convertir en prompt</button>
+            <button class="red" onclick="deleteTask('${task.category}', ${task.index})">Borrar</button>
+          </div>
+          ${isEditing ? `<div class="edit-box">
+            <h4>Editar tarea</h4>
+            <textarea id="edit-${task.category}-${task.index}">${escapeHtml(task.text)}</textarea>
+            <div class="card-actions">
+              <button class="green" onclick="saveEdit('${task.category}', ${task.index})">Guardar cambios</button>
+              <button class="secondary" onclick="cancelEdit()">Cancelar</button>
+            </div>
+          </div>` : ''}
+          ${task.prompt ? `<div class="prompt-box">
+            <h4>Prompt generado</h4>
+            <textarea readonly>${escapeHtml(task.prompt)}</textarea>
+            <div class="prompt-actions">
+              <button class="copy" onclick="copyPrompt('${task.category}', ${task.index})">Copiar prompt</button>
+              <span class="copy-msg" id="copy-msg-${task.category}-${task.index}"></span>
+            </div>
+          </div>` : ''}
+        </div>` : ''}
+      </div>`;
+    }).join("");
+  }, 0);
+}
+
+function openPlanHoy(){ setFilter("planhoy"); }
+function openRoadmap(){ document.getElementById("roadmapModal").style.display = "flex"; }
+function closeRoadmap(){ document.getElementById("roadmapModal").style.display = "none"; }
+function toggleIA(){ document.getElementById("iaPanel").classList.toggle("open"); }
+function pushAI(role, text){
+  const chat = document.getElementById("aiChat");
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  div.innerHTML = `<div class="msg-title">${role === 'ai' ? 'Asistente IA' : 'Tú'}</div>${escapeHtml(text)}`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+function aiStateSummary(){
+  const tasks = getAllTasks();
+  const pending = tasks.filter(t=>!t.done);
+  const done = tasks.filter(t=>t.done);
+  const byCat = {};
+  categories.forEach(c => byCat[c] = tasks.filter(t=>t.category===c).length);
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  return `Resumen actual:
+- Total tareas: ${tasks.length}
+- Pendientes: ${pending.length}
+- Finalizadas: ${done.length}
+- Categoría más cargada: ${capitalize(topCat[0])} (${topCat[1]})
+
+Foco recomendado:
+Cierra primero lo que desbloquea producto útil y repetición de uso.`;
+}
+function aiPriorities(){
+  const pending = getAllTasks().filter(t=>!t.done);
+  const order = ["desarrollo","diseno","seguridad","marketing","metricas","finanzas"];
+  const sorted = pending.sort((a,b)=>order.indexOf(a.category)-order.indexOf(b.category)).slice(0,5);
+  if(sorted.length===0) return "Ahora mismo no hay tareas pendientes.";
+  return `Prioridades sugeridas:
+${sorted.map((t,i)=>`${i+1}. ${capitalize(t.category)} — ${t.text}`).join("\n")}
+
+Criterio:
+Primero lo que mejora producto base, luego estabilidad, luego crecimiento.`;
+}
+function aiImprovements(){
+  return `Mejoras sugeridas:
+1. Define una tarea MVP crítica por categoría.
+2. Reduce tareas ambiguas y conviértelas en acciones concretas.
+3. Marca finalizadas en cuanto cierres algo para mantener foco visual.
+4. Usa [Idea IA] solo para ideas que merecen validación real.`;
+}
+function aiCreateIdeaFromText(text){
+  const lower = text.toLowerCase();
+  let category = "desarrollo";
+  if(lower.includes("marketing")) category = "marketing";
+  if(lower.includes("finanza")) category = "finanzas";
+  if(lower.includes("infra")) category = "diseno";
+  if(lower.includes("seguridad")) category = "seguridad";
+  if(lower.includes("métrica") || lower.includes("metrica")) category = "metricas";
+  const clean = text.replace(/crear tarea idea ia[:\-]*/i,'').trim() || "Nueva idea IA";
+  addTask(true, category, clean);
+  return `He creado una tarea en ${capitalize(category)} con prefijo [Idea IA].`;
+}
+function sendAI(){
+  const input = document.getElementById("aiInput");
+  const text = input.value.trim();
+  if(!text) return;
+  pushAI("user", text);
+  let reply = "";
+  const lower = text.toLowerCase();
+
+  if(lower.includes("resum")) reply = aiStateSummary();
+  else if(lower.includes("prior")) reply = aiPriorities();
+  else if(lower.includes("mejora")) reply = aiImprovements();
+  else if(lower.includes("crear tarea") || lower.includes("idea ia")) reply = aiCreateIdeaFromText(text);
+  else {
+    reply = `Te sugiero esto:
+- Si buscas claridad, usa "Resumir estado".
+- Si buscas foco, usa "Sugerir prioridades".
+- Si quieres una nueva línea de trabajo, pídeme "crear tarea idea IA: ..."
+
+Lectura rápida:
+${aiStateSummary()}`;
+  }
+
+  pushAI("ai", reply);
+  input.value = "";
+}
+function aiQuick(type){
+  if(type === "summary") pushAI("ai", aiStateSummary());
+  if(type === "priorities") pushAI("ai", aiPriorities());
+  if(type === "improvements") pushAI("ai", aiImprovements());
+}
+
+migrateLegacyData();
+render();
+
+const pendingModal = document.getElementById("pendingCategoriesModal");
+if (pendingModal) {
+  pendingModal.addEventListener("click", function(e){
+    if(e.target === this) closePendingCategories();
+  });
+}
+
+pushAI("ai","Listo. Estoy dentro del admin para asesorarte, resumir estado, sugerir prioridades y crear tareas [Idea IA].");
+</script>
+
+<div class="modal-backdrop" id="pendingCategoriesModal">
+  <div class="modal">
+    <h3>Categorías con tareas pendientes</h3>
+    <div id="pendingCategoriesContent"></div>
+    <div class="close-row"><button class="secondary" onclick="closePendingCategories()">Cerrar</button></div>
+  </div>
+</div>
+
+</body>
+</html>
