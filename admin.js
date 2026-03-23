@@ -300,9 +300,9 @@
   async function checkWorkerHealth() {
     var dot = document.getElementById('health-worker');
     try {
-      var res = await fetch(ADMIN_CONFIG.WORKER_URL, { method: 'GET', mode: 'cors' });
-      // 405 = worker online pero no acepta GET (normal, solo acepta POST)
-      dot.className = (res.ok || res.status === 405) ? 'health-dot green' : 'health-dot red';
+      // no-cors: si el servidor responde (aunque sea opaque), está online
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL, { method: 'HEAD', mode: 'no-cors' });
+      dot.className = 'health-dot green';
     } catch (e) {
       dot.className = 'health-dot red';
     }
