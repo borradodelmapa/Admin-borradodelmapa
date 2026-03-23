@@ -366,7 +366,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' })
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
           .then(reg => {
             console.log('✅ SW registrado', reg);
             // Detectar instalación

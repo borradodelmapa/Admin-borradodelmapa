@@ -3,15 +3,15 @@
    Caché offline + actualizaciones en background
    ═══════════════════════════════════════════ */
 
-const CACHE_NAME = 'admin-cache-v2';
+const CACHE_NAME = 'admin-cache-v3';
 const STATIC_ASSETS = [
-  '/admin/',
-  '/admin/index.html',
-  '/admin/admin.css',
-  '/admin/config.js',
-  '/admin/logo-admin.svg',
-  '/admin/manifest.json',
-  '/admin/sw.js'
+  '/',
+  '/index.html',
+  '/admin.css',
+  '/config.js',
+  '/logo-admin.svg',
+  '/manifest.json',
+  '/sw.js'
 ];
 // admin.js NO se cachea — siempre network-first
 
@@ -50,14 +50,14 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Solo cachear peticiones GET de admin
+  // Solo cachear peticiones GET
   if (request.method !== 'GET') {
     event.respondWith(fetch(request));
     return;
   }
 
   // admin.js: network-first (siempre actualizar)
-  if (url.pathname === '/admin/admin.js') {
+  if (url.pathname === '/admin.js') {
     event.respondWith(
       fetch(request)
         .then(response => {
@@ -71,12 +71,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Otros archivos locales: cache-first
-  if (url.pathname.startsWith('/admin/')) {
+  // Archivos locales del mismo origen: cache-first
+  if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(request)
         .then(response => response || fetch(request))
-        .catch(() => caches.match('/admin/index.html'))
+        .catch(() => caches.match('/index.html'))
     );
     return;
   }
@@ -84,7 +84,7 @@ self.addEventListener('fetch', event => {
   // APIs externas: network-first sin cachear
   event.respondWith(fetch(request).catch(() => {
     if (request.destination === 'document') {
-      return caches.match('/admin/index.html');
+      return caches.match('/index.html');
     }
   }));
 });
