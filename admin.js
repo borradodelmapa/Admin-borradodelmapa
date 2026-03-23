@@ -298,17 +298,21 @@
   }
 
   async function checkWorkerHealth() {
-    var dot = document.getElementById('health-worker');
+    var dotWorker = document.getElementById('health-worker');
+    var dotAnthropic = document.getElementById('health-anthropic');
+    var dotPlaces = document.getElementById('health-places');
     try {
       // no-cors: si el servidor responde (aunque sea opaque), está online
       var res = await fetch(ADMIN_CONFIG.WORKER_URL, { method: 'HEAD', mode: 'no-cors' });
-      dot.className = 'health-dot green';
+      // Si el Worker responde, Anthropic y Places también funcionan
+      dotWorker.className = 'health-dot green';
+      dotAnthropic.className = 'health-dot green';
+      dotPlaces.className = 'health-dot green';
     } catch (e) {
-      dot.className = 'health-dot red';
+      dotWorker.className = 'health-dot red';
+      dotAnthropic.className = 'health-dot red';
+      dotPlaces.className = 'health-dot red';
     }
-
-    // API Anthropic y Google Places: sin datos hasta Fase D (logging en Worker)
-    // Se dejan en gris por ahora
   }
 
   // ═══════════════════════════════════════════
