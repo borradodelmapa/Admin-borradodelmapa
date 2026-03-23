@@ -301,7 +301,8 @@
     var dot = document.getElementById('health-worker');
     try {
       var res = await fetch(ADMIN_CONFIG.WORKER_URL, { method: 'GET', mode: 'cors' });
-      dot.className = res.ok ? 'health-dot green' : 'health-dot red';
+      // 405 = worker online pero no acepta GET (normal, solo acepta POST)
+      dot.className = (res.ok || res.status === 405) ? 'health-dot green' : 'health-dot red';
     } catch (e) {
       dot.className = 'health-dot red';
     }
