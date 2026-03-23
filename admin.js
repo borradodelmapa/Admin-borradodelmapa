@@ -670,13 +670,31 @@
       });
     });
 
-    // Changelog
+    // Changelog — mostrar últimos 5, botón "Ver todo" para el resto
+    var allEntries = projectData.changelog || [];
+    var showAll = window._changelogShowAll || false;
+    var entriesToShow = showAll ? allEntries : allEntries.slice(0, 5);
+
     var clHtml = '<div class="changelog-list">';
-    (projectData.changelog || []).forEach(function(entry) {
+    entriesToShow.forEach(function(entry) {
       clHtml += '<div class="changelog-entry"><span class="changelog-date">' + entry.date + '</span><span>' + entry.change + '</span></div>';
     });
     clHtml += '</div>';
     document.getElementById('changelog').innerHTML = clHtml;
+
+    // Botón "Ver todo" si hay más de 5
+    var moreWrap = document.getElementById('changelog-more-wrap');
+    if (allEntries.length > 5) {
+      moreWrap.style.display = 'block';
+      var btn = document.getElementById('btn-changelog-more');
+      btn.textContent = showAll ? 'Ver menos' : 'Ver todo (' + allEntries.length + ')';
+      btn.onclick = function() {
+        window._changelogShowAll = !window._changelogShowAll;
+        renderProyecto();
+      };
+    } else {
+      moreWrap.style.display = 'none';
+    }
   }
 
   // ═══════════════════════════════════════════

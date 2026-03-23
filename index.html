@@ -265,16 +265,20 @@
       <section class="tab-content" id="tab-proyecto">
         <h2 class="section-title">Proyecto</h2>
 
-        <!-- Info del sistema -->
-        <div class="system-info" id="system-info"></div>
+        <!-- Changelog (primero) -->
+        <h3 class="subsection-title">Últimos cambios <button class="btn-sm" id="btn-add-changelog">+ Entrada</button></h3>
+        <div id="changelog"></div>
+        <div id="changelog-more-wrap" style="text-align:center;margin:12px 0;display:none;">
+          <button class="btn-sm secondary" id="btn-changelog-more">Ver todo</button>
+        </div>
 
         <!-- Roadmap -->
         <h3 class="subsection-title">Roadmap</h3>
         <div class="roadmap" id="roadmap"></div>
 
-        <!-- Changelog -->
-        <h3 class="subsection-title">Changelog <button class="btn-sm" id="btn-add-changelog">+ Entrada</button></h3>
-        <div id="changelog"></div>
+        <!-- Info del sistema (al final) -->
+        <h3 class="subsection-title">Info del sistema</h3>
+        <div class="system-info" id="system-info"></div>
       </section>
 
       <!-- Marketing -->
