@@ -151,6 +151,7 @@
       if (tabId === 'dashboard') {
         loadDashboard();
         updateSalmaMetric();
+        initDashChat();
       }
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'proyecto') loadProyecto();
@@ -1391,6 +1392,90 @@
 
     document.getElementById('chat-send').disabled = false;
     document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+  }
+
+  // ═══════════════════════════════════════════
+  //  MINI CHAT (Dashboard)
+  // ═══════════════════════════════════════════
+
+  var dashChatLoaded = false;
+  var dashChatHistory = [];
+
+  function initDashChat() {
+    if (dashChatLoaded) return;
+    dashChatLoaded = true;
+
+    document.getElementById('dash-chat-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      sendDashChat();
+    });
+
+    document.getElementById('dash-chat-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendDashChat();
+      }
+    });
+  }
+
+  async function sendDashChat() {
+    var input = document.getElementById('dash-chat-input');
+    var msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    var container = document.getElementById('dash-chat-messages');
+
+    // Mensaje del usuario
+    var userDiv = document.createElement('div');
+    userDiv.className = 'chat-msg user';
+    userDiv.textContent = msg;
+    container.appendChild(userDiv);
+
+    dashChatHistory.push({ role: 'user', content: msg });
+
+    // Pensando...
+    var thinkDiv = document.createElement('div');
+    thinkDiv.className = 'chat-msg thinking';
+    thinkDiv.textContent = 'Pensando...';
+    container.appendChild(thinkDiv);
+    container.scrollTop = container.scrollHeight;
+
+    document.getElementById('dash-chat-send').disabled = true;
+
+    try {
+      // Construir system prompt mínimo si no existe
+      if (!chatSystemPrompt) buildSystemPrompt();
+
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + ADMIN_CONFIG.ADMIN_CHAT_TOKEN,
+        },
+        body: JSON.stringify({
+          system: chatSystemPrompt,
+          messages: dashChatHistory,
+          model: 'claude-sonnet-4-6',
+        }),
+      });
+
+      var data = await res.json();
+
+      if (data.error) {
+        thinkDiv.textContent = 'Error: ' + data.error;
+      } else {
+        var reply = (data.content && data.content[0] && data.content[0].text) || 'Sin respuesta';
+        thinkDiv.textContent = reply;
+        thinkDiv.className = 'chat-msg assistant';
+        dashChatHistory.push({ role: 'assistant', content: reply });
+      }
+    } catch (err) {
+      thinkDiv.textContent = 'Error: ' + err.message;
+    }
+
+    document.getElementById('dash-chat-send').disabled = false;
+    container.scrollTop = container.scrollHeight;
   }
 
   // ═══════════════════════════════════════════

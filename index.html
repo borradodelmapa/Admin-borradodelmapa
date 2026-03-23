@@ -99,6 +99,18 @@
             <span class="metric-label">Errores hoy</span>
           </div>
         </div>
+
+        <!-- Mini chat rápido -->
+        <div style="margin-top:20px;">
+          <h3 class="subsection-title">Consulta rápida</h3>
+          <div id="dash-chat-messages" style="background:var(--bg-card);border-radius:8px;padding:12px;max-height:300px;overflow-y:auto;margin-bottom:8px;min-height:50px;">
+            <div style="color:var(--text-muted);font-size:13px;">Pregunta lo que necesites sobre el proyecto.</div>
+          </div>
+          <form id="dash-chat-form" style="display:flex;gap:8px;">
+            <input type="text" id="dash-chat-input" class="login-input" placeholder="Escribe tu consulta..." style="flex:1;padding:10px 12px;font-size:14px;margin:0;">
+            <button type="submit" class="btn-sm" id="dash-chat-send" style="padding:10px 16px;">Enviar</button>
+          </form>
+        </div>
       </section>
 
       <!-- Analytics -->
