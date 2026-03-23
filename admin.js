@@ -163,23 +163,36 @@
     }
   }
 
-  // Actualiza m-salma desde localStorage (se llena cuando se visita Salma)
-  function updateSalmaMetric() {
-    var logsToUse = window._salmaLogsCache;
-    if (!logsToUse || logsToUse.length === 0) {
+  // Actualiza m-salma — carga directamente de Firestore admin_logs
+  async function updateSalmaMetric() {
+    // 1. Intentar localStorage primero (instantáneo)
+    try {
+      var stored = localStorage.getItem('_salmaLogs');
+      if (stored) {
+        var logs = JSON.parse(stored);
+        var today = new Date().toISOString().slice(0, 10);
+        var count = logs.filter(function(l) {
+          return l.timestamp && l.timestamp.slice(0, 10) === today;
+        }).length;
+        document.getElementById('m-salma').textContent = count;
+      }
+    } catch(e) {}
+
+    // 2. Cargar desde Firestore (actualiza con dato fresco)
+    try {
+      var snap = await db.collection('admin_logs').orderBy('timestamp', 'desc').limit(500).get();
+      var salmaLogs = [];
+      snap.forEach(function(doc) { salmaLogs.push(doc.data()); });
+      window._salmaLogsCache = salmaLogs;
       try {
-        var stored = localStorage.getItem('_salmaLogs');
-        if (stored) logsToUse = JSON.parse(stored);
+        localStorage.setItem('_salmaLogs', JSON.stringify(salmaLogs));
       } catch(e) {}
-    }
-    if (logsToUse && logsToUse.length > 0) {
       var today = new Date().toISOString().slice(0, 10);
-      var count = logsToUse.filter(function(l) {
+      var count = salmaLogs.filter(function(l) {
         return l.timestamp && l.timestamp.slice(0, 10) === today;
       }).length;
-      var el = document.getElementById('m-salma');
-      if (el) el.textContent = count;
-    }
+      document.getElementById('m-salma').textContent = count;
+    } catch(e) {}
   }
 
   // ─── HAMBURGER ───
