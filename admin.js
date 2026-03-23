@@ -148,7 +148,10 @@
 
     // Cargar datos al entrar en la pestaña (solo si auth activo)
     if (db && firebase.auth().currentUser) {
-      if (tabId === 'dashboard') loadDashboard();
+      if (tabId === 'dashboard') {
+        loadDashboard();
+        updateSalmaMetric();
+      }
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'proyecto') loadProyecto();
       if (tabId === 'marketing') loadMarketing();
@@ -156,6 +159,26 @@
       if (tabId === 'analytics') loadAnalytics();
       if (tabId === 'salma') loadSalma();
       if (tabId === 'chat') loadChat();
+      if (tabId === 'settings') initSettings();
+    }
+  }
+
+  // Actualiza m-salma desde localStorage (se llena cuando se visita Salma)
+  function updateSalmaMetric() {
+    var logsToUse = window._salmaLogsCache;
+    if (!logsToUse || logsToUse.length === 0) {
+      try {
+        var stored = localStorage.getItem('_salmaLogs');
+        if (stored) logsToUse = JSON.parse(stored);
+      } catch(e) {}
+    }
+    if (logsToUse && logsToUse.length > 0) {
+      var today = new Date().toISOString().slice(0, 10);
+      var count = logsToUse.filter(function(l) {
+        return l.timestamp && l.timestamp.slice(0, 10) === today;
+      }).length;
+      var el = document.getElementById('m-salma');
+      if (el) el.textContent = count;
     }
   }
 
@@ -256,6 +279,9 @@
     } catch (err) {
       console.error('Error cargando métricas dashboard:', err);
     }
+
+    // Actualizar métrica Salma (función reutilizable)
+    updateSalmaMetric();
   }
 
   async function checkWorkerHealth() {
@@ -1032,6 +1058,10 @@
 
   var salmaLoaded = false;
   var salmaLogs = [];
+  // Inicializar caché global vacío
+  if (!window._salmaLogsCache) {
+    window._salmaLogsCache = [];
+  }
 
   function loadSalma() {
     if (salmaLoaded) return;
@@ -1044,7 +1074,15 @@
       loadSalma();
     });
 
-    fetchSalmaLogs();
+    // Si hay caché en memoria, usarlo. Si no, cargar desde Firestore
+    if (window._salmaLogsCache && window._salmaLogsCache.length > 0) {
+      salmaLogs = window._salmaLogsCache;
+      renderSalmaMetrics();
+      renderSalmaTable();
+      renderSalmaAlerts();
+    } else {
+      fetchSalmaLogs();
+    }
   }
 
   async function fetchSalmaLogs() {
@@ -1070,9 +1108,26 @@
         });
       });
 
+      // Guardar en localStorage y caché global
+      window._salmaLogsCache = salmaLogs;
+      try {
+        localStorage.setItem('_salmaLogs', JSON.stringify(salmaLogs));
+        localStorage.setItem('_salmaLogsTime', new Date().toISOString());
+      } catch(e) {}
+
       renderSalmaMetrics();
       renderSalmaTable();
       renderSalmaAlerts();
+
+      // Actualizar métrica en el dashboard si está cargado
+      var salmaMetricEl = document.getElementById('m-salma');
+      if (salmaMetricEl) {
+        var today = new Date().toISOString().slice(0, 10);
+        var salmaCalls = salmaLogs.filter(function(log) {
+          return log.timestamp && log.timestamp.slice(0, 10) === today;
+        }).length;
+        salmaMetricEl.textContent = salmaCalls;
+      }
     } catch (err) {
       console.error('Error cargando logs Salma:', err);
       tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);padding:20px;text-align:center;">Sin logs disponibles: ' + err.message + '</td></tr>';
@@ -1311,6 +1366,45 @@
 
     document.getElementById('chat-send').disabled = false;
     document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+  }
+
+  // ═══════════════════════════════════════════
+  //  CONFIGURACIÓN (Settings)
+  // ═══════════════════════════════════════════
+
+  function initSettings() {
+    var btnClear = document.getElementById('btn-clear-cache');
+    if (!btnClear) return;
+
+    btnClear.addEventListener('click', async function() {
+      btnClear.disabled = true;
+      btnClear.textContent = 'Limpiando...';
+      var statusDiv = document.getElementById('cache-status');
+      statusDiv.style.display = 'block';
+      statusDiv.textContent = 'Limpiando caché...';
+
+      try {
+        if ('caches' in window) {
+          var cacheNames = await caches.keys();
+          var promises = cacheNames.map(function(cacheName) {
+            return caches.delete(cacheName);
+          });
+          await Promise.all(promises);
+          statusDiv.textContent = '✅ Caché limpiado. Recargando...';
+          setTimeout(function() {
+            window.location.reload();
+          }, 1000);
+        } else {
+          statusDiv.textContent = '❌ No se puede limpiar el caché en este navegador';
+          btnClear.disabled = false;
+          btnClear.textContent = 'Limpiar caché y recargar';
+        }
+      } catch (err) {
+        statusDiv.textContent = '❌ Error: ' + err.message;
+        btnClear.disabled = false;
+        btnClear.textContent = 'Limpiar caché y recargar';
+      }
+    });
   }
 
   // ═══════════════════════════════════════════

@@ -3,17 +3,17 @@
    Caché offline + actualizaciones en background
    ═══════════════════════════════════════════ */
 
-const CACHE_NAME = 'admin-cache-v1';
+const CACHE_NAME = 'admin-cache-v2';
 const STATIC_ASSETS = [
   '/admin/',
   '/admin/index.html',
-  '/admin/admin.js',
   '/admin/admin.css',
   '/admin/config.js',
   '/admin/logo-admin.svg',
   '/admin/manifest.json',
   '/admin/sw.js'
 ];
+// admin.js NO se cachea — siempre network-first
 
 // ─── INSTALL ───
 self.addEventListener('install', event => {
@@ -56,7 +56,22 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Archivos locales: cache-first
+  // admin.js: network-first (siempre actualizar)
+  if (url.pathname === '/admin/admin.js') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response && response.status === 200) {
+            return response;
+          }
+          return caches.match(request);
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Otros archivos locales: cache-first
   if (url.pathname.startsWith('/admin/')) {
     event.respondWith(
       caches.match(request)

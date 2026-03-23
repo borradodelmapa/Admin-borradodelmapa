@@ -36,7 +36,8 @@ const ADMIN_CONFIG = {
     { id: 'proyecto',     label: 'Proyecto',       icon: '🗂️' },
     { id: 'marketing',    label: 'Marketing',      icon: '📣' },
     { id: 'contabilidad', label: 'Contabilidad',   icon: '💰' },
-    { id: 'chat',         label: 'Chat',           icon: '💬' }
+    { id: 'chat',         label: 'Chat',           icon: '💬' },
+    { id: 'settings',     label: 'Configuración',  icon: '⚙️' }
   ],
 
   // Precios de modelos Anthropic (€ por millón de tokens)

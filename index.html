@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Admin BDM">
   <title>Admin — Borrado del Mapa</title>
-  <link rel="icon" href="logo-admin.svg">
+  <link rel="icon" href="../favicon.ico">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="admin.css">
   <!-- Firebase 8.10.1 -->
@@ -340,6 +340,18 @@
           <textarea class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
           <button type="submit" class="chat-send" id="chat-send">Enviar</button>
         </form>
+      </section>
+
+      <!-- Configuración -->
+      <section class="tab-content" id="tab-settings">
+        <h2 class="section-title">Configuración</h2>
+
+        <div style="background: rgba(67, 97, 238, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+          <h3 class="subsection-title">Caché de la aplicación</h3>
+          <p style="color: #aaa; margin-bottom: 16px; font-size: 14px;">El Service Worker cachea los archivos para que funcione offline. Si has actualizado la app y no ves los cambios, limpia el caché.</p>
+          <button class="btn-sm danger" id="btn-clear-cache">Limpiar caché y recargar</button>
+          <div id="cache-status" style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; font-size: 13px; display: none;"></div>
+        </div>
       </section>
 
     </main>
