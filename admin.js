@@ -561,7 +561,9 @@
     // Roadmap
     var roadmapHtml = '';
     var phases = projectData.phases || {};
-    Object.keys(phases).forEach(function(phaseId) {
+    var phaseOrder = ['F1', 'F2', 'F3', 'F4'];
+    phaseOrder.forEach(function(phaseId) {
+      if (!phases[phaseId]) return;
       var phase = phases[phaseId];
       var tasks = phase.tasks || [];
       var doneCount = tasks.filter(function(t) { return t.status === 'done'; }).length;
