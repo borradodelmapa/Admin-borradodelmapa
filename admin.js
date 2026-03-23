@@ -313,20 +313,37 @@
   }
 
   async function checkWorkerHealth() {
-    var dotWorker = document.getElementById('health-worker');
-    var dotAnthropic = document.getElementById('health-anthropic');
-    var dotPlaces = document.getElementById('health-places');
+    var dots = {
+      worker: document.getElementById('health-worker'),
+      anthropic: document.getElementById('health-anthropic'),
+      google_places: document.getElementById('health-places'),
+      booking_hotels: document.getElementById('health-booking-hotels'),
+      booking_cars: document.getElementById('health-booking-cars'),
+      duffel_flights: document.getElementById('health-duffel')
+    };
+
+    // Poner todos en gris mientras carga
+    Object.values(dots).forEach(function(d) { if (d) d.className = 'health-dot grey'; });
+
     try {
-      // no-cors: si el servidor responde (aunque sea opaque), está online
-      var res = await fetch(ADMIN_CONFIG.WORKER_URL, { method: 'HEAD', mode: 'no-cors' });
-      // Si el Worker responde, Anthropic y Places también funcionan
-      dotWorker.className = 'health-dot green';
-      dotAnthropic.className = 'health-dot green';
-      dotPlaces.className = 'health-dot green';
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/health');
+      var data = await res.json();
+
+      // Worker siempre ok si llegamos aquí
+      if (dots.worker) dots.worker.className = 'health-dot green';
+
+      // Cada API individual
+      var checks = data.checks || {};
+      Object.keys(dots).forEach(function(key) {
+        if (key === 'worker') return;
+        var check = checks[key];
+        if (dots[key] && check) {
+          dots[key].className = 'health-dot ' + (check.status === 'ok' ? 'green' : 'red');
+          dots[key].title = check.status === 'ok' ? check.ms + 'ms' : (check.error || 'Error ' + check.code);
+        }
+      });
     } catch (e) {
-      dotWorker.className = 'health-dot red';
-      dotAnthropic.className = 'health-dot red';
-      dotPlaces.className = 'health-dot red';
+      Object.values(dots).forEach(function(d) { if (d) d.className = 'health-dot red'; });
     }
   }
 
