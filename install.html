@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Admin BDM">
+  <title>Instalar Admin</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logo-admin.svg">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui;
+      background: #1a1a2e;
+      color: #fff;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container { max-width: 500px; text-align: center; }
+    h1 { font-size: 32px; margin-bottom: 10px; color: #d4a017; }
+    p { font-size: 16px; color: #aaa; margin-bottom: 30px; line-height: 1.6; }
+    button {
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button:disabled { background: #666; opacity: 0.5; cursor: not-allowed; }
+    button:hover:not(:disabled) { background: #3a4fc9; }
+    .secondary {
+      background: transparent;
+      border: 2px solid #4361ee;
+      color: #4361ee;
+    }
+    .secondary:hover:not(:disabled) { background: rgba(67, 97, 238, 0.1); }
+    .info {
+      font-size: 14px;
+      color: #aaa;
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(67, 97, 238, 0.1);
+      border-radius: 6px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 Admin BDM</h1>
+    <p>Instala el panel de administración</p>
+
+    <button id="install-btn" disabled>🎯 Instalar en pantalla de inicio</button>
+    <button class="secondary" onclick="window.location.href='/admin/'">➜ Ir a Admin</button>
+
+    <div class="info" id="info">Cargando...</div>
+  </div>
+
+  <script>
+    let deferredPrompt = null;
+    const btn = document.getElementById('install-btn');
+    const info = document.getElementById('info');
+
+    // Registrar SW
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js', { scope: '/admin/' })
+        .then(r => console.log('SW OK:', r.scope))
+        .catch(e => console.error('SW error:', e));
+    }
+
+    // Captar beforeinstallprompt
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      btn.disabled = false;
+      info.innerHTML = '✅ <strong>¡Listo para instalar!</strong><br>Toca el botón para añadirlo a tu pantalla de inicio.';
+    });
+
+    // Detectar instalación
+    window.addEventListener('appinstalled', () => {
+      btn.disabled = true;
+      btn.textContent = '✅ Instalada';
+      info.innerHTML = '¡Ya está en tu pantalla de inicio!';
+    });
+
+    // Click instalar
+    btn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          btn.disabled = true;
+          info.innerHTML = '✅ ¡Instalada correctamente!<br>Puedes cerrar esta página.';
+        }
+      }
+    });
+
+    // Fallback: pasos manuales
+    setTimeout(() => {
+      if (!deferredPrompt) {
+        const ua = navigator.userAgent;
+        let steps = '';
+
+        if (/iPhone|iPad/.test(ua)) {
+          steps = '📲 <strong>iPhone/iPad:</strong><br>1. Toca Compartir (↗️)<br>2. "Añadir a pantalla de inicio"';
+        } else if (/Android/.test(ua)) {
+          steps = '📱 <strong>Android:</strong><br>1. Tapa ⋮ (menú)<br>2. "Instalar aplicación"';
+        } else {
+          steps = '💻 Usa el menú de tu navegador para instalar.';
+        }
+
+        info.innerHTML = `⏳ <strong>Si el botón no funciona:</strong><br>${steps}`;
+      }
+    }, 2000);
+  </script>
+</body>
+</html>
