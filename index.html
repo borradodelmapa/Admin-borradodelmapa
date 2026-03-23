@@ -43,7 +43,7 @@
     <!-- Header -->
     <header class="header">
       <div class="header-inner">
-        <img src="logo-admin.svg" alt="Borrado del Mapa" class="header-logo">
+        <img src="logo-admin.svg" alt="Borrado del Mapa" class="header-logo" id="header-logo" style="cursor:pointer">
 
         <!-- Tabs desktop -->
         <nav class="tabs-desktop" id="tabs-desktop"></nav>
@@ -366,7 +366,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' })
           .then(reg => {
             console.log('✅ SW registrado', reg);
             // Detectar instalación

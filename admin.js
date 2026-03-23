@@ -195,6 +195,13 @@
     } catch(e) {}
   }
 
+  // ─── LOGO → DASHBOARD ───
+
+  document.getElementById('header-logo').addEventListener('click', function() {
+    navigateTo('dashboard');
+    closeMobileMenu();
+  });
+
   // ─── HAMBURGER ───
 
   hamburger.addEventListener('click', function(e) {
