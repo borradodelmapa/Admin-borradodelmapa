@@ -203,6 +203,13 @@
     closeMobileMenu();
   });
 
+  // ─── ACCESO RÁPIDO PROYECTO ───
+
+  document.getElementById('btn-quick-proyecto').addEventListener('click', function() {
+    navigateTo('proyecto');
+    closeMobileMenu();
+  });
+
   // ─── HAMBURGER ───
 
   hamburger.addEventListener('click', function(e) {
