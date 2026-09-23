@@ -793,7 +793,8 @@
     if (valueEl) valueEl.className = 'metric-value' + (lvl ? ' ' + lvl : '');
   }
 
-  function gastosRow(name, eur, sub, pct) {
+  // `share`: la barra reparte el total entre servicios (no mide peligro), así que va en un color neutro y nunca en rojo.
+  function gastosRow(name, eur, sub, pct, share) {
     var row = document.createElement('div');
     row.className = 'g-row';
     var top = document.createElement('div');
@@ -805,7 +806,7 @@
     if (typeof pct === 'number') {
       var bar = document.createElement('div'); bar.className = 'bar';
       var fill = document.createElement('div'); fill.className = 'bar-fill';
-      gastosBar(fill, null, pct);
+      if (share) { fill.style.width = Math.min(100, Math.max(0, pct)) + '%'; fill.className = 'bar-fill share'; } else gastosBar(fill, null, pct);
       bar.appendChild(fill); row.appendChild(bar);
     }
     return row;
@@ -893,7 +894,7 @@
     }).sort(function(a, b) { return b.eur - a.eur; });
     if (!rows.length) serv.appendChild(gastosRow('Sin llamadas a Google hoy', fmtEur(0), '', null));
     rows.forEach(function(r) {
-      serv.appendChild(gastosRow(labels[r.k] || r.k, fmtEur(r.eur), r.n + ' llamadas · ' + fmtEur(unit[r.k]) + ' cada una (precio de lista)', today.eur ? (r.eur / today.eur) * 100 : 0));
+      serv.appendChild(gastosRow(labels[r.k] || r.k, fmtEur(r.eur), r.n + ' llamadas · ' + fmtEur(unit[r.k]) + ' cada una (precio de lista)', today.eur ? (r.eur / today.eur) * 100 : 0, true));
     });
 
     // Candados en Google Cloud (informativo, viene de config.js)
@@ -929,7 +930,7 @@
       document.getElementById('gr-mes-label').textContent = 'Este mes' + (d.month.credits ? ' · créditos ' + fmtEur(-d.month.credits) : '');
       var sku = document.getElementById('gr-sku'); sku.innerHTML = '';
       if (!d.by_sku.length) sku.appendChild(gastosRow('Sin gasto este mes', '—', '', null));
-      d.by_sku.forEach(function(s) { sku.appendChild(gastosRow(s.name, fmtEur(s.eur), '', d.month.eur > 0 ? Math.min(100, s.eur / d.month.eur * 100) : null)); });
+      d.by_sku.forEach(function(s) { sku.appendChild(gastosRow(s.name, fmtEur(s.eur), '', d.month.eur > 0 ? Math.min(100, s.eur / d.month.eur * 100) : null, true)); });
       var dias = document.getElementById('gr-dias'); dias.innerHTML = '';
       d.days.forEach(function(x, i) { dias.appendChild(gastosRow(gastosDayLabel(x.day, i), fmtEur(x.eur), '', null)); });
       if (d.last_usage_at) document.getElementById('gr-note').textContent = 'Es lo que Google cobra de verdad (neto de créditos). Último dato de Google: ' + new Date(d.last_usage_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '. El dato de hoy siempre está incompleto.';
