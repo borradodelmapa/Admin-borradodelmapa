@@ -323,13 +323,14 @@
     $('rs-nota').textContent = falta.length ? 'No se pudo leer: ' + falta.join(', ') + '. Entra en su pestaña para ver el motivo.' : 'Los gastos son estimaciones (Google a precios de lista, Claude por tokens); los ingresos son brutos de Stripe' + (rev.mode === 'test' ? ' en MODO PRUEBA (no es dinero real)' : '') + '. No incluye Duffel, RapidAPI, Twilio ni otros proveedores.';
   }
 
-  var HEALTH_LABELS = { worker: 'Worker', openai: 'OpenAI', google_places: 'Google Places', booking_hotels: 'Hotels', booking_cars: 'Cars', duffel_flights: 'Flights' };
+  var HEALTH_LABELS = { worker: 'Worker', anthropic: 'Anthropic', openai: 'OpenAI', google_places: 'Google Places', booking_hotels: 'Hotels', booking_cars: 'Cars', duffel_flights: 'Flights' };
 
   // Comprueba la salud del Worker y repinta los puntos del Dashboard. `force` pide una comprobación REAL (?force=1); sin él el
   // Worker responde con la última guardada (<10 min) para no gastar llamadas de pago cada vez. Devuelve un resumen.
   async function checkWorkerHealth(force) {
     var dots = {
       worker: document.getElementById('health-worker'),
+      anthropic: document.getElementById('health-anthropic'),
       openai: document.getElementById('health-openai'),
       google_places: document.getElementById('health-places'),
       booking_hotels: document.getElementById('health-booking-hotels'),
