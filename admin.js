@@ -288,12 +288,12 @@
     var rev = null, gg = null, st = null;
     await Promise.all([
       getJson('/admin/revenue').then(function(x) { rev = x; }).catch(function() {}),
-      getJson('/admin/google-usage').then(function(x) { gg = x; }).catch(function() {}),
+      googleMonthCost().then(function(x) { gg = x; }),
       fetchAdminStats().then(function(x) { st = x; }).catch(function() {})
     ]);
 
     var ingresos = rev ? rev.totals.month : null;
-    var googleEur = (gg && gg.month && typeof gg.month.eur === 'number') ? gg.month.eur : null;
+    var googleEur = gg ? gg.eur : null;
     var claudeEur = (st && st.totals && typeof st.totals.claude_usd === 'number') ? st.totals.claude_usd * USD_TO_EUR : null;
 
     if (ingresos !== null) {
@@ -303,7 +303,7 @@
 
     if (googleEur !== null || claudeEur !== null) {
       $('rs-gastos').textContent = fmtEur((googleEur || 0) + (claudeEur || 0));
-      $('rs-gastos-label').textContent = 'Gastos est. · Google ' + (googleEur === null ? '—' : fmtEur(googleEur)) + ' + Claude ' + (claudeEur === null ? '—' : fmtEur(claudeEur));
+      $('rs-gastos-label').textContent = (gg && gg.real ? 'Gastos · Google REAL ' : 'Gastos est. · Google ') + (googleEur === null ? '—' : fmtEur(googleEur)) + ' + Claude ' + (claudeEur === null ? '—' : fmtEur(claudeEur));
     } else { $('rs-gastos').textContent = '—'; $('rs-gastos-label').textContent = 'Gastos estimados · sin datos'; }
 
     var mEl = $('rs-margen');
@@ -686,7 +686,53 @@
     document.getElementById('g-updated').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
 
-  async function loadGastos() {
+  // Coste REAL de Google (GET /admin/google-real, lee la exportación de facturación de BigQuery). Devuelve el JSON o lanza
+  // un Error con el aviso ya redactado para Paco según el código que devuelva el Worker.
+  async function fetchGoogleReal(force) {
+    var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-real' + (force ? '?force=1' : ''), { headers: await adminAuthHeaders(), cache: 'no-store' });
+    var d = await res.json().catch(function() { return {}; });
+    if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+    if (!res.ok) {
+      if (d.code === 'no_permission') throw new Error('Google aún no ha activado el permiso de lectura de la facturación (puede tardar unos minutos). Reintenta con "Actualizar".');
+      if (d.code === 'no_table') throw new Error('La tabla de facturación todavía no existe: Google la crea unas horas después de activar la exportación. Mañana debería estar.');
+      throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
+    }
+    return d;
+  }
+
+  async function loadGoogleReal(force) {
+    var box = document.getElementById('gr-error');
+    box.style.display = 'none';
+    try {
+      var d = await fetchGoogleReal(force);
+      document.getElementById('gr-hoy').textContent = fmtEur(d.today);
+      document.getElementById('gr-ayer').textContent = fmtEur(d.yesterday);
+      document.getElementById('gr-mes').textContent = fmtEur(d.month.eur);
+      document.getElementById('gr-mes-label').textContent = 'Este mes' + (d.month.credits ? ' · créditos ' + fmtEur(-d.month.credits) : '');
+      var sku = document.getElementById('gr-sku'); sku.innerHTML = '';
+      if (!d.by_sku.length) sku.appendChild(gastosRow('Sin gasto este mes', '—', '', null));
+      d.by_sku.forEach(function(s) { sku.appendChild(gastosRow(s.name, fmtEur(s.eur), '', d.month.eur > 0 ? Math.min(100, s.eur / d.month.eur * 100) : null)); });
+      var dias = document.getElementById('gr-dias'); dias.innerHTML = '';
+      d.days.forEach(function(x, i) { dias.appendChild(gastosRow(gastosDayLabel(x.day, i), fmtEur(x.eur), '', null)); });
+      if (d.last_usage_at) document.getElementById('gr-note').textContent = 'Es lo que Google cobra de verdad (neto de créditos). Último dato de Google: ' + new Date(d.last_usage_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '. El dato de hoy siempre está incompleto.';
+    } catch (e) {
+      box.textContent = (e && e.message) ? e.message : 'No se pudo leer el coste real.';
+      box.style.display = 'block';
+    }
+  }
+
+  // Coste de Google de este mes para los márgenes: el REAL si ya está disponible, si no la estimación del Worker.
+  async function googleMonthCost() {
+    try { var r = await fetchGoogleReal(false); return { eur: r.month.eur, real: true }; } catch (e) {}
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-usage', { headers: await adminAuthHeaders(), cache: 'no-store' });
+      if (res.ok) { var j = await res.json(); if (j.month && typeof j.month.eur === 'number') return { eur: j.month.eur, real: false }; }
+    } catch (e) {}
+    return null;
+  }
+
+  async function loadGastos(ev) {
+    loadGoogleReal(!!(ev && ev.type === 'click'));
     if (!gastosWired) {
       gastosWired = true;
       document.getElementById('g-refresh').addEventListener('click', loadGastos);
@@ -943,11 +989,8 @@
       });
 
       // Margen estimado del mes: ingresos sin IVA − Google estimado − Claude estimado (si alguno de los dos costes falla, se dice)
-      var googleEur = null, claudeEur = null;
-      try {
-        var gr = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-usage', { headers: await adminAuthHeaders(), cache: 'no-store' });
-        if (gr.ok) { var gj = await gr.json(); if (gj.month && typeof gj.month.eur === 'number') googleEur = gj.month.eur; }
-      } catch (e) {}
+      var googleEur = null, claudeEur = null, googleReal = false;
+      var gm = await googleMonthCost(); if (gm) { googleEur = gm.eur; googleReal = gm.real; }
       try { var st = await fetchAdminStats(); if (st.totals && typeof st.totals.claude_usd === 'number') claudeEur = st.totals.claude_usd * USD_TO_EUR; } catch (e) {}
       var mEl = document.getElementById('r-margen'), mLabel = document.getElementById('r-margen-label');
       if (googleEur === null && claudeEur === null) {
@@ -955,7 +998,7 @@
       } else {
         var neto = t.month / IVA, margen = neto - (googleEur || 0) - (claudeEur || 0);
         mEl.textContent = fmtEur(margen); mEl.className = 'metric-value' + (margen < 0 ? ' danger' : '');
-        mLabel.textContent = 'Margen est. del mes · ' + fmtEur(neto) + ' sin IVA − Google ' + fmtEur(googleEur || 0) + ' − Claude ' + fmtEur(claudeEur || 0) + (googleEur === null || claudeEur === null ? ' (falta un coste)' : '');
+        mLabel.textContent = 'Margen est. del mes · ' + fmtEur(neto) + ' sin IVA − Google' + (googleReal ? ' (real) ' : ' ') + fmtEur(googleEur || 0) + ' − Claude ' + fmtEur(claudeEur || 0) + (googleEur === null || claudeEur === null ? ' (falta un coste)' : '');
       }
       document.getElementById('r-updated').textContent = 'Actualizado a las ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     } catch (err) {
