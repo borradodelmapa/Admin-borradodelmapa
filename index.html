@@ -12,7 +12,7 @@
   <title>Admin — Borrado del Mapa</title>
   <link rel="icon" href="../favicon.ico">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="admin.css?v=2026-09-23.3">
+  <link rel="stylesheet" href="admin.css?v=2026-09-23.4">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -91,6 +91,49 @@
             <span class="metric-label">Rutas creadas</span>
             <span class="metric-trend" id="m-rutas-trend"></span>
           </div>
+        </div>
+      </section>
+
+      <!-- Gastos en Google -->
+      <section class="tab-content" id="tab-gastos">
+        <h2 class="section-title">Gastos en Google</h2>
+        <p class="gastos-note">Estimación propia del Worker a precios de lista de Google: se adelanta a la factura real (Google aplica cupos gratis). Al llegar a los topes, el Worker deja de llamar a Google.</p>
+
+        <div class="metrics-grid" id="gastos-cards">
+          <div class="metric-card">
+            <span class="metric-icon">📅</span>
+            <span class="metric-value" id="g-hoy">—</span>
+            <span class="metric-label" id="g-hoy-label">Hoy</span>
+            <div class="bar"><div class="bar-fill" id="g-hoy-bar"></div></div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">🗓️</span>
+            <span class="metric-value" id="g-mes">—</span>
+            <span class="metric-label" id="g-mes-label">Este mes</span>
+            <div class="bar"><div class="bar-fill" id="g-mes-bar"></div></div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">📞</span>
+            <span class="metric-value" id="g-llamadas">—</span>
+            <span class="metric-label">Llamadas a Google hoy</span>
+          </div>
+        </div>
+
+        <div id="g-error" class="gastos-error" style="display:none;"></div>
+
+        <h3 class="subsection-title">Últimos 8 días</h3>
+        <div id="g-dias" class="gastos-list"></div>
+
+        <h3 class="subsection-title">Hoy por servicio</h3>
+        <div id="g-servicios" class="gastos-list"></div>
+
+        <h3 class="subsection-title">Candados en Google Cloud</h3>
+        <p class="gastos-note">Cuotas diarias que corta Google aunque el Worker fallara. Se cambian en Google Maps Platform → Cuotas.</p>
+        <div id="g-cuotas" class="gastos-list"></div>
+
+        <div class="gastos-foot">
+          <button class="btn-sm" id="g-refresh">Actualizar</button>
+          <span id="g-updated" class="gastos-note"></span>
         </div>
       </section>
 
@@ -211,12 +254,12 @@
   </div>
 
   <!-- Versión visible: panel + Worker (se rellena en admin.js) -->
-  <div class="version-badge" id="version-badge">Panel 2026-09-23.3</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-23.4</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-23.3"></script>
-  <script src="admin.js?v=2026-09-23.3"></script>
+  <script src="config.js?v=2026-09-23.4"></script>
+  <script src="admin.js?v=2026-09-23.4"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>

@@ -172,6 +172,7 @@
       if (tabId === 'dashboard') {
         loadDashboard();
       }
+      if (tabId === 'gastos') loadGastos();
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'analytics') loadAnalytics();
       if (tabId === 'settings') initSettings();
@@ -504,6 +505,128 @@
     document.getElementById('mu-7d').textContent = recent7;
     document.getElementById('mu-30d').textContent = recent30;
     document.getElementById('mu-avg-rutas').textContent = avgMaps;
+  }
+
+  // ═══════════════════════════════════════════
+  //  GASTOS EN GOOGLE (estimación del Worker: GET /admin/google-usage)
+  // ═══════════════════════════════════════════
+
+  var gastosWired = false;
+
+  function fmtEur(n) {
+    return (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  }
+
+  // Verde hasta el 60 %, ámbar hasta el 90 %, rojo a partir de ahí
+  function gastosLevel(pct) { return pct >= 90 ? 'danger' : (pct >= 60 ? 'warn' : ''); }
+
+  function gastosBar(barEl, valueEl, pct) {
+    var lvl = gastosLevel(pct);
+    barEl.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    barEl.className = 'bar-fill' + (lvl ? ' ' + lvl : '');
+    if (valueEl) valueEl.className = 'metric-value' + (lvl ? ' ' + lvl : '');
+  }
+
+  function gastosRow(name, eur, sub, pct) {
+    var row = document.createElement('div');
+    row.className = 'g-row';
+    var top = document.createElement('div');
+    top.className = 'g-row-top';
+    var n = document.createElement('span'); n.className = 'g-row-name'; n.textContent = name;
+    var e = document.createElement('span'); e.className = 'g-row-eur'; e.textContent = eur;
+    top.appendChild(n); top.appendChild(e); row.appendChild(top);
+    if (sub) { var s = document.createElement('div'); s.className = 'g-row-sub'; s.textContent = sub; row.appendChild(s); }
+    if (typeof pct === 'number') {
+      var bar = document.createElement('div'); bar.className = 'bar';
+      var fill = document.createElement('div'); fill.className = 'bar-fill';
+      gastosBar(fill, null, pct);
+      bar.appendChild(fill); row.appendChild(bar);
+    }
+    return row;
+  }
+
+  function gastosDayLabel(iso, i) {
+    if (i === 0) return 'Hoy';
+    if (i === 1) return 'Ayer';
+    var d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' });
+  }
+
+  function gastosShowError(msg) {
+    var box = document.getElementById('g-error');
+    box.textContent = msg;
+    box.style.display = msg ? 'block' : 'none';
+  }
+
+  function renderGastos(data) {
+    var caps = data.caps || {};
+    var dayCap = Number(caps.daily_eur) || 0, monCap = Number(caps.monthly_eur) || 0;
+    var days = data.days || [];
+    var today = days[0] || { eur: 0, calls: {} };
+    var unit = data.unit_eur || {};
+    var labels = ADMIN_CONFIG.GOOGLE_SERVICE_LABELS || {};
+
+    // Tarjetas: hoy y mes, con barra frente al tope
+    var hoyPct = dayCap ? (today.eur / dayCap) * 100 : 0;
+    document.getElementById('g-hoy').textContent = fmtEur(today.eur);
+    document.getElementById('g-hoy-label').textContent = 'Hoy · tope ' + fmtEur(dayCap) + ' (' + Math.round(hoyPct) + ' %)';
+    gastosBar(document.getElementById('g-hoy-bar'), document.getElementById('g-hoy'), hoyPct);
+
+    var monEur = (data.month && data.month.eur) || 0;
+    var monPct = monCap ? (monEur / monCap) * 100 : 0;
+    document.getElementById('g-mes').textContent = fmtEur(monEur);
+    document.getElementById('g-mes-label').textContent = 'Este mes · tope ' + fmtEur(monCap) + ' (' + Math.round(monPct) + ' %)';
+    gastosBar(document.getElementById('g-mes-bar'), document.getElementById('g-mes'), monPct);
+
+    var nCalls = Object.keys(today.calls || {}).reduce(function(a, k) { return a + (today.calls[k] || 0); }, 0);
+    document.getElementById('g-llamadas').textContent = nCalls;
+
+    // Últimos 8 días
+    var dias = document.getElementById('g-dias');
+    dias.innerHTML = '';
+    days.forEach(function(d, i) {
+      var calls = Object.keys(d.calls || {}).sort(function(a, b) { return (d.calls[b] || 0) - (d.calls[a] || 0); })
+        .map(function(k) { return (labels[k] || k) + ' ' + d.calls[k]; }).join(' · ');
+      dias.appendChild(gastosRow(gastosDayLabel(d.day, i), fmtEur(d.eur), calls || 'sin llamadas', dayCap ? (d.eur / dayCap) * 100 : 0));
+    });
+
+    // Hoy por servicio (coste estimado = llamadas × precio unitario), de mayor a menor
+    var serv = document.getElementById('g-servicios');
+    serv.innerHTML = '';
+    var rows = Object.keys(today.calls || {}).map(function(k) {
+      return { k: k, n: today.calls[k] || 0, eur: (today.calls[k] || 0) * (Number(unit[k]) || 0) };
+    }).sort(function(a, b) { return b.eur - a.eur; });
+    if (!rows.length) serv.appendChild(gastosRow('Sin llamadas a Google hoy', fmtEur(0), '', null));
+    rows.forEach(function(r) {
+      serv.appendChild(gastosRow(labels[r.k] || r.k, fmtEur(r.eur), r.n + ' llamadas · ' + fmtEur(unit[r.k]) + ' cada una (precio de lista)', today.eur ? (r.eur / today.eur) * 100 : 0));
+    });
+
+    // Candados en Google Cloud (informativo, viene de config.js)
+    var cuotas = document.getElementById('g-cuotas');
+    cuotas.innerHTML = '';
+    (ADMIN_CONFIG.GOOGLE_QUOTAS || []).forEach(function(q) { cuotas.appendChild(gastosRow(q.api, q.dia, 'por día', null)); });
+
+    document.getElementById('g-updated').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function loadGastos() {
+    if (!gastosWired) {
+      gastosWired = true;
+      document.getElementById('g-refresh').addEventListener('click', loadGastos);
+    }
+    var btn = document.getElementById('g-refresh');
+    btn.disabled = true;
+    gastosShowError('');
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-usage', { headers: await adminAuthHeaders(), cache: 'no-store' });
+      if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+      if (!res.ok) throw new Error('El Worker respondió ' + res.status + '.');
+      renderGastos(await res.json());
+    } catch (e) {
+      gastosShowError('No se pudo cargar el gasto: ' + (e && e.message ? e.message : 'error de red') + ' Puedes reintentarlo con "Actualizar".');
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // ═══════════════════════════════════════════

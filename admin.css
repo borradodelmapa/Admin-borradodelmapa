@@ -995,3 +995,20 @@ body { min-height: 100vh; }
 }
 
 #main-content { padding-bottom: 36px; } /* deja sitio a la insignia de versión */
+
+/* ─── GASTOS EN GOOGLE ─── */
+.gastos-note { color: var(--text-secondary); font-size: 13px; margin: 0 0 14px; line-height: 1.45; }
+.gastos-error { background: rgba(255,90,90,.12); border: 1px solid var(--red); color: var(--text-primary); padding: 10px 14px; margin: 0 0 14px; font-size: 14px; }
+.gastos-foot { display: flex; align-items: center; gap: 12px; margin: 18px 0 8px; }
+.gastos-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.g-row { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 14px; }
+.g-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.g-row-name { font-weight: 600; }
+.g-row-eur { font-family: var(--font-mono); font-weight: 700; }
+.g-row-sub { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+.bar { width: 100%; height: 6px; background: var(--bg-input); margin-top: 8px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0; background: var(--green); transition: width .3s; }
+.bar-fill.warn { background: var(--yellow); }
+.bar-fill.danger { background: var(--red); }
+.metric-value.warn { color: var(--yellow); }
+.metric-value.danger { color: var(--red); }

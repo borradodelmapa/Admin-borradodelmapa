@@ -4,7 +4,7 @@
 
 const ADMIN_CONFIG = {
   // Versión del panel: súbela en CADA cambio (aquí y en los ?v= de index.html). Se ve abajo a la derecha.
-  ADMIN_VERSION: '2026-09-23.3',
+  ADMIN_VERSION: '2026-09-23.4',
 
   // Firebase (mismo proyecto que borradodelmapa.com)
   FIREBASE: {
@@ -29,10 +29,27 @@ const ADMIN_CONFIG = {
   // Pestañas del admin
   TABS: [
     { id: 'dashboard',    label: 'Dashboard',     icon: '📊' },
+    { id: 'gastos',       label: 'Gastos',         icon: '💶' },
     { id: 'analytics',    label: 'Analytics',      icon: '📈' },
     { id: 'usuarios',     label: 'Usuarios',       icon: '👥' },
     { id: 'settings',     label: 'Configuración',  icon: '⚙️' }
   ],
+
+  // Candados puestos en Google Cloud (cuotas DIARIAS). Solo informativo para la pestaña Gastos:
+  // se cambian en la consola de Google (Google Maps Platform → Cuotas), no aquí. Si se cambia una, actualizar esta lista.
+  GOOGLE_QUOTAS: [
+    { api: 'Places API (todos los métodos juntos)', dia: '900 peticiones' },
+    { api: 'Directions API', dia: '200 peticiones' },
+    { api: 'Maps Static API', dia: '100 peticiones' },
+    { api: 'Geocoding API (v3)', dia: '50 peticiones' },
+    { api: 'Maps JavaScript API', dia: '1.000 cargas de mapa' }
+  ],
+
+  // Nombres en castellano de los servicios que cuenta el Worker (claves de /admin/google-usage)
+  GOOGLE_SERVICE_LABELS: {
+    find: 'Buscar un lugar', details: 'Ficha de un lugar', text: 'Búsqueda de texto', nearby: 'Cerca de un punto',
+    photo: 'Foto', directions: 'Trazado de ruta', static: 'Mapa estático', geocode: 'Geocodificación', other: 'Otros'
+  },
 
   // Precios de modelos Anthropic (€ por millón de tokens)
   MODEL_PRICES: {
