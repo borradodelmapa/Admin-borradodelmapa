@@ -4,7 +4,7 @@
 
 const ADMIN_CONFIG = {
   // Versión del panel: súbela en CADA cambio (aquí y en los ?v= de index.html). Se ve abajo a la derecha.
-  ADMIN_VERSION: '2026-09-23.16',
+  ADMIN_VERSION: '2026-09-23.17',
 
   // Firebase (mismo proyecto que borradodelmapa.com)
   FIREBASE: {
@@ -18,6 +18,37 @@ const ADMIN_CONFIG = {
 
   // Email del admin para Firebase Auth
   ADMIN_EMAIL: 'admin@borradodelmapa.com',
+
+  // Enlaces directos a las páginas de cada proveedor (una sola fuente; el panel los pinta donde hagan falta).
+  // Si cambia un proyecto/cuenta, se cambia aquí y en ningún otro sitio.
+  LINKS: {
+    stripe:        { label: 'Stripe · pagos',              url: 'https://dashboard.stripe.com/test/payments', urlLive: 'https://dashboard.stripe.com/payments' },
+    stripe_subs:   { label: 'Stripe · clientes',           url: 'https://dashboard.stripe.com/test/customers', urlLive: 'https://dashboard.stripe.com/customers' },
+    google_bill:   { label: 'Google Cloud · facturación',  url: 'https://console.cloud.google.com/billing/012460-9B02AE-D84C54/reports?project=gen-lang-client-0108818247' },
+    google_quotas: { label: 'Google · cuotas de Places',   url: 'https://console.cloud.google.com/google/maps-apis/quotas?project=gen-lang-client-0108818247&api=places-backend.googleapis.com' },
+    google_budget: { label: 'Google · presupuesto y alertas', url: 'https://console.cloud.google.com/billing/012460-9B02AE-D84C54/budgets' },
+    bigquery:      { label: 'BigQuery · exportación',      url: 'https://console.cloud.google.com/bigquery?project=gen-lang-client-0108818247' },
+    anthropic:     { label: 'Anthropic · uso y coste',     url: 'https://console.anthropic.com/settings/cost' },
+    openai:        { label: 'OpenAI · uso',                url: 'https://platform.openai.com/usage' },
+    analytics:     { label: 'Google Analytics',            url: 'https://analytics.google.com/analytics/web/#/a256515663p352732094/reports/intelligenthome' },
+    fb_users:      { label: 'Firebase · usuarios',         url: 'https://console.firebase.google.com/project/borradodelmapa-85257/authentication/users' },
+    fb_data:       { label: 'Firebase · base de datos',    url: 'https://console.firebase.google.com/project/borradodelmapa-85257/firestore/data' },
+    cloudflare:    { label: 'Cloudflare · Worker salma-api', url: 'https://dash.cloudflare.com/?to=/:account/workers/services/view/salma-api/production' },
+    github_deploy: { label: 'GitHub · desplegar Worker',   url: 'https://github.com/borradodelmapa/borradodelmapa/actions/workflows/deploy-worker.yml' },
+    twilio:        { label: 'Twilio',                      url: 'https://console.twilio.com/' },
+    duffel:        { label: 'Duffel · vuelos',             url: 'https://app.duffel.com/' },
+    rapidapi:      { label: 'RapidAPI · hoteles y coches', url: 'https://rapidapi.com/developer/billing/subscriptions-and-usage' },
+    elevenlabs:    { label: 'ElevenLabs · voz',            url: 'https://elevenlabs.io/app/subscription' },
+    serper:        { label: 'Serper · eventos',            url: 'https://serper.dev/dashboard' },
+    brave:         { label: 'Brave Search',                url: 'https://api-dashboard.search.brave.com/' },
+    resend:        { label: 'Resend · emails',             url: 'https://resend.com/emails' }
+  },
+  LINK_GROUPS: [
+    { title: 'Dinero y facturación', keys: ['stripe', 'stripe_subs', 'google_bill', 'google_budget', 'google_quotas', 'bigquery', 'anthropic', 'openai'] },
+    { title: 'Usuarios y visitas',   keys: ['fb_users', 'fb_data', 'analytics'] },
+    { title: 'Servidor y despliegue', keys: ['cloudflare', 'github_deploy'] },
+    { title: 'Otros proveedores',    keys: ['twilio', 'duffel', 'rapidapi', 'elevenlabs', 'serper', 'brave', 'resend'] }
+  ],
 
   // GA4
   GA4_MEASUREMENT_ID: 'G-B2YWQKPTZZ',

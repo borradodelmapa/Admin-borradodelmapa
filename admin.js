@@ -36,6 +36,45 @@
     return d.toISOString();
   }
 
+  // ─── ENLACES DIRECTOS ───
+  // Los enlaces salen de ADMIN_CONFIG.LINKS. Una fila con data-links="stripe,google_bill" se rellena sola con esos enlaces.
+  var stripeMode = 'test';
+  function linkUrl(key) {
+    var l = ADMIN_CONFIG.LINKS[key];
+    if (!l) return '#';
+    return (key.indexOf('stripe') === 0 && stripeMode === 'live' && l.urlLive) ? l.urlLive : l.url;
+  }
+  function makeLink(key) {
+    var l = ADMIN_CONFIG.LINKS[key];
+    var a = document.createElement('a');
+    a.className = 'ext-link'; a.dataset.key = key; a.href = linkUrl(key);
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = (l ? l.label : key) + ' ↗';
+    return a;
+  }
+  function renderLinks() {
+    document.querySelectorAll('.links-row').forEach(function(row) {
+      if (row.dataset.done === '1') return;
+      row.dataset.done = '1';
+      (row.dataset.links || '').split(',').forEach(function(k) { if (ADMIN_CONFIG.LINKS[k.trim()]) row.appendChild(makeLink(k.trim())); });
+    });
+    var box = document.getElementById('cfg-enlaces');
+    if (box && !box.dataset.done) {
+      box.dataset.done = '1';
+      ADMIN_CONFIG.LINK_GROUPS.forEach(function(g) {
+        var t = document.createElement('div'); t.className = 'links-group-title'; t.textContent = g.title; box.appendChild(t);
+        var r = document.createElement('div'); r.className = 'links-row';
+        g.keys.forEach(function(k) { r.appendChild(makeLink(k)); });
+        box.appendChild(r);
+      });
+    }
+  }
+  // Stripe tiene páginas distintas en modo prueba y real: se ajustan cuando el Worker dice en cuál está la clave.
+  function setStripeMode(mode) {
+    stripeMode = mode === 'live' ? 'live' : 'test';
+    document.querySelectorAll('.ext-link[data-key^="stripe"]').forEach(function(a) { a.href = linkUrl(a.dataset.key); });
+  }
+
   // ─── DOM REFS ───
 
   const loginScreen = document.getElementById('login-screen');
@@ -127,6 +166,7 @@
   // ─── TABS ───
 
   function initTabs() {
+    renderLinks();
     tabsDesktop.innerHTML = '';
     mobileMenu.innerHTML = '';
 
@@ -375,6 +415,7 @@
       fetchAdminStats().then(function(x) { st = x; }).catch(function() {})
     ]);
 
+    if (rev) setStripeMode(rev.mode);
     var ingresos = rev ? rev.totals.month : null;
     var googleEur = gg ? gg.eur : null;
     var claudeEur = (st && st.totals && typeof st.totals.claude_usd === 'number') ? st.totals.claude_usd * USD_TO_EUR : null;
@@ -1055,6 +1096,7 @@
       if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
       if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
       var t = d.totals;
+      setStripeMode(d.mode);
 
       var banner = document.getElementById('r-mode');
       banner.style.display = 'block';

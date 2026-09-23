@@ -1055,3 +1055,9 @@ body { min-height: 100vh; }
 .da-top-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; }
 .da-top-row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .da-top-row span:last-child { color: var(--text-secondary); white-space: nowrap; }
+
+/* ─── ENLACES DIRECTOS ─── */
+.links-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 16px; }
+.links-group-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 14px 0 2px; }
+.ext-link { display: inline-block; padding: 8px 12px; font-size: 13px; color: var(--text-primary); background: var(--bg-card, rgba(255,255,255,.04)); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; transition: border-color .15s, color .15s; }
+.ext-link:hover, .ext-link:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }

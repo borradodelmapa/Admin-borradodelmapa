@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-23.16">
+  <link rel="stylesheet" href="admin.css?v=2026-09-23.17">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -108,6 +108,7 @@
           </div>
         </div>
         <p class="gastos-note" id="rs-nota"></p>
+        <div class="links-row" data-links="stripe,google_bill,anthropic,openai,fb_users"></div>
 
 
         <!-- Vista rápida del gasto en Google (detalle en la pestaña Gastos) -->
@@ -127,6 +128,8 @@
           </div>
         </div>
 
+        <div class="links-row" data-links="google_bill,google_quotas,bigquery"></div>
+
         <!-- Analítica de un vistazo (detalle en la pestaña Analytics) -->
         <h3 class="subsection-title">Analítica · últimos 7 días</h3>
         <div class="dash-analitica" id="dash-analitica" role="link" tabindex="0" title="Ver el detalle en Analytics">
@@ -140,6 +143,7 @@
           <div class="da-top" id="da-top"></div>
         </div>
         <p class="gastos-note" id="da-nota"></p>
+        <div class="links-row" data-links="analytics"></div>
 
         <div class="metrics-grid" id="dashboard-metrics">
           <div class="metric-card">
@@ -166,6 +170,7 @@
       <!-- Gastos en Google -->
       <section class="tab-content" id="tab-gastos">
         <h2 class="section-title">Gastos en Google</h2>
+        <div class="links-row" data-links="google_bill,google_quotas,google_budget,bigquery,anthropic,openai"></div>
         <p class="gastos-note">Estimación propia del Worker a precios de lista de Google: se adelanta a la factura real (Google aplica cupos gratis). Al llegar a los topes, el Worker deja de llamar a Google.</p>
 
         <div class="metrics-grid" id="gastos-cards">
@@ -236,6 +241,7 @@
       <!-- Ingresos -->
       <section class="tab-content" id="tab-ingresos">
         <h2 class="section-title">Ingresos</h2>
+        <div class="links-row" data-links="stripe,stripe_subs"></div>
         <div id="r-mode" class="mode-banner" style="display:none;"></div>
         <p class="gastos-note">Compras cobradas en Stripe (importes brutos, IVA incluido; sin descontar comisiones de Stripe ni reembolsos). El margen es una estimación aproximada: ingresos sin IVA menos el gasto estimado de Google y de Claude de este mes; no incluye los demás proveedores.</p>
 
@@ -279,6 +285,7 @@
       <!-- Analytics -->
       <section class="tab-content" id="tab-analytics">
         <h2 class="section-title">Analytics</h2>
+        <div class="links-row" data-links="analytics"></div>
 
         <!-- Selector de rango -->
         <div class="users-toolbar" style="margin-bottom:16px;">
@@ -328,6 +335,7 @@
       <!-- Usuarios -->
       <section class="tab-content" id="tab-usuarios">
         <h2 class="section-title">Usuarios</h2>
+        <div class="links-row" data-links="fb_users,fb_data"></div>
 
         <!-- Métricas de usuario -->
         <div class="metrics-grid" id="users-metrics">
@@ -405,6 +413,10 @@
         <button class="btn-sm" id="cfg-health">Comprobar ahora</button>
         <div id="cfg-health-msg" class="gastos-note"></div>
 
+        <h3 class="subsection-title">Enlaces directos</h3>
+        <p class="gastos-note">Cada enlace abre la página del proveedor donde se ve ese dato. Se abren en una pestaña nueva.</p>
+        <div id="cfg-enlaces"></div>
+
         <h3 class="subsection-title">Sesión</h3>
         <button class="btn-sm danger" id="cfg-logout">Cerrar sesión</button>
       </section>
@@ -413,12 +425,12 @@
   </div>
 
   <!-- Versión visible: panel + Worker (se rellena en admin.js) -->
-  <div class="version-badge" id="version-badge">Panel 2026-09-23.16</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-23.17</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-23.16"></script>
-  <script src="admin.js?v=2026-09-23.16"></script>
+  <script src="config.js?v=2026-09-23.17"></script>
+  <script src="admin.js?v=2026-09-23.17"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>
