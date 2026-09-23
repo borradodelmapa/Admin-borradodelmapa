@@ -173,6 +173,7 @@
         loadDashboard();
         loadGastosQuick();
         loadResumen();
+        loadVisitasHoy();
       }
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'ingresos') loadIngresos();
@@ -248,6 +249,26 @@
 
   function escHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+
+  // Visitas de hoy y de ayer desde Google Analytics (misma vía que la pestaña Analytics). Si falla, la tarjeta queda en "—".
+  async function loadVisitasHoy() {
+    var v = document.getElementById('m-visitas'), tr = document.getElementById('m-visitas-trend');
+    try {
+      var d = await ga4Report({ dateRanges: [{ startDate: 'today', endDate: 'today' }, { startDate: 'yesterday', endDate: 'yesterday' }], metrics: [{ name: 'sessions' }] });
+      var hoy = 0, ayer = 0;
+      (d.rows || []).forEach(function(r) {
+        var n = parseInt(r.metricValues[0].value) || 0;
+        var rango = r.dimensionValues && r.dimensionValues[0] && r.dimensionValues[0].value;
+        if (rango === 'date_range_1') ayer = n; else hoy = n;
+      });
+      v.textContent = hoy;
+      tr.textContent = 'ayer ' + ayer;
+      tr.className = 'metric-trend';
+    } catch (e) {
+      console.warn('Visitas de hoy no disponibles:', e && e.message);
+      v.textContent = '—'; tr.textContent = '';
+    }
   }
 
   async function loadDashboardMetrics() {
