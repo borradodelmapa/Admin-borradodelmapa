@@ -979,17 +979,19 @@ body { min-height: 100vh; }
 /* ─── VERSIÓN VISIBLE (panel + Worker) ─── */
 .version-badge {
   position: fixed;
-  right: 8px;
-  bottom: 6px;
+  right: 12px;
+  bottom: 12px;
   z-index: 9999;
-  padding: 2px 7px;
+  padding: 8px 14px;
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .03em;
-  color: var(--text-muted);
-  background: rgba(13,15,16,.82);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--text-primary);
+  background: rgba(13,15,16,.94);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.6);
   pointer-events: none;
   user-select: none;
 }
