@@ -11,10 +11,15 @@
 
   // ─── UTILS ───
 
-  async function sha256(text) {
-    const data = new TextEncoder().encode(text);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  // Cabeceras para el Worker: usa la sesión de Firebase del admin (ID token, se renueva solo).
+  // No hay ningún token fijo en el navegador — el Worker lo valida contra Google (isAdminRequest).
+  async function adminAuthHeaders(extra) {
+    var headers = Object.assign({}, extra || {});
+    var user = firebase.auth().currentUser;
+    if (user) {
+      headers['Authorization'] = 'Bearer ' + (await user.getIdToken());
+    }
+    return headers;
   }
 
   function formatDate(dateStr) {
@@ -83,22 +88,24 @@
       return;
     }
 
-    var hash = await sha256(password);
-    if (hash !== ADMIN_CONFIG.PASSWORD_HASH) {
-      loginError.textContent = 'Contraseña incorrecta';
-      loginPassword.value = '';
-      loginPassword.focus();
-      return;
-    }
-
-    // Autenticar con Firebase Auth
+    // Autenticar directamente con Firebase Auth (ya no hay hash de contraseña en el navegador:
+    // Firebase comprueba la contraseña en su servidor y limita los intentos).
     try {
       await firebase.auth().signInWithEmailAndPassword(ADMIN_CONFIG.ADMIN_EMAIL, password);
       sessionStorage.setItem(SESSION_KEY, Date.now().toString());
       appShown = true;
       showApp();
     } catch (err) {
-      loginError.textContent = 'Error de autenticación Firebase';
+      var code = (err && err.code) || '';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/invalid-login-credentials') {
+        loginError.textContent = 'Contraseña incorrecta';
+        loginPassword.value = '';
+        loginPassword.focus();
+      } else if (code === 'auth/too-many-requests') {
+        loginError.textContent = 'Demasiados intentos. Espera unos minutos.';
+      } else {
+        loginError.textContent = 'Error de autenticación Firebase';
+      }
       console.error('Firebase Auth error:', err);
     }
   });
@@ -326,8 +333,9 @@
     Object.values(dots).forEach(function(d) { if (d) d.className = 'health-dot grey'; });
 
     try {
-      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/health');
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/health', { headers: await adminAuthHeaders() });
       var data = await res.json();
+      if (res.status === 401) throw new Error('No autorizado — vuelve a iniciar sesión');
 
       // Worker siempre ok si llegamos aquí
       if (dots.worker) dots.worker.className = 'health-dot green';
@@ -609,7 +617,7 @@
       ],
       infrastructure: {
         hosting: 'GitHub Pages → borradodelmapa.com',
-        worker: 'Cloudflare Workers → salma-api.paco-defoto.workers.dev',
+        worker: 'Cloudflare Workers → salma-api.borradodelmapa-api.workers.dev',
         database: 'Firebase Firestore',
         auth: 'Firebase Auth',
         maps: 'Google Maps API + Google Places API',
@@ -957,10 +965,7 @@
   async function ga4Report(report) {
     var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/ga4', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + ADMIN_CONFIG.ADMIN_CHAT_TOKEN,
-      },
+      headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         propertyId: ADMIN_CONFIG.GA4_PROPERTY_ID,
         report: report,
@@ -1405,10 +1410,7 @@
     try {
       var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin-chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + ADMIN_CONFIG.ADMIN_CHAT_TOKEN,
-        },
+        headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           system: chatSystemPrompt,
           messages: chatHistory,
@@ -1491,10 +1493,7 @@
 
       var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin-chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + ADMIN_CONFIG.ADMIN_CHAT_TOKEN,
-        },
+        headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           system: chatSystemPrompt,
           messages: dashChatHistory,
