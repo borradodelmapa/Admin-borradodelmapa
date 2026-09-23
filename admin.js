@@ -536,8 +536,9 @@
   }
 
   async function fetchUsers() {
+    wireUserModal();
     var tbody = document.getElementById('users-tbody');
-    tbody.innerHTML = '<tr><td colspan="6"><div class="loading">Cargando usuarios...</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="loading">Cargando usuarios...</div></td></tr>';
 
     try {
       var stats = await fetchAdminStats(true);
@@ -547,7 +548,8 @@
           premium_active: !!u.premium_active, premium_until: u.premium_until,
           mapsCount: u.guides || 0, _realMaps: u.guides || 0,
           usage_msgs: (u.usage && u.usage.msgs) || 0,
-          usage_usd: (u.usage && u.usage.claude_usd) || 0
+          usage_usd: (u.usage && u.usage.claude_usd) || 0,
+          last_login: u.last_login || null, disabled: !!u.disabled, providers: u.providers || [], usage: u.usage || {}
         };
       });
       renderUsersTable();
@@ -557,7 +559,97 @@
       }
     } catch (err) {
       console.error('Error cargando usuarios:', err);
-      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--red);padding:20px;">No se pudieron cargar los usuarios: ' + escHtml(err && err.message) + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--red);padding:20px;">No se pudieron cargar los usuarios: ' + escHtml(err && err.message) + '</td></tr>';
+    }
+  }
+
+  // ─── FICHA DE USUARIO Y ACCIONES (POST /admin/user-action) ───
+  var userModalWired = false;
+  function closeUserModal() {
+    var m = document.getElementById('user-modal'); if (m) m.style.display = 'none';
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso); if (isNaN(d)) return '—';
+    return d.toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Engancha (una sola vez) el clic en las filas de la tabla, el cierre de la ficha y los botones de acción.
+  function wireUserModal() {
+    if (!userModalWired) {
+      userModalWired = true;
+      document.getElementById('user-modal').addEventListener('click', function(e) { if (e.target === this) closeUserModal(); });
+      document.getElementById('user-modal-close').addEventListener('click', closeUserModal);
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeUserModal(); });
+      document.getElementById('user-modal-actions').addEventListener('click', onUserAction);
+      document.getElementById('users-tbody').addEventListener('click', function(e) { var tr = e.target.closest('tr.user-row'); if (tr) openUserModal(tr.dataset.uid); });
+      document.getElementById('users-tbody').addEventListener('keydown', function(e) { if (e.key === 'Enter') { var tr = e.target.closest('tr.user-row'); if (tr) openUserModal(tr.dataset.uid); } });
+    }
+  }
+
+  function openUserModal(uid) {
+    var u = allUsers.filter(function(x) { return x._id === uid; })[0];
+    if (!u) return;
+    wireUserModal();
+    var modal = document.getElementById('user-modal');
+    modal.dataset.uid = uid;
+    document.getElementById('user-modal-title').textContent = u.name || u.email || uid;
+    var us = u.usage || {};
+    var rows = [
+      ['Correo', u.email || '—'],
+      ['Registro', fmtDateTime(u.createdAt)],
+      ['Último acceso', fmtDateTime(u.last_login)],
+      ['Entra con', (u.providers && u.providers.length) ? u.providers.join(', ') : '—'],
+      ['Estado de la cuenta', u.disabled ? 'DESHABILITADA (no puede entrar)' : 'Activa'],
+      ['Plan', u.premium_active ? 'Premium hasta ' + fmtDateTime(u.premium_until) : 'Gratis' + (u.premium_until ? ' (Premium caducó el ' + formatDate(u.premium_until) + ')' : '')],
+      ['Guías guardadas', String(u._realMaps || 0)],
+      ['Este mes', (us.msgs || 0) + ' mensajes · ' + (us.guides || 0) + ' guías · ' + (us.edits || 0) + ' cambios · Claude ≈ ' + fmtEur((us.claude_usd || 0) * USD_TO_EUR)],
+      ['Identificador', uid]
+    ];
+    var box = document.getElementById('user-modal-info'); box.innerHTML = '';
+    rows.forEach(function(r) { box.appendChild(gastosRow(r[0], r[1], '', null)); });
+    var link = document.getElementById('user-modal-fb');
+    link.href = 'https://console.firebase.google.com/project/borradodelmapa-85257/firestore/databases/-default-/data/~2Fusers~2F' + encodeURIComponent(uid);
+    document.getElementById('um-remove').style.display = u.premium_active ? '' : 'none';
+    document.getElementById('um-disable').textContent = u.disabled ? 'Habilitar cuenta' : 'Deshabilitar cuenta';
+    document.getElementById('um-disable').dataset.action = u.disabled ? 'enable' : 'disable';
+    document.getElementById('user-modal-msg').textContent = '';
+    modal.style.display = 'flex';
+  }
+
+  async function onUserAction(e) {
+    var btn = e.target.closest('button[data-action]'); if (!btn || btn.disabled) return;
+    var modal = document.getElementById('user-modal'), uid = modal.dataset.uid;
+    var u = allUsers.filter(function(x) { return x._id === uid; })[0]; if (!u) return;
+    var action = btn.dataset.action, body = { uid: uid, action: action }, quien = u.email || u.name || uid, texto;
+    if (action === 'premium_add') {
+      var days = parseInt(document.getElementById('um-days').value, 10);
+      body.days = days;
+      texto = 'Dar ' + days + ' días de Premium a ' + quien + '. Se suman a lo que ya tenga.';
+    } else if (action === 'premium_remove') texto = 'Quitar el Premium a ' + quien + '. Pasará a plan Gratis ahora mismo.';
+    else if (action === 'disable') texto = 'Deshabilitar la cuenta de ' + quien + '. No podrá entrar y se cerrarán sus sesiones abiertas. Sus datos NO se borran.';
+    else if (action === 'enable') texto = 'Volver a habilitar la cuenta de ' + quien + '.';
+    else if (action === 'reset_free') texto = 'Devolver a ' + quien + ' los cupos gratuitos de por vida (guías y cambios) a cero.';
+    else return;
+    if (!window.confirm(texto + '\n\n¿Seguro?')) return;
+
+    var msg = document.getElementById('user-modal-msg');
+    var all = document.querySelectorAll('#user-modal-actions button'); all.forEach(function(b) { b.disabled = true; });
+    msg.style.color = 'var(--text-secondary)'; msg.textContent = 'Aplicando…';
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/user-action', { method: 'POST', headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+      var d = await res.json().catch(function() { return {}; });
+      if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+      if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
+      msg.style.color = 'var(--green)'; msg.textContent = 'Hecho. Actualizando la lista…';
+      await fetchUsers();                       // vuelve a leer todo (saltando la caché) y repinta la tabla
+      openUserModal(uid);                       // repinta la ficha con los datos nuevos
+      var hecho = { premium_add: 'Hecho: +' + body.days + ' días de Premium para ' + quien + '.', premium_remove: 'Hecho: Premium quitado a ' + quien + '.', disable: 'Hecho: cuenta de ' + quien + ' deshabilitada.', enable: 'Hecho: cuenta de ' + quien + ' habilitada.', reset_free: 'Hecho: cupos gratuitos de ' + quien + ' devueltos.' };
+      msg.style.color = 'var(--green)'; msg.textContent = hecho[action] || 'Hecho.';
+    } catch (err) {
+      msg.style.color = 'var(--red)'; msg.textContent = (err && err.message) ? err.message : 'No se pudo aplicar.';
+    } finally {
+      all = document.querySelectorAll('#user-modal-actions button'); all.forEach(function(b) { b.disabled = false; });
     }
   }
 
@@ -599,16 +691,18 @@
     // Tabla
     var tbody = document.getElementById('users-tbody');
     if (pageUsers.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);padding:20px;text-align:center;">' +
+      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);padding:20px;text-align:center;">' +
         (usersFilter ? 'Sin resultados para "' + escHtml(usersFilter) + '"' : 'No hay usuarios') + '</td></tr>';
     } else {
       tbody.innerHTML = pageUsers.map(function(u) {
         var plan = u.premium_active ? 'Premium hasta ' + formatDate(u.premium_until) : 'Gratis';
         var uso = u.usage_msgs ? (u.usage_msgs + ' msg · ' + '≈ ' + fmtEur(u.usage_usd * 0.92)) : '—';
-        return '<tr>' +
-          '<td>' + escHtml(u.name || '—') + '</td>' +
+        var estado = u.disabled ? ' <span class="badge-off">DESHABILITADA</span>' : '';
+        return '<tr class="user-row" data-uid="' + escHtml(u._id) + '" tabindex="0" title="Abrir ficha y acciones">' +
+          '<td>' + escHtml(u.name || '—') + estado + '</td>' +
           '<td>' + escHtml(u.email || '—') + '</td>' +
           '<td>' + formatDate(u.createdAt) + '</td>' +
+          '<td>' + formatDate(u.last_login) + '</td>' +
           '<td>' + escHtml(plan) + '</td>' +
           '<td>' + (u._realMaps || 0) + '</td>' +
           '<td>' + escHtml(uso) + '</td>' +
