@@ -12,7 +12,7 @@
   <title>Admin — Borrado del Mapa</title>
   <link rel="icon" href="../favicon.ico">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="admin.css?v=2026-09-23.2">
+  <link rel="stylesheet" href="admin.css?v=2026-09-23.3">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -44,7 +44,6 @@
     <header class="header">
       <div class="header-inner">
         <img src="logo-admin.svg" alt="Borrado del Mapa" class="header-logo" id="header-logo" style="cursor:pointer">
-        <button class="btn-sm" id="btn-quick-proyecto" style="font-size:12px;padding:6px 10px;margin-left:8px;">🗂️ Proyecto</button>
 
         <!-- Tabs desktop -->
         <nav class="tabs-desktop" id="tabs-desktop"></nav>
@@ -67,7 +66,7 @@
         <h2 class="section-title">Dashboard</h2>
         <div class="health-row" id="health-row">
           <div class="health-item"><span class="health-dot grey" id="health-worker"></span>Worker</div>
-          <div class="health-item"><span class="health-dot grey" id="health-anthropic"></span>Anthropic</div>
+          <div class="health-item"><span class="health-dot grey" id="health-openai"></span>OpenAI</div>
           <div class="health-item"><span class="health-dot grey" id="health-places"></span>Google Places</div>
           <div class="health-item"><span class="health-dot grey" id="health-booking-hotels"></span>Hotels</div>
           <div class="health-item"><span class="health-dot grey" id="health-booking-cars"></span>Cars</div>
@@ -92,28 +91,6 @@
             <span class="metric-label">Rutas creadas</span>
             <span class="metric-trend" id="m-rutas-trend"></span>
           </div>
-          <div class="metric-card">
-            <span class="metric-icon">🤖</span>
-            <span class="metric-value" id="m-salma">—</span>
-            <span class="metric-label">Llamadas Salma</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-icon">⚠️</span>
-            <span class="metric-value" id="m-errores">—</span>
-            <span class="metric-label">Errores hoy</span>
-          </div>
-        </div>
-
-        <!-- Mini chat rápido -->
-        <div style="margin-top:20px;">
-          <h3 class="subsection-title">Consulta rápida</h3>
-          <div id="dash-chat-messages" style="background:var(--bg-card);border-radius:8px;padding:12px;max-height:300px;overflow-y:auto;margin-bottom:8px;min-height:50px;">
-            <div style="color:var(--text-muted);font-size:13px;">Pregunta lo que necesites sobre el proyecto.</div>
-          </div>
-          <form id="dash-chat-form" style="display:flex;gap:8px;">
-            <input type="text" id="dash-chat-input" class="login-input" placeholder="Escribe tu consulta..." style="flex:1;padding:10px 12px;font-size:14px;margin:0;">
-            <button type="submit" class="btn-sm" id="dash-chat-send" style="padding:10px 16px;">Enviar</button>
-          </form>
         </div>
       </section>
 
@@ -218,150 +195,6 @@
         <div class="pagination" id="users-pagination"></div>
       </section>
 
-      <!-- Salma -->
-      <section class="tab-content" id="tab-salma">
-        <div class="chat-header">
-          <h2 class="section-title" style="margin:0">Salma</h2>
-          <button class="btn-sm" id="btn-refresh-salma">Actualizar</button>
-        </div>
-
-        <!-- Alerta -->
-        <div id="salma-alert" style="display:none"></div>
-
-        <!-- Métricas -->
-        <div class="metrics-grid" id="salma-metrics"></div>
-
-        <!-- Filtros -->
-        <div class="users-toolbar" style="display:flex;gap:8px;flex-wrap:wrap;">
-          <select id="salma-filter-type" class="login-input" style="width:auto;padding:8px 12px;font-size:13px;">
-            <option value="">Todos</option>
-            <option value="route">Rutas</option>
-            <option value="conversational">Conversacional</option>
-          </select>
-          <select id="salma-filter-status" class="login-input" style="width:auto;padding:8px 12px;font-size:13px;">
-            <option value="">Todos</option>
-            <option value="ok">OK</option>
-            <option value="error">Error</option>
-          </select>
-        </div>
-
-        <!-- Tabla últimas peticiones -->
-        <h3 class="subsection-title">Últimas peticiones</h3>
-        <div class="admin-table-wrap">
-          <table class="admin-table" id="salma-table">
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>Tipo</th>
-                <th>Mensaje</th>
-                <th>Chars</th>
-                <th>Latencia</th>
-                <th>Modelo</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="salma-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Proyecto -->
-      <section class="tab-content" id="tab-proyecto">
-        <h2 class="section-title">Proyecto</h2>
-
-        <!-- Changelog (primero) -->
-        <h3 class="subsection-title">Últimos cambios <button class="btn-sm" id="btn-add-changelog">+ Entrada</button></h3>
-        <div id="changelog"></div>
-        <div id="changelog-more-wrap" style="text-align:center;margin:12px 0;display:none;">
-          <button class="btn-sm secondary" id="btn-changelog-more">Ver todo</button>
-        </div>
-
-        <!-- Roadmap -->
-        <h3 class="subsection-title">Roadmap</h3>
-        <div class="roadmap" id="roadmap"></div>
-
-        <!-- Info del sistema (al final) -->
-        <h3 class="subsection-title">Info del sistema</h3>
-        <div class="system-info" id="system-info"></div>
-      </section>
-
-      <!-- Marketing -->
-      <section class="tab-content" id="tab-marketing">
-        <h2 class="section-title">Marketing</h2>
-
-        <!-- Resumen impacto -->
-        <div class="metrics-grid" id="marketing-metrics"></div>
-
-        <!-- Campañas -->
-        <h3 class="subsection-title">Campañas <button class="btn-sm" id="btn-add-campaign">+ Campaña</button></h3>
-        <div class="admin-table-wrap">
-          <table class="admin-table" id="campaigns-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Canal</th>
-                <th>Acción</th>
-                <th>Visitas</th>
-                <th>Registros</th>
-                <th>Notas</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="campaigns-tbody"></tbody>
-          </table>
-        </div>
-
-        <!-- Ideas -->
-        <h3 class="subsection-title">Ideas <button class="btn-sm" id="btn-add-idea">+ Idea</button></h3>
-        <div id="ideas-list"></div>
-      </section>
-
-      <!-- Contabilidad -->
-      <section class="tab-content" id="tab-contabilidad">
-        <h2 class="section-title">Contabilidad</h2>
-
-        <!-- Resumen mensual -->
-        <div class="metrics-grid" id="accounting-metrics"></div>
-
-        <!-- Ingresos -->
-        <h3 class="subsection-title">Ingresos</h3>
-        <div class="info-box" id="revenue-info">Pendiente de activar Stripe (F3)</div>
-
-        <!-- Costes -->
-        <h3 class="subsection-title">Costes <button class="btn-sm" id="btn-add-cost">+ Coste</button></h3>
-        <div class="admin-table-wrap">
-          <table class="admin-table" id="costs-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Concepto</th>
-                <th>Importe (€)</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="costs-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Chat -->
-      <section class="tab-content" id="tab-chat">
-        <div class="chat-header">
-          <h2 class="section-title" style="margin:0">Chat</h2>
-          <div class="chat-actions">
-            <button class="btn-sm secondary" id="btn-refresh-context">Cargar contexto fresco</button>
-            <button class="btn-sm danger" id="btn-new-chat">Nuevo chat</button>
-          </div>
-        </div>
-        <div class="chat-messages" id="chat-messages">
-          <div class="chat-welcome">Pregúntame sobre el proyecto, debugging, producto o lo que necesites.</div>
-        </div>
-        <form class="chat-input-bar" id="chat-form">
-          <textarea class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
-          <button type="submit" class="chat-send" id="chat-send">Enviar</button>
-        </form>
-      </section>
-
       <!-- Configuración -->
       <section class="tab-content" id="tab-settings">
         <h2 class="section-title">Configuración</h2>
@@ -378,12 +211,12 @@
   </div>
 
   <!-- Versión visible: panel + Worker (se rellena en admin.js) -->
-  <div class="version-badge" id="version-badge">Panel 2026-09-23.2</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-23.3</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-23.2"></script>
-  <script src="admin.js?v=2026-09-23.2"></script>
+  <script src="config.js?v=2026-09-23.3"></script>
+  <script src="admin.js?v=2026-09-23.3"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>
