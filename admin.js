@@ -778,7 +778,15 @@
         report: report,
       }),
     });
-    return await res.json();
+    var d = await res.json().catch(function() { return {}; });
+    if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+    if (d && d.error) {
+      var e = d.error, txt = (typeof e === 'string') ? e : JSON.stringify(e);
+      if (/SERVICE_DISABLED|has not been used|is disabled/i.test(txt)) throw new Error('Falta activar la API "Google Analytics Data API" en Google Cloud (proyecto borradodelmapa-85257).');
+      if (typeof e === 'object' && (e.code === 403 || /PERMISSION_DENIED/.test(txt))) throw new Error('La cuenta de servicio del Worker aún no tiene acceso de lector a la propiedad de Analytics (' + ADMIN_CONFIG.GA4_PROPERTY_ID + ').');
+      throw new Error((typeof e === 'string') ? e : (e.message || 'Error de Analytics'));
+    }
+    return d;
   }
 
   async function fetchGA4Data(days) {
