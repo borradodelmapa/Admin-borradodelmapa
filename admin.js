@@ -526,7 +526,7 @@
           usersSortDir = usersSortDir === 'asc' ? 'desc' : 'asc';
         } else {
           usersSortField = field;
-          usersSortDir = (field === 'createdAt' || field === 'mapsCount' || field === 'usage_msgs') ? 'desc' : 'asc';
+          usersSortDir = (field === 'name') ? 'asc' : 'desc';
         }
         renderUsersTable();
       });
@@ -538,7 +538,7 @@
   async function fetchUsers() {
     wireUserModal();
     var tbody = document.getElementById('users-tbody');
-    tbody.innerHTML = '<tr><td colspan="7"><div class="loading">Cargando usuarios...</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12"><div class="loading">Cargando usuarios...</div></td></tr>';
 
     try {
       var stats = await fetchAdminStats(true);
@@ -549,6 +549,7 @@
           mapsCount: u.guides || 0, _realMaps: u.guides || 0,
           usage_msgs: (u.usage && u.usage.msgs) || 0,
           usage_usd: (u.usage && u.usage.claude_usd) || 0,
+          usage_guides: (u.usage && u.usage.guides) || 0, usage_edits: (u.usage && u.usage.edits) || 0,
           last_login: u.last_login || null, disabled: !!u.disabled, providers: u.providers || [], usage: u.usage || {}
         };
       });
@@ -559,7 +560,7 @@
       }
     } catch (err) {
       console.error('Error cargando usuarios:', err);
-      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--red);padding:20px;">No se pudieron cargar los usuarios: ' + escHtml(err && err.message) + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" style="color:var(--red);padding:20px;">No se pudieron cargar los usuarios: ' + escHtml(err && err.message) + '</td></tr>';
     }
   }
 
@@ -582,8 +583,10 @@
       document.getElementById('user-modal-close').addEventListener('click', closeUserModal);
       document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeUserModal(); });
       document.getElementById('user-modal-actions').addEventListener('click', onUserAction);
-      document.getElementById('users-tbody').addEventListener('click', function(e) { var tr = e.target.closest('tr.user-row'); if (tr) openUserModal(tr.dataset.uid); });
-      document.getElementById('users-tbody').addEventListener('keydown', function(e) { if (e.key === 'Enter') { var tr = e.target.closest('tr.user-row'); if (tr) openUserModal(tr.dataset.uid); } });
+      document.getElementById('users-tbody').addEventListener('click', function(e) {
+        var b = e.target.closest('button.ua-btn'); if (b) { if (!b.disabled) onRowAction(b); return; }
+        var tr = e.target.closest('tr.user-row'); if (tr) openUserModal(tr.dataset.uid);
+      });
     }
   }
 
@@ -617,40 +620,57 @@
     modal.style.display = 'flex';
   }
 
-  async function onUserAction(e) {
-    var btn = e.target.closest('button[data-action]'); if (!btn || btn.disabled) return;
-    var modal = document.getElementById('user-modal'), uid = modal.dataset.uid;
-    var u = allUsers.filter(function(x) { return x._id === uid; })[0]; if (!u) return;
-    var action = btn.dataset.action, body = { uid: uid, action: action }, quien = u.email || u.name || uid, texto;
-    if (action === 'premium_add') {
-      var days = parseInt(document.getElementById('um-days').value, 10);
-      body.days = days;
-      texto = 'Dar ' + days + ' días de Premium a ' + quien + '. Se suman a lo que ya tenga.';
-    } else if (action === 'premium_remove') texto = 'Quitar el Premium a ' + quien + '. Pasará a plan Gratis ahora mismo.';
+  // Ejecuta UNA acción sobre un usuario (desde la fila o desde la ficha): aviso de confirmación, POST y recarga de la lista.
+  // `setMsg(texto, color)` pinta el resultado donde toque (bajo la tabla o dentro de la ficha).
+  async function runUserAction(uid, action, days, setMsg) {
+    var u = allUsers.filter(function(x) { return x._id === uid; })[0]; if (!u) return false;
+    var quien = u.email || u.name || uid, texto, body = { uid: uid, action: action };
+    if (action === 'premium_add') { body.days = days; texto = 'Dar ' + days + ' días de Premium a ' + quien + '. Se suman a lo que ya tenga.'; }
+    else if (action === 'premium_remove') texto = 'Quitar el Premium a ' + quien + '. Pasará a plan Gratis ahora mismo.';
     else if (action === 'disable') texto = 'Deshabilitar la cuenta de ' + quien + '. No podrá entrar y se cerrarán sus sesiones abiertas. Sus datos NO se borran.';
     else if (action === 'enable') texto = 'Volver a habilitar la cuenta de ' + quien + '.';
     else if (action === 'reset_free') texto = 'Devolver a ' + quien + ' los cupos gratuitos de por vida (guías y cambios) a cero.';
-    else return;
-    if (!window.confirm(texto + '\n\n¿Seguro?')) return;
-
-    var msg = document.getElementById('user-modal-msg');
-    var all = document.querySelectorAll('#user-modal-actions button'); all.forEach(function(b) { b.disabled = true; });
-    msg.style.color = 'var(--text-secondary)'; msg.textContent = 'Aplicando…';
+    else return false;
+    if (!window.confirm(texto + '\n\n¿Seguro?')) return false;
+    setMsg('Aplicando…', 'var(--text-secondary)');
     try {
       var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/user-action', { method: 'POST', headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
       var d = await res.json().catch(function() { return {}; });
       if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
       if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
-      msg.style.color = 'var(--green)'; msg.textContent = 'Hecho. Actualizando la lista…';
-      await fetchUsers();                       // vuelve a leer todo (saltando la caché) y repinta la tabla
-      openUserModal(uid);                       // repinta la ficha con los datos nuevos
+      setMsg('Hecho. Actualizando la lista…', 'var(--green)');
+      await fetchUsers();
       var hecho = { premium_add: 'Hecho: +' + body.days + ' días de Premium para ' + quien + '.', premium_remove: 'Hecho: Premium quitado a ' + quien + '.', disable: 'Hecho: cuenta de ' + quien + ' deshabilitada.', enable: 'Hecho: cuenta de ' + quien + ' habilitada.', reset_free: 'Hecho: cupos gratuitos de ' + quien + ' devueltos.' };
-      msg.style.color = 'var(--green)'; msg.textContent = hecho[action] || 'Hecho.';
+      setMsg(hecho[action] || 'Hecho.', 'var(--green)');
+      return true;
     } catch (err) {
-      msg.style.color = 'var(--red)'; msg.textContent = (err && err.message) ? err.message : 'No se pudo aplicar.';
-    } finally {
-      all = document.querySelectorAll('#user-modal-actions button'); all.forEach(function(b) { b.disabled = false; });
+      setMsg((err && err.message) ? err.message : 'No se pudo aplicar.', 'var(--red)');
+      return false;
     }
+  }
+
+  // Botones de la fila de la tabla
+  async function onRowAction(btn) {
+    var action = btn.dataset.ua, uid = btn.dataset.uid;
+    if (action === 'ficha') { openUserModal(uid); return; }
+    var box = document.getElementById('users-msg');
+    var setMsg = function(t, c) { box.style.color = c; box.textContent = t; };
+    var all = document.querySelectorAll('#users-tbody .ua-btn'); all.forEach(function(b) { b.disabled = true; });
+    try { await runUserAction(uid, action, action === 'premium_add' ? 30 : undefined, setMsg); }
+    finally { document.querySelectorAll('#users-tbody .ua-btn').forEach(function(b) { b.disabled = false; }); }
+  }
+
+  // Botones de la ficha
+  async function onUserAction(e) {
+    var btn = e.target.closest('button[data-action]'); if (!btn || btn.disabled) return;
+    var modal = document.getElementById('user-modal'), uid = modal.dataset.uid, msg = document.getElementById('user-modal-msg');
+    var action = btn.dataset.action;
+    var days = action === 'premium_add' ? parseInt(document.getElementById('um-days').value, 10) : undefined;
+    var all = document.querySelectorAll('#user-modal-actions button'); all.forEach(function(b) { b.disabled = true; });
+    var ok = false;
+    try { ok = await runUserAction(uid, action, days, function(t, c) { msg.style.color = c; msg.textContent = t; }); }
+    finally { document.querySelectorAll('#user-modal-actions button').forEach(function(b) { b.disabled = false; }); }
+    if (ok) { var keep = msg.textContent, kc = msg.style.color; openUserModal(uid); msg.textContent = keep; msg.style.color = kc; }
   }
 
   function getFilteredUsers() {
@@ -664,14 +684,15 @@
     }
 
     // Ordenar
+    var NUM = ['mapsCount', 'usage_msgs', 'usage_guides', 'usage_edits', 'usage_usd', 'premium_active'];
     filtered.sort(function(a, b) {
-      var va = a[usersSortField] || '';
-      var vb = b[usersSortField] || '';
-      if (typeof va === 'number' && typeof vb === 'number') {
+      var va = a[usersSortField], vb = b[usersSortField];
+      if (NUM.indexOf(usersSortField) >= 0) {
+        va = Number(va) || 0; vb = Number(vb) || 0;
         return usersSortDir === 'asc' ? va - vb : vb - va;
       }
-      va = String(va).toLowerCase();
-      vb = String(vb).toLowerCase();
+      va = String(va == null ? '' : va).toLowerCase();
+      vb = String(vb == null ? '' : vb).toLowerCase();
       if (va < vb) return usersSortDir === 'asc' ? -1 : 1;
       if (va > vb) return usersSortDir === 'asc' ? 1 : -1;
       return 0;
@@ -691,21 +712,31 @@
     // Tabla
     var tbody = document.getElementById('users-tbody');
     if (pageUsers.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);padding:20px;text-align:center;">' +
+      tbody.innerHTML = '<tr><td colspan="12" style="color:var(--text-muted);padding:20px;text-align:center;">' +
         (usersFilter ? 'Sin resultados para "' + escHtml(usersFilter) + '"' : 'No hay usuarios') + '</td></tr>';
     } else {
       tbody.innerHTML = pageUsers.map(function(u) {
-        var plan = u.premium_active ? 'Premium hasta ' + formatDate(u.premium_until) : 'Gratis';
-        var uso = u.usage_msgs ? (u.usage_msgs + ' msg · ' + '≈ ' + fmtEur(u.usage_usd * 0.92)) : '—';
         var estado = u.disabled ? ' <span class="badge-off">DESHABILITADA</span>' : '';
-        return '<tr class="user-row" data-uid="' + escHtml(u._id) + '" tabindex="0" title="Abrir ficha y acciones">' +
-          '<td>' + escHtml(u.name || '—') + estado + '</td>' +
-          '<td>' + escHtml(u.email || '—') + '</td>' +
+        var plan = u.premium_active ? '<span class="badge-plan premium">Premium</span>' : '<span class="badge-plan">Gratis</span>';
+        var prov = (u.providers || []).map(function(p) { return p === 'google.com' ? 'Google' : (p === 'password' ? 'Correo' : p); }).join(', ') || '—';
+        var uid = escHtml(u._id);
+        var acciones = '<button class="ua-btn" data-ua="premium_add" data-uid="' + uid + '" title="Dar 30 días de Premium">+30 d</button>' +
+          (u.premium_active ? '<button class="ua-btn" data-ua="premium_remove" data-uid="' + uid + '" title="Quitar el Premium">Quitar</button>' : '') +
+          '<button class="ua-btn' + (u.disabled ? '' : ' ua-danger') + '" data-ua="' + (u.disabled ? 'enable' : 'disable') + '" data-uid="' + uid + '">' + (u.disabled ? 'Habilitar' : 'Bloquear') + '</button>' +
+          '<button class="ua-btn" data-ua="ficha" data-uid="' + uid + '" title="Abrir la ficha completa">Ficha</button>';
+        return '<tr class="user-row" data-uid="' + uid + '">' +
+          '<td class="u-main"><div class="u-name">' + escHtml(u.name || '—') + estado + '</div><div class="u-email">' + escHtml(u.email || '—') + '</div></td>' +
           '<td>' + formatDate(u.createdAt) + '</td>' +
           '<td>' + formatDate(u.last_login) + '</td>' +
-          '<td>' + escHtml(plan) + '</td>' +
+          '<td>' + plan + '</td>' +
+          '<td>' + (u.premium_active ? formatDate(u.premium_until) : '—') + '</td>' +
           '<td>' + (u._realMaps || 0) + '</td>' +
-          '<td>' + escHtml(uso) + '</td>' +
+          '<td>' + (u.usage_msgs || 0) + '</td>' +
+          '<td>' + (u.usage_guides || 0) + '</td>' +
+          '<td>' + (u.usage_edits || 0) + '</td>' +
+          '<td>' + (u.usage_usd ? '≈ ' + fmtEur(u.usage_usd * USD_TO_EUR) : '—') + '</td>' +
+          '<td>' + escHtml(prov) + '</td>' +
+          '<td class="u-actions">' + acciones + '</td>' +
           '</tr>';
       }).join('');
     }
