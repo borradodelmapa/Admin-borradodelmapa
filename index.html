@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-24.4">
+  <link rel="stylesheet" href="admin.css?v=2026-09-24.5">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -395,6 +395,20 @@
         <div class="pagination" id="users-pagination"></div>
       </section>
 
+      <!-- Feedback de testers -->
+      <section class="tab-content" id="tab-feedback">
+        <h2 class="section-title">Feedback de testers</h2>
+        <div class="links-row" data-links="fb_feedback"></div>
+        <div class="fb-toolbar">
+          <button class="btn-sm" id="fb-filter-unseen">Sin ver</button>
+          <button class="btn-sm secondary" id="fb-filter-all">Todos</button>
+          <button class="btn-sm secondary" id="fb-refresh">Actualizar</button>
+          <span id="fb-count" class="gastos-note"></span>
+        </div>
+        <div id="fb-error" class="gastos-error" style="display:none;"></div>
+        <div id="fb-list"></div>
+      </section>
+
       <!-- Configuración -->
       <section class="tab-content" id="tab-settings">
         <h2 class="section-title">Configuración</h2>
@@ -461,12 +475,12 @@
     </div>
   </div>
 
-  <div class="version-badge" id="version-badge">Panel 2026-09-24.4</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-24.5</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-24.4"></script>
-  <script src="admin.js?v=2026-09-24.4"></script>
+  <script src="config.js?v=2026-09-24.5"></script>
+  <script src="admin.js?v=2026-09-24.5"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>

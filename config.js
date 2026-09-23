@@ -4,7 +4,7 @@
 
 const ADMIN_CONFIG = {
   // Versión del panel: súbela en CADA cambio (aquí y en los ?v= de index.html). Se ve abajo a la derecha.
-  ADMIN_VERSION: '2026-09-24.4',
+  ADMIN_VERSION: '2026-09-24.5',
 
   // Firebase (mismo proyecto que borradodelmapa.com)
   FIREBASE: {
@@ -32,6 +32,7 @@ const ADMIN_CONFIG = {
     openai:        { label: 'OpenAI · uso',                url: 'https://platform.openai.com/usage' },
     analytics:     { label: 'Google Analytics',            url: 'https://analytics.google.com/analytics/web/#/a256515663p352732094/reports/intelligenthome' },
     fb_users:      { label: 'Firebase · usuarios',         url: 'https://console.firebase.google.com/project/borradodelmapa-85257/authentication/users' },
+    fb_feedback:   { label: 'Firebase · colección beta_feedback', url: 'https://console.firebase.google.com/project/borradodelmapa-85257/firestore/databases/-default-/data/~2Fbeta_feedback' },
     fb_data:       { label: 'Firebase · base de datos',    url: 'https://console.firebase.google.com/project/borradodelmapa-85257/firestore/data' },
     cloudflare:    { label: 'Cloudflare · Worker salma-api', url: 'https://dash.cloudflare.com/?to=/:account/workers/services/view/salma-api/production' },
     github_deploy: { label: 'GitHub · desplegar Worker',   url: 'https://github.com/borradodelmapa/borradodelmapa/actions/workflows/deploy-worker.yml' },
@@ -45,7 +46,7 @@ const ADMIN_CONFIG = {
   },
   LINK_GROUPS: [
     { title: 'Dinero y facturación', keys: ['stripe', 'stripe_subs', 'google_bill', 'google_budget', 'google_quotas', 'bigquery', 'anthropic', 'openai'] },
-    { title: 'Usuarios y visitas',   keys: ['fb_users', 'fb_data', 'analytics'] },
+    { title: 'Usuarios y visitas',   keys: ['fb_users', 'fb_data', 'fb_feedback', 'analytics'] },
     { title: 'Servidor y despliegue', keys: ['cloudflare', 'github_deploy'] },
     { title: 'Otros proveedores',    keys: ['twilio', 'duffel', 'rapidapi', 'elevenlabs', 'serper', 'brave', 'resend'] }
   ],
@@ -64,6 +65,7 @@ const ADMIN_CONFIG = {
     { id: 'ingresos',     label: 'Ingresos',       icon: '💰' },
     { id: 'analytics',    label: 'Analytics',      icon: '📈' },
     { id: 'usuarios',     label: 'Usuarios',       icon: '👥' },
+    { id: 'feedback',     label: 'Feedback',       icon: '💬' },
     { id: 'settings',     label: 'Configuración',  icon: '⚙️' }
   ],
 

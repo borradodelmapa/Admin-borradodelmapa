@@ -75,6 +75,108 @@
     document.querySelectorAll('.ext-link[data-key^="stripe"]').forEach(function(a) { a.href = linkUrl(a.dataset.key); });
   }
 
+  // ═══════════════════════════════════════════
+  //  FEEDBACK DE TESTERS (GET /admin/feedback, POST /admin/feedback-seen)
+  // ═══════════════════════════════════════════
+  var fbItems = [], fbFilter = 'unseen', fbWired = false;
+
+  function fbSetBadge(n) {
+    document.querySelectorAll('.tab-btn[data-tab="feedback"]').forEach(function(b) {
+      b.textContent = '💬 Feedback' + (n > 0 ? ' (' + n + ')' : '');
+    });
+  }
+
+  async function fbFetch() {
+    var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/feedback', { headers: await adminAuthHeaders(), cache: 'no-store' });
+    var d = await res.json().catch(function() { return {}; });
+    if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+    if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
+    fbItems = d.items || [];
+    fbSetBadge(d.unseen || 0);
+    return d;
+  }
+
+  // Número de mensajes sin ver en la pestaña, se actualiza al entrar en el Dashboard
+  async function refreshFeedbackBadge() { try { await fbFetch(); } catch (e) {} }
+
+  function fbCopyText(i) {
+    return ['Feedback de ' + (i.email || i.user_name || i.user_id || 'tester') + ' · ' + fmtDateTime(i.at), 'Pantalla: ' + (i.page || '—'), 'Worker ' + (i.worker_version || '?') + ' · ' + (i.front_versions || ''), i.screenshot_url ? 'Captura: ' + i.screenshot_url : '', '', i.note || '', '', '— logs —', i.logs || '(sin logs)'].join('\n');
+  }
+
+  async function fbMark(id, seen) {
+    var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/feedback-seen', { method: 'POST', headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ id: id, seen: seen }) });
+    var d = await res.json().catch(function() { return {}; });
+    if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
+  }
+
+  function renderFeedback() {
+    var list = document.getElementById('fb-list'); list.innerHTML = '';
+    var items = fbItems.filter(function(i) { return fbFilter === 'all' || !i.seen; });
+    document.getElementById('fb-count').textContent = items.length + (fbFilter === 'all' ? ' mensajes' : ' sin ver') + ' · ' + fbItems.length + ' en total';
+    document.getElementById('fb-filter-unseen').className = 'btn-sm' + (fbFilter === 'unseen' ? '' : ' secondary');
+    document.getElementById('fb-filter-all').className = 'btn-sm' + (fbFilter === 'all' ? '' : ' secondary');
+    if (!items.length) {
+      var e = document.createElement('div'); e.className = 'gastos-note'; e.textContent = fbFilter === 'all' ? 'Todavía no hay feedback.' : 'No hay mensajes sin ver. 🎉'; list.appendChild(e); return;
+    }
+    items.forEach(function(i) {
+      var card = document.createElement('div'); card.className = 'fb-card' + (i.seen ? ' seen' : ''); card.dataset.id = i.id;
+      var head = document.createElement('div'); head.className = 'fb-head';
+      var who = document.createElement('strong'); who.textContent = i.email || i.user_name || (i.user_id || '').slice(0, 8) || 'anónimo';
+      var when = document.createElement('span'); when.className = 'fb-when'; when.textContent = fmtDateTime(i.at);
+      head.appendChild(who); head.appendChild(when); card.appendChild(head);
+      var note = document.createElement('div'); note.className = 'fb-note'; note.textContent = i.note || ''; card.appendChild(note);
+      var meta = document.createElement('div'); meta.className = 'fb-meta';
+      meta.textContent = 'Pantalla: ' + (i.page || '—') + ' · Worker ' + (i.worker_version || '?') + (i.front_versions ? ' · ' + i.front_versions : '');
+      card.appendChild(meta);
+      if (i.user_agent) { var ua = document.createElement('div'); ua.className = 'fb-meta'; ua.textContent = i.user_agent; card.appendChild(ua); }
+      if (i.screenshot_url) {
+        var a = document.createElement('a'); a.href = i.screenshot_url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'fb-shot';
+        var img = document.createElement('img'); img.src = i.screenshot_url; img.alt = 'Captura del tester'; img.loading = 'lazy'; a.appendChild(img); card.appendChild(a);
+      }
+      var bar = document.createElement('div'); bar.className = 'fb-actions';
+      var mk = function(txt, cls, act) { var b = document.createElement('button'); b.className = 'btn-sm ' + cls; b.textContent = txt; b.dataset.act = act; b.dataset.id = i.id; return b; };
+      bar.appendChild(mk(i.seen ? 'Marcar como no visto' : 'Marcar como visto', i.seen ? 'secondary' : '', 'seen'));
+      bar.appendChild(mk('Copiar todo', 'secondary', 'copy'));
+      if (i.logs) bar.appendChild(mk('Ver logs (' + i.logs_len + ' car.)', 'secondary', 'logs'));
+      card.appendChild(bar);
+      if (i.logs) { var pre = document.createElement('pre'); pre.className = 'fb-logs'; pre.style.display = 'none'; pre.textContent = i.logs; card.appendChild(pre); }
+      list.appendChild(card);
+    });
+  }
+
+  async function loadFeedback() {
+    if (!fbWired) {
+      fbWired = true;
+      document.getElementById('fb-filter-unseen').addEventListener('click', function() { fbFilter = 'unseen'; renderFeedback(); });
+      document.getElementById('fb-filter-all').addEventListener('click', function() { fbFilter = 'all'; renderFeedback(); });
+      document.getElementById('fb-refresh').addEventListener('click', loadFeedback);
+      document.getElementById('fb-list').addEventListener('click', async function(e) {
+        var b = e.target.closest('button[data-act]'); if (!b) return;
+        var id = b.dataset.id, item = fbItems.filter(function(x) { return x.id === id; })[0]; if (!item) return;
+        if (b.dataset.act === 'logs') {
+          var pre = b.closest('.fb-card').querySelector('.fb-logs'); var open = pre.style.display === 'none';
+          pre.style.display = open ? 'block' : 'none'; b.textContent = open ? 'Ocultar logs' : 'Ver logs (' + item.logs_len + ' car.)'; return;
+        }
+        if (b.dataset.act === 'copy') {
+          try { await navigator.clipboard.writeText(fbCopyText(item)); b.textContent = 'Copiado ✓'; } catch (err) { b.textContent = 'No se pudo copiar'; }
+          setTimeout(function() { b.textContent = 'Copiar todo'; }, 1800); return;
+        }
+        if (b.dataset.act === 'seen') {
+          b.disabled = true;
+          try {
+            await fbMark(id, !item.seen); item.seen = !item.seen;
+            fbSetBadge(fbItems.filter(function(x) { return !x.seen; }).length); renderFeedback();
+          } catch (err) { var box = document.getElementById('fb-error'); box.textContent = 'No se pudo marcar: ' + err.message; box.style.display = 'block'; b.disabled = false; }
+        }
+      });
+    }
+    var btn = document.getElementById('fb-refresh'), err = document.getElementById('fb-error');
+    btn.disabled = true; err.style.display = 'none';
+    try { await fbFetch(); renderFeedback(); }
+    catch (e) { err.textContent = 'No se pudo cargar el feedback: ' + (e && e.message ? e.message : 'error de red'); err.style.display = 'block'; }
+    finally { btn.disabled = false; }
+  }
+
   // ─── DOM REFS ───
 
   const loginScreen = document.getElementById('login-screen');
@@ -215,9 +317,11 @@
         loadResumen();
         loadVisitasHoy();
         loadAnaliticaRapida();
+        refreshFeedbackBadge();
       }
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'ingresos') loadIngresos();
+      if (tabId === 'feedback') loadFeedback();
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'analytics') loadAnalytics();
       if (tabId === 'settings') initSettings();
