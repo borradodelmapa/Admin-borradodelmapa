@@ -929,11 +929,16 @@
       document.getElementById('gr-mes').textContent = fmtEur(d.month.eur);
       document.getElementById('gr-mes-label').textContent = 'Este mes' + (d.month.credits ? ' · créditos ' + fmtEur(-d.month.credits) : '');
       var sku = document.getElementById('gr-sku'); sku.innerHTML = '';
-      if (!d.by_sku.length) sku.appendChild(gastosRow('Sin gasto este mes', '—', '', null));
+      if (!d.by_sku.length) {
+        if (d.rows_read > 0) {
+          sku.appendChild(gastosRow('Google ya ha registrado ' + d.rows_read + ' líneas de uso, todas a 0,00 €', '0,00 €', 'Dentro de lo gratuito o todavía sin tarifar. Desde ' + (d.first_day || '—') + '.', null));
+          (d.zero_skus || []).forEach(function(n) { sku.appendChild(gastosRow(n, '0,00 €', 'sin coste por ahora', null)); });
+        } else sku.appendChild(gastosRow('Sin gasto este mes', '—', '', null));
+      }
       d.by_sku.forEach(function(s) { sku.appendChild(gastosRow(s.name, fmtEur(s.eur), '', d.month.eur > 0 ? Math.min(100, s.eur / d.month.eur * 100) : null, true)); });
       var dias = document.getElementById('gr-dias'); dias.innerHTML = '';
       d.days.forEach(function(x, i) { dias.appendChild(gastosRow(gastosDayLabel(x.day, i), fmtEur(x.eur), '', null)); });
-      if (d.last_usage_at) document.getElementById('gr-note').textContent = 'Es lo que Google cobra de verdad (neto de créditos). Último dato de Google: ' + new Date(d.last_usage_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '. El dato de hoy siempre está incompleto.';
+      if (d.last_usage_at) document.getElementById('gr-note').textContent = 'Es lo que Google cobra de verdad (neto de créditos). Filas leídas: ' + (d.rows_read || 0) + '. Último dato de Google: ' + new Date(d.last_usage_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '. El dato de hoy siempre está incompleto.';
     } catch (e) {
       box.textContent = (e && e.message) ? e.message : 'No se pudo leer el coste real.';
       box.style.display = 'block';
