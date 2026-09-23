@@ -174,6 +174,7 @@
         loadGastosQuick();
         loadResumen();
         loadVisitasHoy();
+        loadAnaliticaRapida();
       }
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'ingresos') loadIngresos();
@@ -252,6 +253,67 @@
   }
 
   // Visitas de hoy y de ayer desde Google Analytics (misma vía que la pestaña Analytics). Si falla, la tarjeta queda en "—".
+  // Analítica de un vistazo en el Dashboard: totales de 7 días, sesiones por día (minigráfico) y los 3 países y páginas principales.
+  // Usa la misma vía que la pestaña Analytics (POST /ga4). Cada informe va por separado: si uno falla, el resto se pinta igual.
+  var daWired = false, daChart = null;
+  async function loadAnaliticaRapida() {
+    if (!daWired) {
+      daWired = true;
+      var box = document.getElementById('dash-analitica');
+      box.addEventListener('click', function() { navigateTo('analytics'); });
+      box.addEventListener('keydown', function(e) { if (e.key === 'Enter') navigateTo('analytics'); });
+    }
+    var $ = function(id) { return document.getElementById(id); };
+    var range = [{ startDate: '6daysAgo', endDate: 'today' }];
+    var safe = function(p) { return p.then(function(x) { return { ok: true, data: x }; }, function(e) { return { ok: false, err: e }; }); };
+    var res = await Promise.all([
+      safe(ga4Report({ dateRanges: range, metrics: [{ name: 'sessions' }, { name: 'totalUsers' }, { name: 'newUsers' }, { name: 'averageSessionDuration' }] })),
+      safe(ga4Report({ dateRanges: range, dimensions: [{ name: 'date' }], metrics: [{ name: 'sessions' }], orderBys: [{ dimension: { dimensionName: 'date' } }] })),
+      safe(ga4Report({ dateRanges: range, dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 3 })),
+      safe(ga4Report({ dateRanges: range, dimensions: [{ name: 'pagePath' }], metrics: [{ name: 'screenPageViews' }], orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }], limit: 3 }))
+    ]);
+    if (!res[0].ok && !res[1].ok) {
+      ['da-sesiones', 'da-usuarios', 'da-nuevos', 'da-duracion'].forEach(function(id) { $(id).textContent = '—'; });
+      $('da-nota').textContent = 'Analítica no disponible: ' + ((res[0].err && res[0].err.message) || 'error') + ' Entra en la pestaña Analytics para ver el detalle.';
+      return;
+    }
+    if (res[0].ok) {
+      var r0 = (res[0].data.rows || [])[0];
+      var m = function(i) { return r0 ? (parseFloat(r0.metricValues[i].value) || 0) : 0; };
+      $('da-sesiones').textContent = Math.round(m(0)); $('da-usuarios').textContent = Math.round(m(1));
+      $('da-nuevos').textContent = Math.round(m(2)); $('da-duracion').textContent = Math.round(m(3)) + 's';
+    }
+    if (res[1].ok) {
+      var rows = res[1].data.rows || [], labels = [], values = [];
+      rows.forEach(function(r) { var d = r.dimensionValues[0].value; labels.push(d.slice(6, 8) + '/' + d.slice(4, 6)); values.push(parseInt(r.metricValues[0].value) || 0); });
+      var hoy = values.length ? values[values.length - 1] : 0, ayer = values.length > 1 ? values[values.length - 2] : 0;
+      $('da-sesiones-trend').textContent = 'hoy ' + hoy + ' · ayer ' + ayer;
+      if (daChart) daChart.destroy();
+      daChart = new Chart($('da-chart'), {
+        type: 'line',
+        data: { labels: labels, datasets: [{ label: 'Sesiones', data: values, borderColor: '#F4630B', backgroundColor: 'rgba(244,99,11,.14)', fill: true, tension: .3, pointRadius: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#7E8285' }, grid: { display: false } }, y: { ticks: { color: '#7E8285', precision: 0 }, grid: { color: 'rgba(255,255,255,.05)' }, beginAtZero: true } } }
+      });
+    }
+    var top = $('da-top'); top.innerHTML = '';
+    var addTop = function(title, r, unit) {
+      if (!r.ok) return;
+      var rws = r.data.rows || []; if (!rws.length) return;
+      var col = document.createElement('div'); col.className = 'da-top-col';
+      var h = document.createElement('div'); h.className = 'da-top-title'; h.textContent = title; col.appendChild(h);
+      rws.forEach(function(x) {
+        var line = document.createElement('div'); line.className = 'da-top-row';
+        var a = document.createElement('span'); a.textContent = x.dimensionValues[0].value;
+        var b = document.createElement('span'); b.textContent = x.metricValues[0].value + ' ' + unit;
+        line.appendChild(a); line.appendChild(b); col.appendChild(line);
+      });
+      top.appendChild(col);
+    };
+    addTop('Países', res[2], 'ses.');
+    addTop('Páginas', res[3], 'vistas');
+    $('da-nota').textContent = 'Últimos 7 días de Google Analytics. Pulsa el bloque para ver el detalle.';
+  }
+
   async function loadVisitasHoy() {
     var v = document.getElementById('m-visitas'), tr = document.getElementById('m-visitas-trend');
     try {

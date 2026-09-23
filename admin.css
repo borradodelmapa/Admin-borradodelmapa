@@ -1043,3 +1043,15 @@ body { min-height: 100vh; }
 .mode-banner { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin: 0 0 14px; border: 1px solid var(--border, rgba(255,255,255,.12)); }
 .mode-banner.test { background: rgba(244, 99, 11, .12); color: var(--accent, #F4630B); }
 .mode-banner.live { background: rgba(74, 222, 128, .12); color: var(--green, #4ade80); }
+
+/* ─── ANALÍTICA RÁPIDA (Dashboard) ─── */
+.dash-analitica { cursor: pointer; }
+.dash-analitica:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 10px; }
+.da-chart-wrap { position: relative; height: 150px; margin: 14px 0 6px; background: var(--bg-card, rgba(255,255,255,.03)); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+.da-top { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 10px; }
+@media (min-width: 768px) { .da-top { grid-template-columns: 1fr 1fr; } }
+.da-top-col { background: var(--bg-card, rgba(255,255,255,.03)); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.da-top-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 6px; }
+.da-top-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; }
+.da-top-row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.da-top-row span:last-child { color: var(--text-secondary); white-space: nowrap; }
