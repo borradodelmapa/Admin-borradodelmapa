@@ -4,22 +4,23 @@
    ═══════════════════════════════════════════ */
 
 :root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-card: #1e2a4a;
-  --bg-card-hover: #243056;
-  --bg-input: #0f1629;
-  --text-primary: #e8e8f0;
-  --text-secondary: #8b8fa3;
-  --text-muted: #5a5e72;
-  --border: rgba(255,255,255,.08);
-  --border-hover: rgba(255,255,255,.15);
-  --accent: #4361ee;
-  --accent-hover: #3a56d4;
-  --green: #06d6a0;
-  --red: #ef476f;
+  --bg-primary: #0D0F10;
+  --bg-secondary: #131516;
+  --bg-card: #17191B;
+  --bg-card-hover: #1E2124;
+  --bg-input: #0D0F10;
+  --text-primary: #ECEBE8;
+  --text-secondary: #C4C7C9;
+  --text-muted: #7E8285;
+  --border: #2B2E30;
+  --border-hover: #454A4D;
+  --accent: #F4630B;
+  --text-on-accent: #0D0F10;
+  --accent-hover: #FF7A2E;
+  --green: #43d977;
+  --red: #ff5a5a;
   --yellow: #ffd166;
-  --dorado: #d4a017;
+  --dorado: #F4630B;
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 2px 12px rgba(0,0,0,.3);
@@ -88,7 +89,7 @@ body { min-height: 100vh; }
 
 .login-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
   padding: 14px;
@@ -191,7 +192,7 @@ body { min-height: 100vh; }
 
 .tab-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* Menú móvil */
@@ -447,7 +448,7 @@ body { min-height: 100vh; }
 }
 
 .pagination button:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-.pagination button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pagination button.active { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
 .pagination button:disabled { opacity: .3; cursor: default; }
 
 .pagination-info {
@@ -500,7 +501,7 @@ body { min-height: 100vh; }
 
 .btn-sm {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
   padding: 4px 12px;
@@ -513,7 +514,7 @@ body { min-height: 100vh; }
 .btn-sm:hover { background: var(--accent-hover); }
 
 .btn-sm.danger { background: var(--red); }
-.btn-sm.danger:hover { background: #d63a5c; }
+.btn-sm.danger:hover { background: #e04545; }
 
 .btn-sm.secondary {
   background: transparent;
@@ -811,7 +812,7 @@ body { min-height: 100vh; }
   font-weight: 600;
 }
 
-.type-badge.route { background: var(--accent); color: #fff; }
+.type-badge.route { background: var(--accent); color: var(--text-on-accent); }
 .type-badge.conversational { background: var(--text-muted); color: #fff; }
 
 /* ─── CHAT ─── */
@@ -863,7 +864,7 @@ body { min-height: 100vh; }
 
 .chat-msg.user {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   align-self: flex-end;
   border-bottom-right-radius: 4px;
 }
@@ -909,7 +910,7 @@ body { min-height: 100vh; }
 
 .chat-send {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
   padding: 12px 20px;
@@ -974,3 +975,23 @@ body { min-height: 100vh; }
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ─── VERSIÓN VISIBLE (panel + Worker) ─── */
+.version-badge {
+  position: fixed;
+  right: 8px;
+  bottom: 6px;
+  z-index: 9999;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .03em;
+  color: var(--text-muted);
+  background: rgba(13,15,16,.82);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  pointer-events: none;
+  user-select: none;
+}
+
+#main-content { padding-bottom: 36px; } /* deja sitio a la insignia de versión */

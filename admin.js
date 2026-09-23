@@ -60,6 +60,20 @@
   // Inicializar Firebase siempre (necesario para auth)
   initFirebase();
 
+  // ─── VERSIÓN VISIBLE ───
+  // Insignia abajo a la derecha: versión del panel (ADMIN_VERSION, la que tiene cargada ESTE navegador)
+  // + versión del Worker en producción (/version, público). Sirve para saber qué se está viendo de verdad.
+  (function showVersion() {
+    var el = document.getElementById('version-badge');
+    if (!el) return;
+    var panel = 'Panel ' + (ADMIN_CONFIG.ADMIN_VERSION || '?');
+    el.textContent = panel + ' · Worker …';
+    fetch(ADMIN_CONFIG.WORKER_URL + '/version', { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { el.textContent = panel + ' · Worker ' + (d.version_short || '?'); })
+      .catch(function() { el.textContent = panel + ' · Worker sin respuesta'; });
+  })();
+
   // ─── LOGIN ───
 
   function showApp() {
@@ -1073,16 +1087,16 @@
       type: 'line',
       data: {
         labels: labels,
-        datasets: [{ label: 'Sesiones', data: values, borderColor: '#4361ee', backgroundColor: 'rgba(67,97,238,.1)', fill: true, tension: .3 }],
+        datasets: [{ label: 'Sesiones', data: values, borderColor: '#F4630B', backgroundColor: 'rgba(244,99,11,.14)', fill: true, tension: .3 }],
       },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(255,255,255,.05)' }, beginAtZero: true } } },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#7E8285' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#7E8285' }, grid: { color: 'rgba(255,255,255,.05)' }, beginAtZero: true } } },
     });
   }
 
   function renderGA4Sources(data) {
     var rows = getGA4Rows(data);
     var labels = [], values = [];
-    var colors = ['#4361ee', '#06d6a0', '#ffd166', '#ef476f', '#8b8fa3', '#e0b84a', '#4cc9f0', '#f72585'];
+    var colors = ['#F4630B', '#43d977', '#ffd166', '#ff5a5a', '#7E8285', '#e0b84a', '#4cc9f0', '#f72585'];
     rows.forEach(function(r) {
       labels.push(r.dimensionValues[0].value);
       values.push(parseInt(r.metricValues[0].value) || 0);
@@ -1092,14 +1106,14 @@
     ga4Charts.sources = new Chart(document.getElementById('chart-sources'), {
       type: 'doughnut',
       data: { labels: labels, datasets: [{ data: values, backgroundColor: colors.slice(0, labels.length) }] },
-      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#8b8fa3', font: { size: 11 } } } } },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#7E8285', font: { size: 11 } } } } },
     });
   }
 
   function renderGA4Devices(data) {
     var rows = getGA4Rows(data);
     var labels = [], values = [];
-    var colors = ['#4361ee', '#06d6a0', '#ffd166'];
+    var colors = ['#F4630B', '#43d977', '#ffd166'];
     rows.forEach(function(r) {
       labels.push(r.dimensionValues[0].value);
       values.push(parseInt(r.metricValues[0].value) || 0);
@@ -1109,7 +1123,7 @@
     ga4Charts.devices = new Chart(document.getElementById('chart-devices'), {
       type: 'doughnut',
       data: { labels: labels, datasets: [{ data: values, backgroundColor: colors.slice(0, labels.length) }] },
-      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#8b8fa3', font: { size: 11 } } } } },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#7E8285', font: { size: 11 } } } } },
     });
   }
 
@@ -1253,7 +1267,7 @@
       var typeBadge = '<span class="type-badge ' + l.type + '">' + (l.type === 'route' ? 'Ruta' : 'Conv') + '</span>';
       var statusClass = l.status === 'error' ? 'status-error' : 'status-ok';
       var msg = l.user_message.length > 60 ? l.user_message.slice(0, 60) + '...' : l.user_message;
-      return '<tr' + (l.status === 'error' ? ' style="background:rgba(239,71,111,.08)"' : '') + '>' +
+      return '<tr' + (l.status === 'error' ? ' style="background:rgba(255,90,90,.08)"' : '') + '>' +
         '<td>' + time + '</td>' +
         '<td>' + typeBadge + '</td>' +
         '<td title="' + l.user_message.replace(/"/g, '&quot;') + '">' + msg + '</td>' +
