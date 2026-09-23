@@ -1036,3 +1036,8 @@ body { min-height: 100vh; }
 .cfg-field .login-input { width: 150px; margin: 0; }
 #tab-settings .btn-sm { margin-bottom: 4px; }
 #cfg-caps-msg, #cfg-health-msg { min-height: 20px; margin-top: 8px; }
+
+/* ─── INGRESOS ─── */
+.mode-banner { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin: 0 0 14px; border: 1px solid var(--border, rgba(255,255,255,.12)); }
+.mode-banner.test { background: rgba(244, 99, 11, .12); color: var(--accent, #F4630B); }
+.mode-banner.live { background: rgba(74, 222, 128, .12); color: var(--green, #4ade80); }

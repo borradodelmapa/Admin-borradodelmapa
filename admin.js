@@ -174,6 +174,7 @@
         loadGastosQuick();
       }
       if (tabId === 'gastos') loadGastos();
+      if (tabId === 'ingresos') loadIngresos();
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'analytics') loadAnalytics();
       if (tabId === 'settings') initSettings();
@@ -824,6 +825,85 @@
     tbody.innerHTML = rows.map(function(r) {
       return '<tr><td>' + r.dimensionValues[0].value + '</td><td>' + (parseInt(r.metricValues[0].value) || 0) + '</td></tr>';
     }).join('');
+  }
+
+  // ═══════════════════════════════════════════
+  //  INGRESOS (Stripe, vía GET /admin/revenue) + margen estimado
+  // ═══════════════════════════════════════════
+
+  var ingresosWired = false;
+  var USD_TO_EUR = 0.92;   // solo para convertir el coste estimado de Claude (en USD) a euros
+  var IVA = 1.21;          // los importes de Stripe llevan IVA incluido
+
+  function ingresosError(msg) {
+    var box = document.getElementById('r-error');
+    box.textContent = msg;
+    box.style.display = msg ? 'block' : 'none';
+  }
+
+  async function loadIngresos() {
+    if (!ingresosWired) {
+      ingresosWired = true;
+      document.getElementById('r-refresh').addEventListener('click', function() { refreshIngresos(); });
+    }
+    refreshIngresos();
+  }
+
+  async function refreshIngresos() {
+    var btn = document.getElementById('r-refresh');
+    btn.disabled = true;
+    ingresosError('');
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/revenue', { headers: await adminAuthHeaders(), cache: 'no-store' });
+      var d = await res.json().catch(function() { return {}; });
+      if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+      if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
+      var t = d.totals;
+
+      var banner = document.getElementById('r-mode');
+      banner.style.display = 'block';
+      banner.textContent = d.mode === 'live' ? 'Stripe en modo REAL: estos importes son cobros de verdad.' : 'Stripe en MODO PRUEBA: estos importes son de mentira (tarjeta de test), no son dinero real.';
+      banner.className = 'mode-banner ' + (d.mode === 'live' ? 'live' : 'test');
+
+      document.getElementById('r-mes').textContent = fmtEur(t.month);
+      document.getElementById('r-mes-label').textContent = 'Este mes · ' + t.month_count + (t.month_count === 1 ? ' compra' : ' compras');
+      document.getElementById('r-30d').textContent = fmtEur(t.d30);
+      document.getElementById('r-30d-label').textContent = 'Últimos 30 días · ' + t.d30_count + (t.d30_count === 1 ? ' compra' : ' compras');
+      document.getElementById('r-total').textContent = fmtEur(t.gross);
+      document.getElementById('r-total-label').textContent = 'Total cobrado · ' + t.count + (t.count === 1 ? ' compra' : ' compras') + (d.truncated ? ' (o más)' : '');
+
+      var planes = document.getElementById('r-planes'); planes.innerHTML = '';
+      if (!d.by_plan.length) planes.appendChild(gastosRow('Sin compras todavía', '—', '', null));
+      d.by_plan.forEach(function(p) { planes.appendChild(gastosRow(p.label, fmtEur(p.gross), p.count + (p.count === 1 ? ' compra' : ' compras'), null)); });
+
+      var rec = document.getElementById('r-recientes'); rec.innerHTML = '';
+      if (!d.recent.length) rec.appendChild(gastosRow('Sin compras todavía', '—', '', null));
+      d.recent.forEach(function(c) {
+        var when = new Date(c.at).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        rec.appendChild(gastosRow(c.label + ' · ' + (c.email || 'sin email'), fmtEur(c.amount), when, null));
+      });
+
+      // Margen estimado del mes: ingresos sin IVA − Google estimado − Claude estimado (si alguno de los dos costes falla, se dice)
+      var googleEur = null, claudeEur = null;
+      try {
+        var gr = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-usage', { headers: await adminAuthHeaders(), cache: 'no-store' });
+        if (gr.ok) { var gj = await gr.json(); if (gj.month && typeof gj.month.eur === 'number') googleEur = gj.month.eur; }
+      } catch (e) {}
+      try { var st = await fetchAdminStats(); if (st.totals && typeof st.totals.claude_usd === 'number') claudeEur = st.totals.claude_usd * USD_TO_EUR; } catch (e) {}
+      var mEl = document.getElementById('r-margen'), mLabel = document.getElementById('r-margen-label');
+      if (googleEur === null && claudeEur === null) {
+        mEl.textContent = '—'; mEl.className = 'metric-value'; mLabel.textContent = 'Margen estimado: sin datos de costes';
+      } else {
+        var neto = t.month / IVA, margen = neto - (googleEur || 0) - (claudeEur || 0);
+        mEl.textContent = fmtEur(margen); mEl.className = 'metric-value' + (margen < 0 ? ' danger' : '');
+        mLabel.textContent = 'Margen est. del mes · ' + fmtEur(neto) + ' sin IVA − Google ' + fmtEur(googleEur || 0) + ' − Claude ' + fmtEur(claudeEur || 0) + (googleEur === null || claudeEur === null ? ' (falta un coste)' : '');
+      }
+      document.getElementById('r-updated').textContent = 'Actualizado a las ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    } catch (err) {
+      ingresosError('No se pudieron cargar los ingresos: ' + ((err && err.message) ? err.message : 'sin conexión con el Worker.'));
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // ═══════════════════════════════════════════

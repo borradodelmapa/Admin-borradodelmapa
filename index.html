@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-23.7">
+  <link rel="stylesheet" href="admin.css?v=2026-09-23.8">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -164,6 +164,49 @@
         </div>
       </section>
 
+      <!-- Ingresos -->
+      <section class="tab-content" id="tab-ingresos">
+        <h2 class="section-title">Ingresos</h2>
+        <div id="r-mode" class="mode-banner" style="display:none;"></div>
+        <p class="gastos-note">Compras cobradas en Stripe (importes brutos, IVA incluido; sin descontar comisiones de Stripe ni reembolsos). El margen es una estimación aproximada: ingresos sin IVA menos el gasto estimado de Google y de Claude de este mes; no incluye los demás proveedores.</p>
+
+        <div class="metrics-grid" id="ingresos-cards">
+          <div class="metric-card">
+            <span class="metric-icon">🗓️</span>
+            <span class="metric-value" id="r-mes">—</span>
+            <span class="metric-label" id="r-mes-label">Este mes</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">📆</span>
+            <span class="metric-value" id="r-30d">—</span>
+            <span class="metric-label" id="r-30d-label">Últimos 30 días</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">💰</span>
+            <span class="metric-value" id="r-total">—</span>
+            <span class="metric-label" id="r-total-label">Total cobrado</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">📉</span>
+            <span class="metric-value" id="r-margen">—</span>
+            <span class="metric-label" id="r-margen-label">Margen estimado del mes</span>
+          </div>
+        </div>
+
+        <div id="r-error" class="gastos-error" style="display:none;"></div>
+
+        <h3 class="subsection-title">Por plan</h3>
+        <div id="r-planes" class="gastos-list"></div>
+
+        <h3 class="subsection-title">Últimas compras</h3>
+        <div id="r-recientes" class="gastos-list"></div>
+
+        <div class="gastos-foot">
+          <button class="btn-sm" id="r-refresh">Actualizar</button>
+          <span id="r-updated" class="gastos-note"></span>
+        </div>
+      </section>
+
       <!-- Analytics -->
       <section class="tab-content" id="tab-analytics">
         <h2 class="section-title">Analytics</h2>
@@ -301,12 +344,12 @@
   </div>
 
   <!-- Versión visible: panel + Worker (se rellena en admin.js) -->
-  <div class="version-badge" id="version-badge">Panel 2026-09-23.7</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-23.8</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-23.7"></script>
-  <script src="admin.js?v=2026-09-23.7"></script>
+  <script src="config.js?v=2026-09-23.8"></script>
+  <script src="admin.js?v=2026-09-23.8"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>
