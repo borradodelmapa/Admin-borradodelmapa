@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-23.5">
+  <link rel="stylesheet" href="admin.css?v=2026-09-23.6">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -269,24 +269,42 @@
       <section class="tab-content" id="tab-settings">
         <h2 class="section-title">Configuración</h2>
 
-        <div style="background: rgba(67, 97, 238, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-          <h3 class="subsection-title">Caché de la aplicación</h3>
-          <p style="color: #aaa; margin-bottom: 16px; font-size: 14px;">El Service Worker cachea los archivos para que funcione offline. Si has actualizado la app y no ves los cambios, limpia el caché.</p>
-          <button class="btn-sm danger" id="btn-clear-cache">Limpiar caché y recargar</button>
-          <div id="cache-status" style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; font-size: 13px; display: none;"></div>
-        </div>
+        <h3 class="subsection-title">Versiones</h3>
+        <p class="gastos-note">Sirven para saber qué estás viendo de verdad. Si el panel no coincide con la última versión publicada, recarga con Ctrl+F5.</p>
+        <div id="cfg-versiones" class="gastos-list"></div>
+
+        <h3 class="subsection-title">Topes de gasto en Google</h3>
+        <p class="gastos-note">Tope propio del Worker, en euros: al llegar a él deja de llamar a Google (fotos, fichas y trazados nuevos fallan hasta el día o mes siguiente). No cambia las cuotas de Google Cloud, que se editan en su consola.</p>
+        <form id="cfg-caps-form" class="cfg-form">
+          <label class="cfg-field">Tope diario (€)
+            <input type="number" id="cfg-daily" class="login-input" min="0.5" max="100" step="0.5" inputmode="decimal" required>
+          </label>
+          <label class="cfg-field">Tope mensual (€)
+            <input type="number" id="cfg-monthly" class="login-input" min="1" max="1000" step="1" inputmode="decimal" required>
+          </label>
+          <button type="submit" class="btn-sm" id="cfg-caps-save">Guardar topes</button>
+        </form>
+        <div id="cfg-caps-msg" class="gastos-note"></div>
+
+        <h3 class="subsection-title">Salud de los servicios</h3>
+        <p class="gastos-note">El Dashboard muestra la última comprobación (hasta 10 min). Este botón hace una comprobación real ahora: llama a OpenAI, Google, RapidAPI y Duffel, con un coste de céntimos.</p>
+        <button class="btn-sm" id="cfg-health">Comprobar ahora</button>
+        <div id="cfg-health-msg" class="gastos-note"></div>
+
+        <h3 class="subsection-title">Sesión</h3>
+        <button class="btn-sm danger" id="cfg-logout">Cerrar sesión</button>
       </section>
 
     </main>
   </div>
 
   <!-- Versión visible: panel + Worker (se rellena en admin.js) -->
-  <div class="version-badge" id="version-badge">Panel 2026-09-23.5</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-23.6</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-23.5"></script>
-  <script src="admin.js?v=2026-09-23.5"></script>
+  <script src="config.js?v=2026-09-23.6"></script>
+  <script src="admin.js?v=2026-09-23.6"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>

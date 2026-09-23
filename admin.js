@@ -287,7 +287,11 @@
 
   }
 
-  async function checkWorkerHealth() {
+  var HEALTH_LABELS = { worker: 'Worker', openai: 'OpenAI', google_places: 'Google Places', booking_hotels: 'Hotels', booking_cars: 'Cars', duffel_flights: 'Flights' };
+
+  // Comprueba la salud del Worker y repinta los puntos del Dashboard. `force` pide una comprobación REAL (?force=1); sin él el
+  // Worker responde con la última guardada (<10 min) para no gastar llamadas de pago cada vez. Devuelve un resumen.
+  async function checkWorkerHealth(force) {
     var dots = {
       worker: document.getElementById('health-worker'),
       openai: document.getElementById('health-openai'),
@@ -300,27 +304,34 @@
     // Poner todos en gris mientras carga
     Object.values(dots).forEach(function(d) { if (d) d.className = 'health-dot grey'; });
 
+    var summary = { failing: [], total: 0, cached: false, error: '' };
     try {
-      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/health', { headers: await adminAuthHeaders() });
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/health' + (force ? '?force=1' : ''), { headers: await adminAuthHeaders() });
       var data = await res.json();
       if (res.status === 401) throw new Error('No autorizado — vuelve a iniciar sesión');
 
       // Worker siempre ok si llegamos aquí
       if (dots.worker) dots.worker.className = 'health-dot green';
+      summary.total = 1;
 
       // Cada API individual
       var checks = data.checks || {};
+      summary.cached = !!data.cached;
       Object.keys(dots).forEach(function(key) {
         if (key === 'worker') return;
         var check = checks[key];
         if (dots[key] && check) {
+          summary.total++;
           dots[key].className = 'health-dot ' + (check.status === 'ok' ? 'green' : 'red');
           dots[key].title = check.status === 'ok' ? check.ms + 'ms' : (check.error || 'Error ' + check.code);
+          if (check.status !== 'ok') summary.failing.push(HEALTH_LABELS[key] || key);
         }
       });
     } catch (e) {
       Object.values(dots).forEach(function(d) { if (d) d.className = 'health-dot red'; });
+      summary.error = (e && e.message) ? e.message : 'No se pudo comprobar';
     }
+    return summary;
   }
 
   // ═══════════════════════════════════════════
@@ -840,92 +851,99 @@
   }
 
   // ═══════════════════════════════════════════
-  //  CONFIGURACIÓN (Settings)
+  //  CONFIGURACIÓN: versiones, topes de gasto, salud y cerrar sesión
   // ═══════════════════════════════════════════
 
-  function initSettings() {
-    var btnClear = document.getElementById('btn-clear-cache');
-    if (!btnClear) return;
+  var settingsWired = false;
 
-    btnClear.addEventListener('click', async function() {
-      btnClear.disabled = true;
-      btnClear.textContent = 'Limpiando...';
-      var statusDiv = document.getElementById('cache-status');
-      statusDiv.style.display = 'block';
-      statusDiv.textContent = 'Limpiando caché...';
-
-      try {
-        if ('caches' in window) {
-          var cacheNames = await caches.keys();
-          var promises = cacheNames.map(function(cacheName) {
-            return caches.delete(cacheName);
-          });
-          await Promise.all(promises);
-          statusDiv.textContent = '✅ Caché limpiado. Recargando...';
-          setTimeout(function() {
-            window.location.reload();
-          }, 1000);
-        } else {
-          statusDiv.textContent = '❌ No se puede limpiar el caché en este navegador';
-          btnClear.disabled = false;
-          btnClear.textContent = 'Limpiar caché y recargar';
-        }
-      } catch (err) {
-        statusDiv.textContent = '❌ Error: ' + err.message;
-        btnClear.disabled = false;
-        btnClear.textContent = 'Limpiar caché y recargar';
-      }
-    });
+  function cfgMsg(id, text, isError) {
+    var el = document.getElementById(id);
+    el.textContent = text;
+    el.style.color = isError ? 'var(--red)' : 'var(--green)';
   }
 
-  // ═══════════════════════════════════════════
-  //  MODAL GENÉRICO
-  // ═══════════════════════════════════════════
+  function cfgSetValue(row, text) { row.querySelector('.g-row-eur').textContent = text; }
 
-  function showModal(title, fields, onSave) {
-    var overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
+  // Se ejecuta cada vez que se entra en la pestaña: refresca versiones y topes actuales
+  async function loadSettings() {
+    var box = document.getElementById('cfg-versiones');
+    box.innerHTML = '';
+    var user = firebase.auth().currentUser;
+    box.appendChild(gastosRow('Panel', ADMIN_CONFIG.ADMIN_VERSION || '?', '', null));
+    var wRow = gastosRow('Worker', '…', '', null); box.appendChild(wRow);
+    var dRow = gastosRow('Último despliegue del Worker', '…', '', null); box.appendChild(dRow);
+    box.appendChild(gastosRow('Sesión', (user && user.email) ? user.email : '—', '', null));
+    try {
+      var v = await (await fetch(ADMIN_CONFIG.WORKER_URL + '/version', { cache: 'no-store' })).json();
+      cfgSetValue(wRow, v.version_short || '?');
+      var d = v.deployed_at ? new Date(v.deployed_at) : null;
+      cfgSetValue(dRow, (d && !isNaN(d)) ? d.toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
+    } catch (e) { cfgSetValue(wRow, 'sin respuesta'); cfgSetValue(dRow, '—'); }
 
-    var html = '<div class="modal"><h3>' + title + '</h3>';
-    fields.forEach(function(f) {
-      html += '<label style="font-size:12px;color:var(--text-secondary)">' + f.label + '</label>';
-      if (f.type === 'select') {
-        html += '<select name="' + f.name + '">';
-        (f.options || []).forEach(function(opt) {
-          html += '<option value="' + opt + '">' + opt + '</option>';
-        });
-        html += '</select>';
-      } else if (f.type === 'textarea') {
-        html += '<textarea name="' + f.name + '">' + (f.value || '') + '</textarea>';
-      } else {
-        html += '<input type="' + f.type + '" name="' + f.name + '" value="' + (f.value || '') + '">';
-      }
-    });
-    html += '<div class="modal-actions">';
-    html += '<button class="btn-sm secondary modal-cancel">Cancelar</button>';
-    html += '<button class="btn-sm modal-save">Guardar</button>';
-    html += '</div></div>';
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-usage', { headers: await adminAuthHeaders(), cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var caps = (await res.json()).caps || {};
+      document.getElementById('cfg-daily').value = caps.daily_eur;
+      document.getElementById('cfg-monthly').value = caps.monthly_eur;
+      cfgMsg('cfg-caps-msg', '', false);
+    } catch (e) { cfgMsg('cfg-caps-msg', 'No se pudieron leer los topes actuales. Recarga la pestaña.', true); }
+  }
 
-    overlay.innerHTML = html;
-    document.body.appendChild(overlay);
+  function initSettings() {
+    if (!settingsWired) {
+      settingsWired = true;   // los botones se enganchan UNA sola vez (antes se añadía un aviso de clic más en cada visita)
 
-    overlay.querySelector('.modal-cancel').addEventListener('click', function() {
-      document.body.removeChild(overlay);
-    });
-
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) document.body.removeChild(overlay);
-    });
-
-    overlay.querySelector('.modal-save').addEventListener('click', function() {
-      var data = {};
-      fields.forEach(function(f) {
-        var el = overlay.querySelector('[name="' + f.name + '"]');
-        data[f.name] = el ? el.value : '';
+      // Guardar topes de gasto
+      document.getElementById('cfg-caps-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var btn = document.getElementById('cfg-caps-save');
+        var daily = parseFloat(String(document.getElementById('cfg-daily').value).replace(',', '.'));
+        var monthly = parseFloat(String(document.getElementById('cfg-monthly').value).replace(',', '.'));
+        if (!isFinite(daily) || !isFinite(monthly)) { cfgMsg('cfg-caps-msg', 'Escribe los dos topes como números.', true); return; }
+        if (!window.confirm('¿Cambiar los topes a ' + fmtEur(daily) + ' al día y ' + fmtEur(monthly) + ' al mes?')) return;
+        btn.disabled = true;
+        cfgMsg('cfg-caps-msg', 'Guardando…', false);
+        try {
+          var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-caps', {
+            method: 'POST',
+            headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ daily_eur: daily, monthly_eur: monthly })
+          });
+          var data = await res.json().catch(function() { return {}; });
+          if (res.status === 401) throw new Error('Sesión caducada: vuelve a entrar en el panel.');
+          if (!res.ok) throw new Error(data.error || ('El Worker respondió ' + res.status + '.'));
+          document.getElementById('cfg-daily').value = data.caps.daily_eur;
+          document.getElementById('cfg-monthly').value = data.caps.monthly_eur;
+          cfgMsg('cfg-caps-msg', 'Guardado: ' + fmtEur(data.caps.daily_eur) + ' al día y ' + fmtEur(data.caps.monthly_eur) + ' al mes. Se aplica en menos de un minuto.', false);
+        } catch (err) {
+          cfgMsg('cfg-caps-msg', (err && err.message) ? err.message : 'No se pudo guardar.', true);
+        } finally {
+          btn.disabled = false;
+        }
       });
-      document.body.removeChild(overlay);
-      onSave(data);
-    });
+
+      // Comprobación de salud real (?force=1)
+      document.getElementById('cfg-health').addEventListener('click', async function() {
+        var btn = this;
+        btn.disabled = true;
+        cfgMsg('cfg-health-msg', 'Comprobando los servicios…', false);
+        var r = await checkWorkerHealth(true);
+        btn.disabled = false;
+        if (r.error) cfgMsg('cfg-health-msg', r.error, true);
+        else if (r.failing.length) cfgMsg('cfg-health-msg', 'Fallan: ' + r.failing.join(', ') + '.', true);
+        else cfgMsg('cfg-health-msg', 'Todo correcto: responden los ' + r.total + ' servicios.', false);
+      });
+
+      // Cerrar sesión
+      document.getElementById('cfg-logout').addEventListener('click', async function() {
+        this.disabled = true;
+        try { await firebase.auth().signOut(); } catch (e) {}
+        try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+        window.location.reload();
+      });
+    }
+    loadSettings();
   }
 
 })();

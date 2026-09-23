@@ -1029,3 +1029,10 @@ body { min-height: 100vh; }
 /* ─── VISTA RÁPIDA DE GASTOS EN EL DASHBOARD ─── */
 .dash-gastos { cursor: pointer; margin-bottom: 20px; }
 .dash-gastos .metric-card:hover { background: var(--bg-card-hover); }
+
+/* ─── CONFIGURACIÓN ─── */
+.cfg-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; margin: 0 0 8px; }
+.cfg-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.cfg-field .login-input { width: 150px; margin: 0; }
+#tab-settings .btn-sm { margin-bottom: 4px; }
+#cfg-caps-msg, #cfg-health-msg { min-height: 20px; margin-top: 8px; }
