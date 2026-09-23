@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
+<!DOCTYPE html><html lang="es"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
@@ -13,32 +11,25 @@
   <link rel="icon" href="../favicon.ico">
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css?v=2026-09-23.7">
   <!-- Firebase 8.10.1 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  
+  
 </head>
 <body>
 
   <!-- ═══ LOGIN ═══ -->
-  <div id="login-screen" class="login-screen">
+  <div id="login-screen" class="login-screen" style="display: flex;">
     <div class="brand-block">
       <img src="salma-avatar.webp" alt="Salma" class="brand-avatar brand-avatar-lg">
       <div class="brand-word brand-word-lg">✦ BORRADO<span>DEL</span>MAPA</div>
       <div class="brand-sub">Panel de administración</div>
     </div>
     <form class="login-form" id="login-form">
-      <input
-        type="password"
-        class="login-input"
-        id="login-password"
-        placeholder="Contraseña"
-        autocomplete="off"
-        autofocus
-      >
+      <input type="password" class="login-input" id="login-password" placeholder="Contraseña" autocomplete="off" autofocus="">
       <button type="submit" class="login-btn">Entrar</button>
       <div class="login-error" id="login-error"></div>
     </form>
@@ -56,7 +47,7 @@
         </div>
 
         <!-- Tabs desktop -->
-        <nav class="tabs-desktop" id="tabs-desktop"></nav>
+        <nav class="tabs-desktop" id="tabs-desktop"><button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button><button class="tab-btn" data-tab="gastos">💶 Gastos</button><button class="tab-btn" data-tab="analytics">📈 Analytics</button><button class="tab-btn" data-tab="usuarios">👥 Usuarios</button><button class="tab-btn" data-tab="settings">⚙️ Configuración</button></nav>
 
         <!-- Hamburger móvil -->
         <button class="hamburger" id="hamburger" aria-label="Menú">
@@ -65,37 +56,37 @@
       </div>
 
       <!-- Menú móvil -->
-      <nav class="mobile-menu" id="mobile-menu"></nav>
+      <nav class="mobile-menu" id="mobile-menu"><button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button><button class="tab-btn" data-tab="gastos">💶 Gastos</button><button class="tab-btn" data-tab="analytics">📈 Analytics</button><button class="tab-btn" data-tab="usuarios">👥 Usuarios</button><button class="tab-btn" data-tab="settings">⚙️ Configuración</button></nav>
     </header>
 
     <!-- Main content -->
     <main class="main" id="main-content">
 
       <!-- Dashboard -->
-      <section class="tab-content" id="tab-dashboard">
+      <section class="tab-content active" id="tab-dashboard">
         <h2 class="section-title">Dashboard</h2>
         <div class="health-row" id="health-row">
-          <div class="health-item"><span class="health-dot grey" id="health-worker"></span>Worker</div>
-          <div class="health-item"><span class="health-dot grey" id="health-openai"></span>OpenAI</div>
-          <div class="health-item"><span class="health-dot grey" id="health-places"></span>Google Places</div>
-          <div class="health-item"><span class="health-dot grey" id="health-booking-hotels"></span>Hotels</div>
-          <div class="health-item"><span class="health-dot grey" id="health-booking-cars"></span>Cars</div>
-          <div class="health-item"><span class="health-dot grey" id="health-duffel"></span>Flights</div>
+          <div class="health-item"><span class="health-dot green" id="health-worker"></span>Worker</div>
+          <div class="health-item"><span class="health-dot green" id="health-openai" title="5ms"></span>OpenAI</div>
+          <div class="health-item"><span class="health-dot green" id="health-places" title="5ms"></span>Google Places</div>
+          <div class="health-item"><span class="health-dot green" id="health-booking-hotels" title="undefinedms"></span>Hotels</div>
+          <div class="health-item"><span class="health-dot green" id="health-booking-cars" title="undefinedms"></span>Cars</div>
+          <div class="health-item"><span class="health-dot green" id="health-duffel" title="undefinedms"></span>Flights</div>
         </div>
         <!-- Vista rápida del gasto en Google (detalle en la pestaña Gastos) -->
         <h3 class="subsection-title">Gasto en Google · estimado</h3>
         <div class="metrics-grid dash-gastos" id="dash-gastos" role="link" tabindex="0" title="Ver el detalle en Gastos">
           <div class="metric-card">
             <span class="metric-icon">📅</span>
-            <span class="metric-value" id="dg-hoy">—</span>
-            <span class="metric-label" id="dg-hoy-label">Hoy</span>
-            <div class="bar"><div class="bar-fill" id="dg-hoy-bar"></div></div>
+            <span class="metric-value danger" id="dg-hoy">7,40 €</span>
+            <span class="metric-label" id="dg-hoy-label">Hoy · tope 8,00 € (93 %)</span>
+            <div class="bar"><div class="bar-fill danger" id="dg-hoy-bar" style="width: 92.5%;"></div></div>
           </div>
           <div class="metric-card">
             <span class="metric-icon">🗓️</span>
-            <span class="metric-value" id="dg-mes">—</span>
-            <span class="metric-label" id="dg-mes-label">Este mes</span>
-            <div class="bar"><div class="bar-fill" id="dg-mes-bar"></div></div>
+            <span class="metric-value" id="dg-mes">22,00 €</span>
+            <span class="metric-label" id="dg-mes-label">Este mes · tope 50,00 € (44 %)</span>
+            <div class="bar"><div class="bar-fill" id="dg-mes-bar" style="width: 44%;"></div></div>
           </div>
         </div>
 
@@ -108,15 +99,15 @@
           </div>
           <div class="metric-card">
             <span class="metric-icon">👥</span>
-            <span class="metric-value" id="m-usuarios">—</span>
+            <span class="metric-value" id="m-usuarios">3</span>
             <span class="metric-label">Usuarios</span>
-            <span class="metric-trend" id="m-usuarios-trend"></span>
+            <span class="metric-trend up" id="m-usuarios-trend">+1 esta semana</span>
           </div>
           <div class="metric-card">
             <span class="metric-icon">🗺️</span>
-            <span class="metric-value" id="m-rutas">—</span>
+            <span class="metric-value" id="m-rutas">5</span>
             <span class="metric-label">Rutas creadas</span>
-            <span class="metric-trend" id="m-rutas-trend"></span>
+            <span class="metric-trend up" id="m-rutas-trend">+2 esta semana</span>
           </div>
         </div>
       </section>
@@ -172,7 +163,7 @@
         <div class="users-toolbar" style="margin-bottom:16px;">
           <select id="ga4-range" class="login-input" style="width:auto;padding:8px 12px;font-size:13px;">
             <option value="7">7 días</option>
-            <option value="30" selected>30 días</option>
+            <option value="30" selected="">30 días</option>
             <option value="90">90 días</option>
           </select>
         </div>
@@ -279,10 +270,10 @@
         <p class="gastos-note">Tope propio del Worker, en euros: al llegar a él deja de llamar a Google (fotos, fichas y trazados nuevos fallan hasta el día o mes siguiente). No cambia las cuotas de Google Cloud, que se editan en su consola.</p>
         <form id="cfg-caps-form" class="cfg-form">
           <label class="cfg-field">Tope diario (€)
-            <input type="number" id="cfg-daily" class="login-input" min="0.5" max="100" step="0.5" inputmode="decimal" required>
+            <input type="number" id="cfg-daily" class="login-input" min="0.5" max="100" step="0.5" inputmode="decimal" required="">
           </label>
           <label class="cfg-field">Tope mensual (€)
-            <input type="number" id="cfg-monthly" class="login-input" min="1" max="1000" step="1" inputmode="decimal" required>
+            <input type="number" id="cfg-monthly" class="login-input" min="1" max="1000" step="1" inputmode="decimal" required="">
           </label>
           <button type="submit" class="btn-sm" id="cfg-caps-save">Guardar topes</button>
         </form>
@@ -301,37 +292,15 @@
   </div>
 
   <!-- Versión visible: panel + Worker (se rellena en admin.js) -->
-  <div class="version-badge" id="version-badge">Panel 2026-09-23.7</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-23.7 · Worker 4554365f</div>
 
   <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-23.7"></script>
-  <script src="admin.js?v=2026-09-23.7"></script>
+  
+  
+  
 
   <!-- Service Worker + PWA Ready -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' })
-          .then(reg => {
-            console.log('✅ SW registrado', reg);
-            // Detectar instalación
-            if (window.navigator.standalone === true) {
-              console.log('✅ APP instalada (standalone)');
-            } else if (window.matchMedia('(display-mode: standalone)').matches) {
-              console.log('✅ APP en modo standalone');
-            }
-          })
-          .catch(err => console.error('❌ SW error:', err));
-      });
+  
 
-      // Sugerir instalación en Chrome/Edge
-      let deferredPrompt;
-      window.addEventListener('beforeinstallprompt', e => {
-        deferredPrompt = e;
-        console.log('💾 App instalable detectada');
-      });
-    }
-  </script>
-</body>
-</html>
+
+</body></html>

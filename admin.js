@@ -230,61 +230,38 @@
     checkWorkerHealth();
   }
 
+  // Estadísticas de usuarios y guías: las lee el Worker con su cuenta de servicio (GET /admin/stats). El panel no puede leer
+  // Firestore directo: las reglas solo dejan a cada usuario su propio documento. Caché de 20 s para que Dashboard y Usuarios
+  // no lo pidan dos veces seguidas.
+  var statsCache = { at: 0, data: null };
+  async function fetchAdminStats(force) {
+    if (!force && statsCache.data && Date.now() - statsCache.at < 20000) return statsCache.data;
+    var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/stats', { headers: await adminAuthHeaders(), cache: 'no-store' });
+    var data = await res.json().catch(function() { return {}; });
+    if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+    if (!res.ok) throw new Error(data.error || ('El Worker respondió ' + res.status + '.'));
+    statsCache = { at: Date.now(), data: data };
+    return data;
+  }
+
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+
   async function loadDashboardMetrics() {
     try {
-      var usersSnap = await db.collection('users').get();
-      var users = [];
-      usersSnap.forEach(function(doc) { users.push(doc.data()); });
-
-      // Total usuarios
-      var totalUsers = users.length;
-      document.getElementById('m-usuarios').textContent = totalUsers;
-
-      // Registros últimos 7 días para tendencia
-      var d7 = daysAgo(7);
-      var recent7 = users.filter(function(u) { return u.createdAt && u.createdAt >= d7; }).length;
+      var t = (await fetchAdminStats()).totals;
+      document.getElementById('m-usuarios').textContent = t.users;
       var trend7 = document.getElementById('m-usuarios-trend');
-      if (recent7 > 0) {
-        trend7.textContent = '+' + recent7 + ' esta semana';
-        trend7.className = 'metric-trend up';
-      }
-
-      // Contar rutas reales desde subcollecciones maps
-      var totalRutas = 0;
-      var rutasRecientes = 0;
-      var realMapCounts = {}; // uid → count real
-      var promises = [];
-      usersSnap.forEach(function(doc) {
-        var uid = doc.id;
-        // Total maps
-        var p1 = db.collection('users').doc(uid).collection('maps').get()
-          .then(function(snap) {
-            realMapCounts[uid] = snap.size;
-            totalRutas += snap.size;
-          });
-        // Maps últimos 7 días
-        var p2 = db.collection('users').doc(uid).collection('maps')
-          .where('createdAt', '>=', d7).get()
-          .then(function(snap) { rutasRecientes += snap.size; });
-        promises.push(p1, p2);
-      });
-      await Promise.all(promises);
-
-      // Guardar conteos reales para la tabla de usuarios
-      window._realMapCounts = realMapCounts;
-
-      document.getElementById('m-rutas').textContent = totalRutas;
-
+      if (t.users7 > 0) { trend7.textContent = '+' + t.users7 + ' esta semana'; trend7.className = 'metric-trend up'; }
+      document.getElementById('m-rutas').textContent = t.guides;
       var trendRutas = document.getElementById('m-rutas-trend');
-      if (rutasRecientes > 0) {
-        trendRutas.textContent = '+' + rutasRecientes + ' esta semana';
-        trendRutas.className = 'metric-trend up';
-      }
-
+      if (t.guides7 > 0) { trendRutas.textContent = '+' + t.guides7 + ' esta semana'; trendRutas.className = 'metric-trend up'; }
     } catch (err) {
-      console.error('Error cargando métricas dashboard:', err);
+      console.warn('Estadísticas del dashboard no disponibles:', err && err.message);
+      document.getElementById('m-usuarios').textContent = '—';
+      document.getElementById('m-rutas').textContent = '—';
     }
-
   }
 
   var HEALTH_LABELS = { worker: 'Worker', openai: 'OpenAI', google_places: 'Google Places', booking_hotels: 'Hotels', booking_cars: 'Cars', duffel_flights: 'Flights' };
@@ -365,7 +342,7 @@
           usersSortDir = usersSortDir === 'asc' ? 'desc' : 'asc';
         } else {
           usersSortField = field;
-          usersSortDir = field === 'createdAt' || field === 'mapsCount' ? 'desc' : 'asc';
+          usersSortDir = (field === 'createdAt' || field === 'mapsCount' || field === 'usage_msgs') ? 'desc' : 'asc';
         }
         renderUsersTable();
       });
@@ -376,32 +353,27 @@
 
   async function fetchUsers() {
     var tbody = document.getElementById('users-tbody');
-    tbody.innerHTML = '<tr><td colspan="4"><div class="loading">Cargando usuarios...</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="loading">Cargando usuarios...</div></td></tr>';
 
     try {
-      var snap = await db.collection('users').get();
-      allUsers = [];
-      var promises = [];
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        d._id = doc.id;
-        // Usar conteo real del dashboard si existe, si no contar
-        if (window._realMapCounts && window._realMapCounts[doc.id] !== undefined) {
-          d._realMaps = window._realMapCounts[doc.id];
-        } else {
-          var p = db.collection('users').doc(doc.id).collection('maps').get()
-            .then(function(s) { d._realMaps = s.size; });
-          promises.push(p);
-        }
-        allUsers.push(d);
+      var stats = await fetchAdminStats(true);
+      allUsers = (stats.users || []).map(function(u) {
+        return {
+          _id: u.uid, name: u.name, email: u.email, createdAt: u.createdAt,
+          premium_active: !!u.premium_active, premium_until: u.premium_until,
+          mapsCount: u.guides || 0, _realMaps: u.guides || 0,
+          usage_msgs: (u.usage && u.usage.msgs) || 0,
+          usage_usd: (u.usage && u.usage.claude_usd) || 0
+        };
       });
-      await Promise.all(promises);
-
       renderUsersTable();
       renderUsersMetrics();
+      if (stats.truncated && (stats.truncated.users || stats.truncated.guides)) {
+        console.warn('Estadísticas truncadas: hay más datos de los que se muestran.');
+      }
     } catch (err) {
       console.error('Error cargando usuarios:', err);
-      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--red);padding:20px;">Error al cargar usuarios</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--red);padding:20px;">No se pudieron cargar los usuarios: ' + escHtml(err && err.message) + '</td></tr>';
     }
   }
 
@@ -443,15 +415,19 @@
     // Tabla
     var tbody = document.getElementById('users-tbody');
     if (pageUsers.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted);padding:20px;text-align:center;">' +
-        (usersFilter ? 'Sin resultados para "' + usersFilter + '"' : 'No hay usuarios') + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);padding:20px;text-align:center;">' +
+        (usersFilter ? 'Sin resultados para "' + escHtml(usersFilter) + '"' : 'No hay usuarios') + '</td></tr>';
     } else {
       tbody.innerHTML = pageUsers.map(function(u) {
+        var plan = u.premium_active ? 'Premium hasta ' + formatDate(u.premium_until) : 'Gratis';
+        var uso = u.usage_msgs ? (u.usage_msgs + ' msg · ' + '≈ ' + fmtEur(u.usage_usd * 0.92)) : '—';
         return '<tr>' +
-          '<td>' + (u.name || '—') + '</td>' +
-          '<td>' + (u.email || '—') + '</td>' +
+          '<td>' + escHtml(u.name || '—') + '</td>' +
+          '<td>' + escHtml(u.email || '—') + '</td>' +
           '<td>' + formatDate(u.createdAt) + '</td>' +
-          '<td>' + (u._realMaps || u.mapsCount || 0) + '</td>' +
+          '<td>' + escHtml(plan) + '</td>' +
+          '<td>' + (u._realMaps || 0) + '</td>' +
+          '<td>' + escHtml(uso) + '</td>' +
           '</tr>';
       }).join('');
     }
