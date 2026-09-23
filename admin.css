@@ -1012,3 +1012,20 @@ body { min-height: 100vh; }
 .bar-fill.danger { background: var(--red); }
 .metric-value.warn { color: var(--yellow); }
 .metric-value.danger { color: var(--red); }
+
+/* ─── MARCA: avatar de Salma + "BORRADO DEL MAPA" (mismo estilo que la app) ─── */
+.brand-block { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.brand-avatar { border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); background: var(--bg-card); }
+.brand-avatar-lg { width: 96px; height: 96px; }
+.brand-avatar-sm { width: 34px; height: 34px; border-width: 1.5px; }
+.brand-word { font-family: 'Barlow Condensed', 'Archivo', sans-serif; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.brand-word span { color: var(--text-muted); }
+.brand-word-lg { font-size: 34px; line-height: 1; }
+.brand-word-sm { font-size: 19px; }
+.brand-sub { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-secondary); }
+.header-brand { display: flex; align-items: center; gap: 10px; margin-right: 24px; flex-shrink: 0; cursor: pointer; }
+@media (max-width: 520px) { .brand-word-sm { display: none; } .header-brand { margin-right: 12px; } }
+
+/* ─── VISTA RÁPIDA DE GASTOS EN EL DASHBOARD ─── */
+.dash-gastos { cursor: pointer; margin-bottom: 20px; }
+.dash-gastos .metric-card:hover { background: var(--bg-card-hover); }

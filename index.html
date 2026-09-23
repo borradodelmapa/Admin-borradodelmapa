@@ -12,7 +12,10 @@
   <title>Admin — Borrado del Mapa</title>
   <link rel="icon" href="../favicon.ico">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="admin.css?v=2026-09-23.4">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css?v=2026-09-23.5">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -22,7 +25,11 @@
 
   <!-- ═══ LOGIN ═══ -->
   <div id="login-screen" class="login-screen">
-    <img src="logo-admin.svg" alt="Borrado del Mapa" class="login-logo">
+    <div class="brand-block">
+      <img src="salma-avatar.webp" alt="Salma" class="brand-avatar brand-avatar-lg">
+      <div class="brand-word brand-word-lg">✦ BORRADO<span>DEL</span>MAPA</div>
+      <div class="brand-sub">Panel de administración</div>
+    </div>
     <form class="login-form" id="login-form">
       <input
         type="password"
@@ -43,7 +50,10 @@
     <!-- Header -->
     <header class="header">
       <div class="header-inner">
-        <img src="logo-admin.svg" alt="Borrado del Mapa" class="header-logo" id="header-logo" style="cursor:pointer">
+        <div class="header-brand" id="header-logo" role="link" tabindex="0" aria-label="Ir al Dashboard">
+          <img src="salma-avatar.webp" alt="Salma" class="brand-avatar brand-avatar-sm">
+          <span class="brand-word brand-word-sm">✦ BORRADO<span>DEL</span>MAPA</span>
+        </div>
 
         <!-- Tabs desktop -->
         <nav class="tabs-desktop" id="tabs-desktop"></nav>
@@ -72,6 +82,23 @@
           <div class="health-item"><span class="health-dot grey" id="health-booking-cars"></span>Cars</div>
           <div class="health-item"><span class="health-dot grey" id="health-duffel"></span>Flights</div>
         </div>
+        <!-- Vista rápida del gasto en Google (detalle en la pestaña Gastos) -->
+        <h3 class="subsection-title">Gasto en Google · estimado</h3>
+        <div class="metrics-grid dash-gastos" id="dash-gastos" role="link" tabindex="0" title="Ver el detalle en Gastos">
+          <div class="metric-card">
+            <span class="metric-icon">📅</span>
+            <span class="metric-value" id="dg-hoy">—</span>
+            <span class="metric-label" id="dg-hoy-label">Hoy</span>
+            <div class="bar"><div class="bar-fill" id="dg-hoy-bar"></div></div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">🗓️</span>
+            <span class="metric-value" id="dg-mes">—</span>
+            <span class="metric-label" id="dg-mes-label">Este mes</span>
+            <div class="bar"><div class="bar-fill" id="dg-mes-bar"></div></div>
+          </div>
+        </div>
+
         <div class="metrics-grid" id="dashboard-metrics">
           <div class="metric-card">
             <span class="metric-icon">👁️</span>
@@ -254,12 +281,12 @@
   </div>
 
   <!-- Versión visible: panel + Worker (se rellena en admin.js) -->
-  <div class="version-badge" id="version-badge">Panel 2026-09-23.4</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-23.5</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-23.4"></script>
-  <script src="admin.js?v=2026-09-23.4"></script>
+  <script src="config.js?v=2026-09-23.5"></script>
+  <script src="admin.js?v=2026-09-23.5"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>

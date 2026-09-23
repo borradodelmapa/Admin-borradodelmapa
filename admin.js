@@ -171,6 +171,7 @@
     if (db && firebase.auth().currentUser) {
       if (tabId === 'dashboard') {
         loadDashboard();
+        loadGastosQuick();
       }
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'usuarios') loadUsuarios();
@@ -558,25 +559,54 @@
     box.style.display = msg ? 'block' : 'none';
   }
 
-  function renderGastos(data) {
+  // Pinta las dos tarjetas (hoy y mes) frente a su tope. `p` es el prefijo de los ids: 'g' (pestaña Gastos) o 'dg' (Dashboard).
+  function paintGastosCards(p, data) {
     var caps = data.caps || {};
     var dayCap = Number(caps.daily_eur) || 0, monCap = Number(caps.monthly_eur) || 0;
+    var today = (data.days || [])[0] || { eur: 0, calls: {} };
+    var $ = function(s) { return document.getElementById(p + '-' + s); };
+
+    var hoyPct = dayCap ? (today.eur / dayCap) * 100 : 0;
+    $('hoy').textContent = fmtEur(today.eur);
+    $('hoy-label').textContent = 'Hoy · tope ' + fmtEur(dayCap) + ' (' + Math.round(hoyPct) + ' %)';
+    gastosBar($('hoy-bar'), $('hoy'), hoyPct);
+
+    var monEur = (data.month && data.month.eur) || 0;
+    var monPct = monCap ? (monEur / monCap) * 100 : 0;
+    $('mes').textContent = fmtEur(monEur);
+    $('mes-label').textContent = 'Este mes · tope ' + fmtEur(monCap) + ' (' + Math.round(monPct) + ' %)';
+    gastosBar($('mes-bar'), $('mes'), monPct);
+  }
+
+  // Vista rápida en el Dashboard: se refresca cada vez que se entra. Si falla, no molesta: deja "—" y lo dice.
+  var dashGastosWired = false;
+  async function loadGastosQuick() {
+    if (!dashGastosWired) {
+      dashGastosWired = true;
+      var box = document.getElementById('dash-gastos');
+      box.addEventListener('click', function() { navigateTo('gastos'); });
+      box.addEventListener('keydown', function(e) { if (e.key === 'Enter') navigateTo('gastos'); });
+    }
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-usage', { headers: await adminAuthHeaders(), cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      paintGastosCards('dg', await res.json());
+    } catch (e) {
+      document.getElementById('dg-hoy-label').textContent = 'Hoy · sin datos (entra en Gastos)';
+      document.getElementById('dg-mes-label').textContent = 'Este mes · sin datos';
+    }
+  }
+
+  function renderGastos(data) {
+    var caps = data.caps || {};
+    var dayCap = Number(caps.daily_eur) || 0;
     var days = data.days || [];
     var today = days[0] || { eur: 0, calls: {} };
     var unit = data.unit_eur || {};
     var labels = ADMIN_CONFIG.GOOGLE_SERVICE_LABELS || {};
 
     // Tarjetas: hoy y mes, con barra frente al tope
-    var hoyPct = dayCap ? (today.eur / dayCap) * 100 : 0;
-    document.getElementById('g-hoy').textContent = fmtEur(today.eur);
-    document.getElementById('g-hoy-label').textContent = 'Hoy · tope ' + fmtEur(dayCap) + ' (' + Math.round(hoyPct) + ' %)';
-    gastosBar(document.getElementById('g-hoy-bar'), document.getElementById('g-hoy'), hoyPct);
-
-    var monEur = (data.month && data.month.eur) || 0;
-    var monPct = monCap ? (monEur / monCap) * 100 : 0;
-    document.getElementById('g-mes').textContent = fmtEur(monEur);
-    document.getElementById('g-mes-label').textContent = 'Este mes · tope ' + fmtEur(monCap) + ' (' + Math.round(monPct) + ' %)';
-    gastosBar(document.getElementById('g-mes-bar'), document.getElementById('g-mes'), monPct);
+    paintGastosCards('g', data);
 
     var nCalls = Object.keys(today.calls || {}).reduce(function(a, k) { return a + (today.calls[k] || 0); }, 0);
     document.getElementById('g-llamadas').textContent = nCalls;
