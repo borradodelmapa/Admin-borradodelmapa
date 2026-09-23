@@ -172,6 +172,7 @@
       if (tabId === 'dashboard') {
         loadDashboard();
         loadGastosQuick();
+        loadResumen();
       }
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'ingresos') loadIngresos();
@@ -263,6 +264,63 @@
       document.getElementById('m-usuarios').textContent = '—';
       document.getElementById('m-rutas').textContent = '—';
     }
+  }
+
+  // Resumen del mes del Dashboard: junta ingresos (Stripe), gastos (Google + Claude, estimados), margen y usuarios.
+  // Cada dato se pide por separado: si uno falla, ese hueco queda en "—" y el resto se pinta igual.
+  var resumenWired = false;
+  async function loadResumen() {
+    if (!resumenWired) {
+      resumenWired = true;
+      [['rs-card-ingresos', 'ingresos'], ['rs-card-gastos', 'gastos'], ['rs-card-usuarios', 'usuarios']].forEach(function(p) {
+        var el = document.getElementById(p[0]);
+        el.addEventListener('click', function() { navigateTo(p[1]); });
+        el.addEventListener('keydown', function(e) { if (e.key === 'Enter') navigateTo(p[1]); });
+      });
+    }
+    var $ = function(id) { return document.getElementById(id); };
+    var hdrs = await adminAuthHeaders();
+    var getJson = async function(path) {
+      var r = await fetch(ADMIN_CONFIG.WORKER_URL + path, { headers: hdrs, cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    };
+    var rev = null, gg = null, st = null;
+    await Promise.all([
+      getJson('/admin/revenue').then(function(x) { rev = x; }).catch(function() {}),
+      getJson('/admin/google-usage').then(function(x) { gg = x; }).catch(function() {}),
+      fetchAdminStats().then(function(x) { st = x; }).catch(function() {})
+    ]);
+
+    var ingresos = rev ? rev.totals.month : null;
+    var googleEur = (gg && gg.month && typeof gg.month.eur === 'number') ? gg.month.eur : null;
+    var claudeEur = (st && st.totals && typeof st.totals.claude_usd === 'number') ? st.totals.claude_usd * USD_TO_EUR : null;
+
+    if (ingresos !== null) {
+      $('rs-ingresos').textContent = fmtEur(ingresos);
+      $('rs-ingresos-label').textContent = 'Ingresos del mes · ' + rev.totals.month_count + (rev.totals.month_count === 1 ? ' compra' : ' compras') + (rev.mode === 'test' ? ' · PRUEBA' : '');
+    } else { $('rs-ingresos').textContent = '—'; $('rs-ingresos-label').textContent = 'Ingresos del mes · sin datos'; }
+
+    if (googleEur !== null || claudeEur !== null) {
+      $('rs-gastos').textContent = fmtEur((googleEur || 0) + (claudeEur || 0));
+      $('rs-gastos-label').textContent = 'Gastos est. · Google ' + (googleEur === null ? '—' : fmtEur(googleEur)) + ' + Claude ' + (claudeEur === null ? '—' : fmtEur(claudeEur));
+    } else { $('rs-gastos').textContent = '—'; $('rs-gastos-label').textContent = 'Gastos estimados · sin datos'; }
+
+    var mEl = $('rs-margen');
+    if (ingresos !== null && (googleEur !== null || claudeEur !== null)) {
+      var neto = ingresos / IVA, margen = neto - (googleEur || 0) - (claudeEur || 0);
+      mEl.textContent = fmtEur(margen); mEl.className = 'metric-value' + (margen < 0 ? ' danger' : '');
+      $('rs-margen-label').textContent = 'Margen estimado (ingresos sin IVA − gastos)';
+    } else { mEl.textContent = '—'; mEl.className = 'metric-value'; $('rs-margen-label').textContent = 'Margen estimado · faltan datos'; }
+
+    if (st && st.totals) {
+      $('rs-usuarios').textContent = st.totals.users;
+      $('rs-usuarios-label').textContent = 'Usuarios · ' + st.totals.premium + ' Premium · ' + st.totals.guides + ' guías';
+    } else { $('rs-usuarios').textContent = '—'; $('rs-usuarios-label').textContent = 'Usuarios · sin datos'; }
+
+    var falta = [];
+    if (!rev) falta.push('Ingresos'); if (!gg) falta.push('Google'); if (!st) falta.push('Usuarios');
+    $('rs-nota').textContent = falta.length ? 'No se pudo leer: ' + falta.join(', ') + '. Entra en su pestaña para ver el motivo.' : 'Los gastos son estimaciones (Google a precios de lista, Claude por tokens); los ingresos son brutos de Stripe' + (rev.mode === 'test' ? ' en MODO PRUEBA (no es dinero real)' : '') + '. No incluye Duffel, RapidAPI, Twilio ni otros proveedores.';
   }
 
   var HEALTH_LABELS = { worker: 'Worker', openai: 'OpenAI', google_places: 'Google Places', booking_hotels: 'Hotels', booking_cars: 'Cars', duffel_flights: 'Flights' };
