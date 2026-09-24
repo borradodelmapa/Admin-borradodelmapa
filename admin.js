@@ -1090,8 +1090,31 @@
     return null;
   }
 
+  // Coste REAL de OpenAI (GET /admin/openai-costs, API de costes con la clave de administrador). Importes en dólares.
+  async function loadOpenAIReal(force) {
+    var box = document.getElementById('oa-error'); box.style.display = 'none';
+    var usd = function(n) { return '$' + (Number(n) || 0).toFixed(2).replace('.', ','); };
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/openai-costs' + (force ? '?force=1' : ''), { headers: await adminAuthHeaders(), cache: 'no-store' });
+      var d = await res.json().catch(function() { return {}; });
+      if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+      if (!res.ok) throw new Error(d.detail || d.error || ('El Worker respondió ' + res.status + '.'));
+      document.getElementById('oa-hoy').textContent = usd(d.today_usd);
+      document.getElementById('oa-mes').textContent = usd(d.month_usd);
+      var l = document.getElementById('oa-lineas'); l.innerHTML = '';
+      if (!d.by_line.length) l.appendChild(gastosRow('Sin gasto este mes', '—', '', null));
+      d.by_line.slice(0, 8).forEach(function(x) { l.appendChild(gastosRow(x.item, usd(x.usd), '', d.month_usd > 0 ? Math.min(100, x.usd / d.month_usd * 100) : null, true)); });
+      var dias = document.getElementById('oa-dias'); dias.innerHTML = '';
+      d.days.slice(-8).reverse().forEach(function(x) { dias.appendChild(gastosRow(x.day, usd(x.usd), '', null)); });
+    } catch (e) {
+      box.textContent = (e && e.message) ? e.message : 'No se pudo leer el coste real de OpenAI.';
+      box.style.display = 'block';
+    }
+  }
+
   async function loadGastos(ev) {
     loadGoogleReal(!!(ev && ev.type === 'click'));
+    loadOpenAIReal(!!(ev && ev.type === 'click'));
     if (!gastosWired) {
       gastosWired = true;
       document.getElementById('g-refresh').addEventListener('click', loadGastos);

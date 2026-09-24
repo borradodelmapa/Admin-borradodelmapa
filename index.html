@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-24.5">
+  <link rel="stylesheet" href="admin.css?v=2026-09-24.6">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -219,6 +219,16 @@
         <div id="gr-sku" class="gastos-list"></div>
         <h3 class="subsection-title">Últimos días (real)</h3>
         <div id="gr-dias" class="gastos-list"></div>
+
+        <h3 class="subsection-title">Coste REAL de OpenAI (dólares)</h3>
+        <p class="gastos-note" id="oa-note">Lo que OpenAI cobra de verdad este mes, leído de su API de costes. Va con unas horas de retraso.</p>
+        <div class="metrics-grid">
+          <div class="metric-card"><span class="metric-icon">📅</span><span class="metric-value" id="oa-hoy">—</span><span class="metric-label">Hoy (incompleto)</span></div>
+          <div class="metric-card"><span class="metric-icon">🗓️</span><span class="metric-value" id="oa-mes">—</span><span class="metric-label">Este mes</span></div>
+        </div>
+        <div id="oa-error" class="gastos-error" style="display:none;"></div>
+        <div id="oa-lineas" class="gastos-list"></div>
+        <div id="oa-dias" class="gastos-list"></div>
 
         <h3 class="subsection-title">Estimación propia del Worker</h3>
 
@@ -475,12 +485,12 @@
     </div>
   </div>
 
-  <div class="version-badge" id="version-badge">Panel 2026-09-24.5</div>
+  <div class="version-badge" id="version-badge">Panel 2026-09-24.6</div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-24.5"></script>
-  <script src="admin.js?v=2026-09-24.5"></script>
+  <script src="config.js?v=2026-09-24.6"></script>
+  <script src="admin.js?v=2026-09-24.6"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>
