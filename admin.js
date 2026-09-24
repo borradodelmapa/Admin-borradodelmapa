@@ -512,11 +512,12 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     };
-    var rev = null, gg = null, st = null;
+    var rev = null, gg = null, st = null, oa = null;
     await Promise.all([
       getJson('/admin/revenue').then(function(x) { rev = x; }).catch(function() {}),
       googleMonthCost().then(function(x) { gg = x; }),
-      fetchAdminStats().then(function(x) { st = x; }).catch(function() {})
+      fetchAdminStats().then(function(x) { st = x; }).catch(function() {}),
+      getJson('/admin/openai-costs').then(function(x) { oa = x; }).catch(function() {})
     ]);
 
     if (rev) setStripeMode(rev.mode);
@@ -529,14 +530,15 @@
       $('rs-ingresos-label').textContent = 'Ingresos del mes · ' + rev.totals.month_count + (rev.totals.month_count === 1 ? ' compra' : ' compras') + (rev.mode === 'test' ? ' · PRUEBA' : '');
     } else { $('rs-ingresos').textContent = '—'; $('rs-ingresos-label').textContent = 'Ingresos del mes · sin datos'; }
 
-    if (googleEur !== null || claudeEur !== null) {
-      $('rs-gastos').textContent = fmtEur((googleEur || 0) + (claudeEur || 0));
-      $('rs-gastos-label').textContent = (gg && gg.real ? 'Gastos · Google REAL ' : 'Gastos est. · Google ') + (googleEur === null ? '—' : fmtEur(googleEur)) + ' + Claude ' + (claudeEur === null ? '—' : fmtEur(claudeEur));
+    var openaiEur = oa && typeof oa.month_usd === 'number' ? oa.month_usd * USD_TO_EUR : null;
+    if (googleEur !== null || claudeEur !== null || openaiEur !== null) {
+      $('rs-gastos').textContent = fmtEur((googleEur || 0) + (claudeEur || 0) + (openaiEur || 0));
+      $('rs-gastos-label').textContent = (gg && gg.real ? 'Gastos · Google REAL ' : 'Gastos est. · Google ') + (googleEur === null ? '—' : fmtEur(googleEur)) + ' + Claude est. ' + (claudeEur === null ? '—' : fmtEur(claudeEur)) + ' + OpenAI REAL ' + (openaiEur === null ? '—' : fmtEur(openaiEur));
     } else { $('rs-gastos').textContent = '—'; $('rs-gastos-label').textContent = 'Gastos estimados · sin datos'; }
 
     var mEl = $('rs-margen');
-    if (ingresos !== null && (googleEur !== null || claudeEur !== null)) {
-      var neto = ingresos / IVA, margen = neto - (googleEur || 0) - (claudeEur || 0);
+    if (ingresos !== null && (googleEur !== null || claudeEur !== null || openaiEur !== null)) {
+      var neto = ingresos / IVA, margen = neto - (googleEur || 0) - (claudeEur || 0) - (openaiEur || 0);
       mEl.textContent = fmtEur(margen); mEl.className = 'metric-value' + (margen < 0 ? ' danger' : '');
       $('rs-margen-label').textContent = 'Margen estimado (ingresos sin IVA − gastos)';
     } else { mEl.textContent = '—'; mEl.className = 'metric-value'; $('rs-margen-label').textContent = 'Margen estimado · faltan datos'; }
@@ -547,8 +549,8 @@
     } else { $('rs-usuarios').textContent = '—'; $('rs-usuarios-label').textContent = 'Usuarios · sin datos'; }
 
     var falta = [];
-    if (!rev) falta.push('Ingresos'); if (!gg) falta.push('Google'); if (!st) falta.push('Usuarios');
-    $('rs-nota').textContent = falta.length ? 'No se pudo leer: ' + falta.join(', ') + '. Entra en su pestaña para ver el motivo.' : 'Los gastos son estimaciones (Google a precios de lista, Claude por tokens); los ingresos son brutos de Stripe' + (rev.mode === 'test' ? ' en MODO PRUEBA (no es dinero real)' : '') + '. No incluye Duffel, RapidAPI, Twilio ni otros proveedores.';
+    if (!rev) falta.push('Ingresos'); if (!gg) falta.push('Google'); if (!oa) falta.push('OpenAI'); if (!st) falta.push('Usuarios');
+    $('rs-nota').textContent = falta.length ? 'No se pudo leer: ' + falta.join(', ') + '. Entra en su pestaña para ver el motivo.' : 'Google y OpenAI son lo que cobran de verdad cuando hay dato; Claude es una estimación por tokens (la cifra real está en la consola de Anthropic); los ingresos son brutos de Stripe' + (rev.mode === 'test' ? ' en MODO PRUEBA (no es dinero real)' : '') + '. No incluye Duffel, RapidAPI, Twilio ni otros proveedores.';
   }
 
   var HEALTH_LABELS = { worker: 'Worker', anthropic: 'Anthropic', openai: 'OpenAI', google_places: 'Google Places', booking_hotels: 'Hotels', booking_cars: 'Cars', duffel_flights: 'Flights' };
