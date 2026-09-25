@@ -4,7 +4,7 @@
 
 const ADMIN_CONFIG = {
   // Versión del panel: súbela en CADA cambio (aquí y en los ?v= de index.html). Se ve abajo a la derecha.
-  ADMIN_VERSION: '2026-09-26.1',
+  ADMIN_VERSION: '2026-09-26.2',
 
   // Firebase (mismo proyecto que borradodelmapa.com)
   FIREBASE: {

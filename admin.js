@@ -741,11 +741,11 @@
       texto = 'BORRAR PARA SIEMPRE la cuenta de ' + quien + ': su acceso, guías, notas, fotos, documentos, todo. No hay vuelta atrás.';
     } else return false;
     if (!window.confirm(texto + '\n\n¿Seguro?')) return false;
-    // Doble confirmación solo para borrar de verdad — teclear el email/nombre exacto,
-    // mismo patrón que "escribe el nombre del repo para borrarlo" de otros paneles.
+    // Doble confirmación solo para borrar de verdad — un segundo aviso, sin teclear nada
+    // (teclear el email/nombre exacto fallaba para cuentas de WhatsApp sin email: el
+    // valor esperado caía en el nombre, no en el móvil que se usa para identificar la cuenta).
     if (action === 'delete') {
-      var escrito = window.prompt('Para confirmar, escribe exactamente esto:\n\n' + quien + '\n\n(sin espacios de más, tal cual)');
-      if (escrito !== quien) { setMsg(escrito === null ? 'Cancelado.' : 'No coincide — no se ha borrado nada.', 'var(--text-secondary)'); return false; }
+      if (!window.confirm('Última confirmación: se borra TODO de ' + quien + ' para siempre, sin vuelta atrás. ¿Adelante?')) { setMsg('Cancelado.', 'var(--text-secondary)'); return false; }
       body.confirm = true;
     }
     setMsg('Aplicando…', 'var(--text-secondary)');
