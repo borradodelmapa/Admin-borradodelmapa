@@ -650,7 +650,7 @@
       var stats = await fetchAdminStats(true);
       allUsers = (stats.users || []).map(function(u) {
         return {
-          _id: u.uid, name: u.name, email: u.email, createdAt: u.createdAt,
+          _id: u.uid, name: u.name, email: u.email, phone: u.phone, created_via: u.created_via, createdAt: u.createdAt,
           premium_active: !!u.premium_active, premium_until: u.premium_until,
           mapsCount: u.guides || 0, _realMaps: u.guides || 0,
           usage_msgs: (u.usage && u.usage.msgs) || 0,
@@ -703,13 +703,14 @@
     wireUserModal();
     var modal = document.getElementById('user-modal');
     modal.dataset.uid = uid;
-    document.getElementById('user-modal-title').textContent = u.name || u.email || uid;
+    document.getElementById('user-modal-title').textContent = u.name || u.email || u.phone || uid;
     var us = u.usage || {};
     var rows = [
       ['Correo', u.email || '—'],
+      ['Teléfono', u.phone || '—'],
       ['Registro', fmtDateTime(u.createdAt)],
       ['Último acceso', fmtDateTime(u.last_login)],
-      ['Entra con', (u.providers && u.providers.length) ? u.providers.join(', ') : '—'],
+      ['Entra con', (u.providers && u.providers.length) ? u.providers.join(', ') : (u.created_via === 'whatsapp' ? 'WhatsApp' : '—')],
       ['Estado de la cuenta', u.disabled ? 'DESHABILITADA (no puede entrar)' : 'Activa'],
       ['Plan', u.premium_active ? 'Premium hasta ' + fmtDateTime(u.premium_until) : 'Gratis' + (u.premium_until ? ' (Premium caducó el ' + formatDate(u.premium_until) + ')' : '')],
       ['Guías guardadas', String(u._realMaps || 0)],
@@ -731,7 +732,7 @@
   // `setMsg(texto, color)` pinta el resultado donde toque (bajo la tabla o dentro de la ficha).
   async function runUserAction(uid, action, days, setMsg) {
     var u = allUsers.filter(function(x) { return x._id === uid; })[0]; if (!u) return false;
-    var quien = u.email || u.name || uid, texto, body = { uid: uid, action: action };
+    var quien = u.email || u.phone || u.name || uid, texto, body = { uid: uid, action: action };
     if (action === 'premium_add') { body.days = days; texto = 'Dar ' + days + ' días de Premium a ' + quien + '. Se suman a lo que ya tenga.'; }
     else if (action === 'premium_remove') texto = 'Quitar el Premium a ' + quien + '. Pasará a plan Gratis ahora mismo.';
     else if (action === 'disable') texto = 'Deshabilitar la cuenta de ' + quien + '. No podrá entrar y se cerrarán sus sesiones abiertas. Sus datos NO se borran.';
@@ -800,7 +801,8 @@
       filtered = allUsers.filter(function(u) {
         var name = (u.name || '').toLowerCase();
         var email = (u.email || '').toLowerCase();
-        return name.indexOf(usersFilter) !== -1 || email.indexOf(usersFilter) !== -1;
+        var phone = (u.phone || '').toLowerCase();
+        return name.indexOf(usersFilter) !== -1 || email.indexOf(usersFilter) !== -1 || phone.indexOf(usersFilter) !== -1;
       });
     }
 
@@ -839,14 +841,15 @@
       tbody.innerHTML = pageUsers.map(function(u) {
         var estado = u.disabled ? ' <span class="badge-off">DESHABILITADA</span>' : '';
         var plan = u.premium_active ? '<span class="badge-plan premium">Premium</span>' : '<span class="badge-plan">Gratis</span>';
-        var prov = (u.providers || []).map(function(p) { return p === 'google.com' ? 'Google' : (p === 'password' ? 'Correo' : p); }).join(', ') || '—';
+        var prov = (u.providers || []).map(function(p) { return p === 'google.com' ? 'Google' : (p === 'password' ? 'Correo' : p); }).join(', ');
+        if (!prov) prov = (u.created_via === 'whatsapp') ? 'WhatsApp' : '—';
         var uid = escHtml(u._id);
         var acciones = '<button class="ua-btn" data-ua="premium_add" data-uid="' + uid + '" title="Dar 30 días de Premium">+30 d</button>' +
           (u.premium_active ? '<button class="ua-btn" data-ua="premium_remove" data-uid="' + uid + '" title="Quitar el Premium">Quitar</button>' : '') +
           '<button class="ua-btn' + (u.disabled ? '' : ' ua-danger') + '" data-ua="' + (u.disabled ? 'enable' : 'disable') + '" data-uid="' + uid + '">' + (u.disabled ? 'Habilitar' : 'Bloquear') + '</button>' +
           '<button class="ua-btn" data-ua="ficha" data-uid="' + uid + '" title="Abrir la ficha completa">Ficha</button>';
         return '<tr class="user-row" data-uid="' + uid + '">' +
-          '<td class="u-main"><div class="u-name">' + escHtml(u.name || '—') + estado + '</div><div class="u-email">' + escHtml(u.email || '—') + '</div></td>' +
+          '<td class="u-main"><div class="u-name">' + escHtml(u.name || '—') + estado + '</div><div class="u-email">' + escHtml(u.email || u.phone || '—') + '</div></td>' +
           '<td>' + formatDate(u.createdAt) + '</td>' +
           '<td>' + formatDate(u.last_login) + '</td>' +
           '<td>' + plan + '</td>' +
