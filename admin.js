@@ -689,6 +689,7 @@
       document.getElementById('user-modal-close').addEventListener('click', closeUserModal);
       document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeUserModal(); });
       document.getElementById('user-modal-actions').addEventListener('click', onUserAction);
+      document.getElementById('user-modal-danger').addEventListener('click', onUserAction);
       document.getElementById('users-tbody').addEventListener('click', function(e) {
         var b = e.target.closest('button.ua-btn'); if (b) { if (!b.disabled) onRowAction(b); return; }
         var tr = e.target.closest('tr.user-row'); if (tr) openUserModal(tr.dataset.uid);
@@ -736,8 +737,17 @@
     else if (action === 'disable') texto = 'Deshabilitar la cuenta de ' + quien + '. No podrá entrar y se cerrarán sus sesiones abiertas. Sus datos NO se borran.';
     else if (action === 'enable') texto = 'Volver a habilitar la cuenta de ' + quien + '.';
     else if (action === 'reset_free') texto = 'Devolver a ' + quien + ' los cupos gratuitos de por vida (guías y cambios) a cero.';
-    else return false;
+    else if (action === 'delete') {
+      texto = 'BORRAR PARA SIEMPRE la cuenta de ' + quien + ': su acceso, guías, notas, fotos, documentos, todo. No hay vuelta atrás.';
+    } else return false;
     if (!window.confirm(texto + '\n\n¿Seguro?')) return false;
+    // Doble confirmación solo para borrar de verdad — teclear el email/nombre exacto,
+    // mismo patrón que "escribe el nombre del repo para borrarlo" de otros paneles.
+    if (action === 'delete') {
+      var escrito = window.prompt('Para confirmar, escribe exactamente esto:\n\n' + quien + '\n\n(sin espacios de más, tal cual)');
+      if (escrito !== quien) { setMsg(escrito === null ? 'Cancelado.' : 'No coincide — no se ha borrado nada.', 'var(--text-secondary)'); return false; }
+      body.confirm = true;
+    }
     setMsg('Aplicando…', 'var(--text-secondary)');
     try {
       var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/user-action', { method: 'POST', headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
@@ -746,8 +756,10 @@
       if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
       setMsg('Hecho. Actualizando la lista…', 'var(--green)');
       await fetchUsers();
-      var hecho = { premium_add: 'Hecho: +' + body.days + ' días de Premium para ' + quien + '.', premium_remove: 'Hecho: Premium quitado a ' + quien + '.', disable: 'Hecho: cuenta de ' + quien + ' deshabilitada.', enable: 'Hecho: cuenta de ' + quien + ' habilitada.', reset_free: 'Hecho: cupos gratuitos de ' + quien + ' devueltos.' };
-      setMsg(hecho[action] || 'Hecho.', 'var(--green)');
+      var hecho = { premium_add: 'Hecho: +' + body.days + ' días de Premium para ' + quien + '.', premium_remove: 'Hecho: Premium quitado a ' + quien + '.', disable: 'Hecho: cuenta de ' + quien + ' deshabilitada.', enable: 'Hecho: cuenta de ' + quien + ' habilitada.', reset_free: 'Hecho: cupos gratuitos de ' + quien + ' devueltos.', delete: 'Hecho: ' + quien + ' borrado por completo.' };
+      var msgTxt = hecho[action] || 'Hecho.';
+      if (action === 'delete' && d.result && d.result.errors) msgTxt += ' (con avisos: ' + d.result.errors.join('; ') + ')';
+      setMsg(msgTxt, 'var(--green)');
       return true;
     } catch (err) {
       setMsg((err && err.message) ? err.message : 'No se pudo aplicar.', 'var(--red)');
@@ -772,10 +784,13 @@
     var modal = document.getElementById('user-modal'), uid = modal.dataset.uid, msg = document.getElementById('user-modal-msg');
     var action = btn.dataset.action;
     var days = action === 'premium_add' ? parseInt(document.getElementById('um-days').value, 10) : undefined;
-    var all = document.querySelectorAll('#user-modal-actions button'); all.forEach(function(b) { b.disabled = true; });
+    var all = document.querySelectorAll('#user-modal-actions button, #user-modal-danger button'); all.forEach(function(b) { b.disabled = true; });
     var ok = false;
     try { ok = await runUserAction(uid, action, days, function(t, c) { msg.style.color = c; msg.textContent = t; }); }
-    finally { document.querySelectorAll('#user-modal-actions button').forEach(function(b) { b.disabled = false; }); }
+    finally { document.querySelectorAll('#user-modal-actions button, #user-modal-danger button').forEach(function(b) { b.disabled = false; }); }
+    // Tras borrar, el usuario ya no existe — cerrar la ficha en vez de intentar volver a
+    // abrirla (openUserModal no lo encontraría en la lista recién refrescada).
+    if (ok && action === 'delete') { setTimeout(closeUserModal, 1200); return; }
     if (ok) { var keep = msg.textContent, kc = msg.style.color; openUserModal(uid); msg.textContent = keep; msg.style.color = kc; }
   }
 

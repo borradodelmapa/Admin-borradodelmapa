@@ -1074,6 +1074,7 @@ body { min-height: 100vh; }
 .user-modal-sub { margin: 18px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
 .user-actions { display: flex; flex-direction: column; gap: 10px; }
 .user-action-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.user-modal-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0 4px; }
 
 .bar-fill.share { background: var(--accent); }
 
