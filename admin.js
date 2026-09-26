@@ -231,6 +231,7 @@
       var badge = document.createElement('span'); badge.className = 'cs-grav'; badge.textContent = (g.gravedad || '').toUpperCase(); top.appendChild(badge);
       var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', boton: '⚑ ¿Nos avisas?', pendiente: '📋 pendiente de CLAUDE.md' };
       var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona + (ORIG[g.origen] ? ' · ' + ORIG[g.origen] : ''); top.appendChild(tags);
+      if (g.modelo) { var mo = document.createElement('span'); mo.className = 'hoy-model hoy-model-' + g.modelo; mo.textContent = '🧠 Hacer con ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet'); mo.title = g.modelo_por || ''; top.appendChild(mo); }
       var cnt = document.createElement('span'); cnt.className = 'cs-cnt'; cnt.textContent = g.count ? g.count + (g.count === 1 ? ' aviso' : ' avisos') + (g.reporters > 1 ? ' · ' + g.reporters + ' personas' : '') : ''; top.appendChild(cnt);
       card.appendChild(top);
       var t = document.createElement('div'); t.className = 'cs-title'; t.textContent = g.titulo; card.appendChild(t);
@@ -304,7 +305,7 @@
         var g = csGroups.filter(function(x) { return x.id === b.dataset.id; })[0]; if (!g) return;
         var err = document.getElementById('cs-error'); err.style.display = 'none';
         if (b.dataset.act === 'claude') {
-          var txt = 'Mira el caso ' + g.id + ': ' + g.titulo;
+          var txt = 'Mira el caso ' + g.id + ': ' + g.titulo + (g.modelo ? ' (recomendado: ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + ')' : '');
           try { await navigator.clipboard.writeText(txt); b.textContent = '✓ Copiado — pégalo en el chat de Claude'; }
           catch (x) { prompt('Copia esto y pégalo en el chat de Claude:', txt); }
           setTimeout(function() { b.textContent = '🤖 Pedir a Claude'; }, 3000); return;
@@ -370,6 +371,7 @@
     if (mode === 'decidir' && g.decision) html += '<div class="hoy-q">❓ ' + hoyEsc(g.decision) + '</div>';
     html += '<div class="hoy-meta"><span class="hoy-chip">' + (HOY_AREA_NAME[g.area] || g.area) + '</span><span class="hoy-chip">' + ((typeof CS_TIPO !== 'undefined' && CS_TIPO[g.tipo]) || g.tipo) + '</span>' +
       (g.count ? '<span class="hoy-chip">' + g.count + (g.count === 1 ? ' aviso' : ' avisos') + '</span>' : '') +
+      (g.modelo ? '<span class="hoy-model hoy-model-' + g.modelo + '" title="' + hoyEsc(g.modelo_por || '') + '">🧠 Hacer con ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + '</span>' : '') +
       (g.lock ? '<span class="hoy-lock">🔒 ' + hoyEsc(g.lock.sesion) + ' · ' + hoyAgo(g.lock.at) + '</span>' : '') +
       '<span class="hoy-who">siguiente paso: ' + who + '</span></div>';
     if (last) html += '<div class="hoy-last"><b>' + (last.de === 'claude' ? '🤖 Claude' : '👤 Tú') + '</b> · ' + hoyAgo(last.at) + (coms.length > 1 ? ' · ' + coms.length + ' mensajes' : '') + '<br>' + hoyEsc(last.texto) + '</div>';
@@ -483,8 +485,9 @@
       var det = cardEl.querySelector('.hoy-det'), open = det.style.display === 'none';
       if (open) det.innerHTML = hoyDetalle(g); det.style.display = open ? 'block' : 'none'; return;
     }
-    if (act === 'claude') return copy('Mira el caso ' + g.id + ': ' + g.titulo, btn, '✓ Copiado — pégalo en el chat');
-    if (act === 'opciones') return copy('Dame opciones y tu recomendación para decidir el caso ' + g.id + ': ' + g.titulo + (g.decision ? ' — ' + g.decision : ''), btn, '✓ Copiado — pégalo en el chat');
+    var mod = g.modelo ? ' (recomendado: ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + ')' : '';
+    if (act === 'claude') return copy('Mira el caso ' + g.id + ': ' + g.titulo + mod, btn, '✓ Copiado — pégalo en el chat');
+    if (act === 'opciones') return copy('Dame opciones y tu recomendación para decidir el caso ' + g.id + ': ' + g.titulo + (g.decision ? ' — ' + g.decision : '') + mod, btn, '✓ Copiado — pégalo en el chat');
     try {
       if (act === 'comentar') {
         var t = prompt('Mensaje para Claude en este caso (lo leerá al empezar la sesión):'); if (!t) return;

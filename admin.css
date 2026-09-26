@@ -1183,3 +1183,8 @@ body { min-height: 100vh; }
 .hoy-area .ic { font-size: 22px; } .hoy-area .nm { font-weight: 700; font-size: 15px; margin-top: 4px; } .hoy-area .ct { font-size: 12px; color: var(--text-muted); margin-top: 2px; } .hoy-area .ct b { color: var(--text-primary); }
 #hoy-area-list { margin-top: 12px; }
 .hoy-foot { margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+
+/* Modelo recomendado para trabajar el caso (26 sept 2026) */
+.hoy-model { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.hoy-model-opus { background: rgba(170,120,255,.15); color: #c9a8ff; border: 1px solid rgba(170,120,255,.4); }
+.hoy-model-sonnet { background: rgba(106,169,255,.12); color: #8fc0ff; border: 1px solid rgba(106,169,255,.35); }
