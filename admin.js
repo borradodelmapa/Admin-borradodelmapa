@@ -109,6 +109,15 @@
     if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
   }
 
+  // Tarjetas plegadas: solo se ve el texto; "Ver más" abre el resto. Se recuerda cuáles están abiertas.
+  var fbOpen = {}, csOpen = {};
+  function foldToggle(b, moreSel, textSel, open) {
+    var card = b.parentNode;
+    card.querySelector(moreSel).style.display = open ? '' : 'none';
+    var t = card.querySelector(textSel); if (t) t.classList.toggle('clamp', !open);
+    b.textContent = open ? '▴ Ver menos' : '▾ Ver más';
+  }
+
   function renderFeedback() {
     var list = document.getElementById('fb-list'); list.innerHTML = '';
     var items = fbQuery ? fbItems.filter(fbMatch) : fbItems.filter(function(i) { return fbFilter === 'all' || !i.seen; });
@@ -125,8 +134,13 @@
       var who = document.createElement('strong'); who.textContent = i.email || i.user_name || (i.user_id || '').slice(0, 8) || 'anónimo';
       var when = document.createElement('span'); when.className = 'fb-when'; when.textContent = fmtDateTime(i.at);
       head.appendChild(who); head.appendChild(when); card.appendChild(head);
-      if (i.ai_tipo) { var ai = document.createElement('div'); ai.className = 'fb-ai'; ai.textContent = (CS_TIPO[i.ai_tipo] || i.ai_tipo) + ' · ' + i.ai_zona + ' · ' + i.ai_gravedad + (i.ai_resumen ? ' — ' + i.ai_resumen : ''); card.appendChild(ai); }
-      var note = document.createElement('div'); note.className = 'fb-note'; note.textContent = i.note || ''; card.appendChild(note);
+      var ai;
+      var note = document.createElement('div'); note.className = 'fb-note' + (fbOpen[i.id] ? '' : ' clamp'); note.textContent = i.note || ''; card.appendChild(note);
+      // Todo lo demás (IA, caso, pantalla, captura, botones, logs) va plegado bajo "Ver más"
+      var tg = document.createElement('button'); tg.className = 'fold-toggle'; tg.dataset.act = 'more'; tg.dataset.id = i.id; tg.textContent = fbOpen[i.id] ? '▴ Ver menos' : '▾ Ver más'; card.appendChild(tg);
+      var more = document.createElement('div'); more.className = 'fb-more'; if (!fbOpen[i.id]) more.style.display = 'none'; card.appendChild(more);
+      var cardText = card; card = more;
+      if (i.ai_tipo) { ai = document.createElement('div'); ai.className = 'fb-ai'; ai.textContent = (CS_TIPO[i.ai_tipo] || i.ai_tipo) + ' · ' + i.ai_zona + ' · ' + i.ai_gravedad + (i.ai_resumen ? ' — ' + i.ai_resumen : ''); card.appendChild(ai); }
       // A qué caso ha ido este mensaje (la IA lo mete en uno al llegar)
       var cases = csGroups.filter(function(g) { return (g.items || []).indexOf(i.id) >= 0; });
       var fc = document.createElement('div'); fc.className = 'fb-caso';
@@ -155,7 +169,7 @@
       if (i.logs) bar.appendChild(mk('Ver logs (' + i.logs_len + ' car.)', 'secondary', 'logs'));
       card.appendChild(bar);
       if (i.logs) { var pre = document.createElement('pre'); pre.className = 'fb-logs'; pre.style.display = 'none'; pre.textContent = i.logs; card.appendChild(pre); }
-      list.appendChild(card);
+      list.appendChild(cardText);
     });
   }
 
@@ -168,13 +182,14 @@
       document.getElementById('fb-list').addEventListener('click', async function(e) {
         var go = e.target.closest('a[data-goto]');
         if (go) {   // ir al caso: vista Casos, sin filtros, y se abre ese caso
-          csFilter = 'all'; csArea = null; setFbView('casos'); renderCasos();
+          csFilter = 'all'; csArea = null; csOpen[go.dataset.goto] = true; setFbView('casos'); renderCasos();
           var c = document.querySelector('.cs-card[data-id="' + go.dataset.goto + '"]');
           if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.style.outline = '2px solid var(--accent)'; setTimeout(function() { c.style.outline = ''; }, 2500); }
           return;
         }
         var b = e.target.closest('button[data-act]'); if (!b) return;
         var id = b.dataset.id, item = fbItems.filter(function(x) { return x.id === id; })[0]; if (!item) return;
+        if (b.dataset.act === 'more') { fbOpen[id] = !fbOpen[id]; foldToggle(b, '.fb-more', '.fb-note', fbOpen[id]); return; }
         if (b.dataset.act === 'logs') {
           var pre = b.closest('.fb-card').querySelector('.fb-logs'); var open = pre.style.display === 'none';
           pre.style.display = open ? 'block' : 'none'; b.textContent = open ? 'Ocultar logs' : 'Ver logs (' + item.logs_len + ' car.)'; return;
@@ -309,14 +324,17 @@
     }).join('');
     var sel = document.getElementById('cs-area-sel');
     sel.style.display = csArea ? '' : 'none';
-    if (csArea) sel.innerHTML = 'Viendo solo <b>' + escHtml(HOY_AREA_NAME[csArea] || csArea) + '</b> · <a href="#" id="cs-area-clear" style="color:var(--accent)">ver todas las áreas</a>';
+    if (csArea) sel.innerHTML = 'Viendo solo <b>' + escHtml(HOY_AREA_NAME[csArea] || csArea) + '</b>' + (csFilter === 'open' ? ' (abiertos)' : ' (todos, cerrados al final)') + ' · <a href="#" id="cs-area-clear" style="color:var(--accent)">ver todas las áreas</a>';
     var groups = fbQuery ? csGroups.filter(csMatch)
       : csGroups.filter(function(g) { return (csFilter === 'all' || open(g)) && (!csArea || csAreaOf(g) === csArea); });
     if (fbView === 'casos') fbSearchNote(groups.length, groups.length === 1 ? 'caso' : 'casos');
+    // Orden: sin atender (nuevo, visto) → te toca (propuesta, comprobando) → en marcha → cerrados al final.
+    // Dentro de cada grupo, urgentes primero, luego los que más avisos tienen y los más recientes.
+    var ORD = { nuevo: 0, visto: 0, propuesta: 1, comprobando: 1, en_marcha: 2, arreglado: 3, descartado: 3 };
+    var ordOf = function(g) { return ORD[g.estado] !== undefined ? ORD[g.estado] : 2; };
+    var gravOf = function(g) { return CS_GRAV_ORDER[g.gravedad] !== undefined ? CS_GRAV_ORDER[g.gravedad] : 2; };
     groups.sort(function(a, b) {
-      var ORD = { propuesta: -1, nuevo: 0 }; var ea = ORD[a.estado] !== undefined ? ORD[a.estado] : 1, eb = ORD[b.estado] !== undefined ? ORD[b.estado] : 1;
-      if (ea !== eb && (ea === -1 || eb === -1)) return ea - eb;
-      return (CS_GRAV_ORDER[a.gravedad] - CS_GRAV_ORDER[b.gravedad]) || (ea - eb) || (b.count - a.count) || String(b.last_at).localeCompare(String(a.last_at));
+      return (ordOf(a) - ordOf(b)) || (gravOf(a) - gravOf(b)) || ((b.count || 0) - (a.count || 0)) || String(b.last_at).localeCompare(String(a.last_at));
     });
     document.getElementById('cs-count').textContent = csGroups.filter(open).length + ' abiertos · ' + csGroups.length + ' en total';
     document.getElementById('cs-filter-open').className = 'btn-sm' + (csFilter === 'open' ? '' : ' secondary');
@@ -330,17 +348,24 @@
       var card = document.createElement('div'); card.className = 'cs-card cs-' + (g.gravedad || 'media') + (open(g) ? '' : ' closed'); card.dataset.id = g.id;
       var top = document.createElement('div'); top.className = 'cs-top';
       var badge = document.createElement('span'); badge.className = 'cs-grav'; badge.textContent = (g.gravedad || '').toUpperCase(); top.appendChild(badge);
+      var est = document.createElement('span'); est.className = 'cs-est'; est.textContent = CS_ESTADOS[g.estado] || g.estado; top.appendChild(est);
+      card.appendChild(top);
+      var t = document.createElement('div'); t.className = 'cs-title'; t.textContent = g.titulo; card.appendChild(t);
+      if (g.ejemplo) { var ex = document.createElement('div'); ex.className = 'cs-ejemplo' + (csOpen[g.id] ? '' : ' clamp'); ex.textContent = g.ejemplo; card.appendChild(ex); }
+      // Todo lo demás (área, avisos, estado, ayuda, nota, diagnóstico, botones) va plegado bajo "Ver más"
+      var tg = document.createElement('button'); tg.className = 'fold-toggle'; tg.dataset.act = 'more'; tg.dataset.id = g.id; tg.textContent = csOpen[g.id] ? '▴ Ver menos' : '▾ Ver más'; card.appendChild(tg);
+      var more = document.createElement('div'); more.className = 'cs-more'; if (!csOpen[g.id]) more.style.display = 'none'; card.appendChild(more);
+      var cardBox = card; card = more;
+      top = document.createElement('div'); top.className = 'cs-top';
       var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', boton: '⚑ ¿Nos avisas?', pendiente: '📋 pendiente de CLAUDE.md' };
       ORIG.mensaje = '💬 de un mensaje';
       var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (HOY_AREA_NAME[csAreaOf(g)] || csAreaOf(g)) + ' · ' + (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona + (ORIG[g.origen] ? ' · ' + ORIG[g.origen] : ''); top.appendChild(tags);
       if (g.modelo) { var mo = document.createElement('span'); mo.className = 'hoy-model hoy-model-' + g.modelo; mo.textContent = '🧠 Hacer con ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet'); mo.title = g.modelo_por || ''; top.appendChild(mo); }
       var cnt = document.createElement('span'); cnt.className = 'cs-cnt'; cnt.textContent = g.count ? g.count + (g.count === 1 ? ' aviso' : ' avisos') + (g.reporters > 1 ? ' · ' + g.reporters + ' personas' : '') : ''; top.appendChild(cnt);
       card.appendChild(top);
-      var t = document.createElement('div'); t.className = 'cs-title'; t.textContent = g.titulo; card.appendChild(t);
       var meta = document.createElement('div'); meta.className = 'fb-meta';
       meta.textContent = 'Estado: ' + (CS_ESTADOS[g.estado] || g.estado) + ' · último ' + fmtDateTime(g.last_at) + ' · primero ' + fmtDateTime(g.first_at) + (g.reabierto_at ? ' · ⚠️ reabierto' : '');
       card.appendChild(meta);
-      if (g.ejemplo) { var ex = document.createElement('div'); ex.className = 'cs-ejemplo'; ex.textContent = g.ejemplo; card.appendChild(ex); }
       var ay = document.createElement('div'); ay.className = (g.estado === 'propuesta' || g.estado === 'comprobando') ? 'cs-estado cs-estado-' + g.estado : 'cs-ayuda';
       ay.textContent = csAyuda(g); if (ay.textContent) card.appendChild(ay);
       if (g.nota) { var nt = document.createElement('div'); nt.className = 'cs-nota'; nt.textContent = '📝 ' + g.nota; card.appendChild(nt); }
@@ -368,7 +393,7 @@
       card.appendChild(bar);
       if (g.detalle) { var pre = document.createElement('pre'); pre.className = 'fb-logs cs-detalle'; pre.style.display = 'none'; pre.textContent = g.detalle; card.appendChild(pre); }
       var ml = document.createElement('div'); ml.className = 'cs-msgs'; ml.style.display = 'none'; card.appendChild(ml);
-      list.appendChild(card);
+      list.appendChild(cardBox);
     });
   }
 
@@ -396,7 +421,10 @@
       });
       document.getElementById('cs-areas').addEventListener('click', function(e) {
         var a = e.target.closest('.hoy-area'); if (!a) return;
-        csArea = csArea === a.dataset.k ? null : a.dataset.k; renderCasos();
+        csArea = csArea === a.dataset.k ? null : a.dataset.k;
+        if (csArea) csFilter = 'open';   // el número de la tarjeta son los abiertos: la lista enseña esos mismos
+        renderCasos();
+        if (csArea) document.getElementById('cs-area-sel').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
       document.getElementById('cs-area-sel').addEventListener('click', function(e) {
         if (e.target.id === 'cs-area-clear') { e.preventDefault(); csArea = null; renderCasos(); }
@@ -414,6 +442,7 @@
         var b = e.target.closest('button[data-act]'); if (!b) return;
         var g = csGroups.filter(function(x) { return x.id === b.dataset.id; })[0]; if (!g) return;
         var err = document.getElementById('cs-error'); err.style.display = 'none';
+        if (b.dataset.act === 'more') { csOpen[g.id] = !csOpen[g.id]; foldToggle(b, '.cs-more', '.cs-ejemplo', csOpen[g.id]); return; }
         if (b.dataset.act === 'claude') {
           var txt = 'Mira el caso ' + g.id + ': ' + g.titulo + (g.modelo ? ' (recomendado: ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + ')' : '');
           try { await navigator.clipboard.writeText(txt); b.textContent = '✓ Copiado — pégalo en el chat de Claude'; }

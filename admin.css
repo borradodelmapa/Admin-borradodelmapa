@@ -1128,6 +1128,13 @@ body { min-height: 100vh; }
 .cs-ejemplo { white-space: pre-wrap; word-break: break-word; font-size: 13px; color: var(--text-secondary); margin: 8px 0; max-height: 120px; overflow: auto; background: rgba(0,0,0,.25); padding: 8px 10px; border-radius: 6px; }
 .cs-nota { font-size: 13px; color: var(--yellow); margin: 6px 0; white-space: pre-wrap; }
 .cs-msgs { margin-top: 10px; }
+/* Tarjetas plegadas (casos y mensajes): solo el texto, recortado a unas líneas; "Ver más" abre el resto */
+.fb-note.clamp, .cs-ejemplo.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
+.cs-ejemplo.clamp { max-height: none; }
+.fb-note, .cs-ejemplo { overflow-wrap: anywhere; }
+.fold-toggle { background: none; border: 0; padding: 4px 0; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cs-more, .fb-more { margin-top: 6px; }
+.cs-est { color: var(--text-secondary); }
 .cs-msg { white-space: pre-wrap; word-break: break-word; font-size: 12px; padding: 8px 10px; margin-bottom: 6px; background: rgba(0,0,0,.3); border-radius: 6px; max-height: 180px; overflow: auto; }
 .fb-ai { font-size: 12px; color: var(--accent); margin: 4px 0; }
 
