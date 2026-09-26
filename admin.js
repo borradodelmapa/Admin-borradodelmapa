@@ -226,7 +226,8 @@
       var card = document.createElement('div'); card.className = 'cs-card cs-' + (g.gravedad || 'media') + (open(g) ? '' : ' closed'); card.dataset.id = g.id;
       var top = document.createElement('div'); top.className = 'cs-top';
       var badge = document.createElement('span'); badge.className = 'cs-grav'; badge.textContent = (g.gravedad || '').toUpperCase(); top.appendChild(badge);
-      var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona; top.appendChild(tags);
+      var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', boton: '⚑ ¿Nos avisas?' };
+      var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona + (ORIG[g.origen] ? ' · ' + ORIG[g.origen] : ''); top.appendChild(tags);
       var cnt = document.createElement('span'); cnt.className = 'cs-cnt'; cnt.textContent = g.count + (g.count === 1 ? ' aviso' : ' avisos') + (g.reporters > 1 ? ' · ' + g.reporters + ' personas' : ''); top.appendChild(cnt);
       card.appendChild(top);
       var t = document.createElement('div'); t.className = 'cs-title'; t.textContent = g.titulo; card.appendChild(t);
@@ -242,8 +243,10 @@
         b.dataset.act = 'estado'; b.dataset.estado = k; b.dataset.id = g.id; if (g.estado === k) b.disabled = true; bar.appendChild(b);
       });
       var bn = document.createElement('button'); bn.className = 'btn-sm secondary'; bn.textContent = g.nota ? 'Editar nota' : 'Añadir nota'; bn.dataset.act = 'nota'; bn.dataset.id = g.id; bar.appendChild(bn);
-      var bm = document.createElement('button'); bm.className = 'btn-sm secondary'; bm.textContent = 'Ver mensajes (' + (g.items || []).length + ')'; bm.dataset.act = 'msgs'; bm.dataset.id = g.id; bar.appendChild(bm);
+      if ((g.items || []).length) { var bm = document.createElement('button'); bm.className = 'btn-sm secondary'; bm.textContent = 'Ver mensajes (' + (g.items || []).length + ')'; bm.dataset.act = 'msgs'; bm.dataset.id = g.id; bar.appendChild(bm); }
+      if (g.detalle) { var bd = document.createElement('button'); bd.className = 'btn-sm secondary'; bd.textContent = 'Detalle técnico'; bd.dataset.act = 'detalle'; bd.dataset.id = g.id; bar.appendChild(bd); }
       card.appendChild(bar);
+      if (g.detalle) { var pre = document.createElement('pre'); pre.className = 'fb-logs cs-detalle'; pre.style.display = 'none'; pre.textContent = g.detalle; card.appendChild(pre); }
       var ml = document.createElement('div'); ml.className = 'cs-msgs'; ml.style.display = 'none'; card.appendChild(ml);
       list.appendChild(card);
     });
@@ -281,6 +284,10 @@
         var b = e.target.closest('button[data-act]'); if (!b) return;
         var g = csGroups.filter(function(x) { return x.id === b.dataset.id; })[0]; if (!g) return;
         var err = document.getElementById('cs-error'); err.style.display = 'none';
+        if (b.dataset.act === 'detalle') {
+          var pd = b.closest('.cs-card').querySelector('.cs-detalle'); var op = pd.style.display === 'none';
+          pd.style.display = op ? 'block' : 'none'; b.textContent = op ? 'Ocultar detalle' : 'Detalle técnico'; return;
+        }
         if (b.dataset.act === 'msgs') {
           var card = b.closest('.cs-card'), box = card.querySelector('.cs-msgs'), opening = box.style.display === 'none';
           if (opening) { if (!fbItems.length) { try { await fbFetch(); } catch (x) {} } renderCaseMsgs(card, g); }

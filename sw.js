@@ -3,7 +3,7 @@
    Caché offline + actualizaciones en background
    ═══════════════════════════════════════════ */
 
-const CACHE_NAME = 'admin-cache-v5';
+const CACHE_NAME = 'admin-cache-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
