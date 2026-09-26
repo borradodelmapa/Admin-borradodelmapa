@@ -126,6 +126,18 @@
       head.appendChild(who); head.appendChild(when); card.appendChild(head);
       if (i.ai_tipo) { var ai = document.createElement('div'); ai.className = 'fb-ai'; ai.textContent = (CS_TIPO[i.ai_tipo] || i.ai_tipo) + ' · ' + i.ai_zona + ' · ' + i.ai_gravedad + (i.ai_resumen ? ' — ' + i.ai_resumen : ''); card.appendChild(ai); }
       var note = document.createElement('div'); note.className = 'fb-note'; note.textContent = i.note || ''; card.appendChild(note);
+      // A qué caso ha ido este mensaje (la IA lo mete en uno al llegar)
+      var cases = csGroups.filter(function(g) { return (g.items || []).indexOf(i.id) >= 0; });
+      var fc = document.createElement('div'); fc.className = 'fb-caso';
+      if (cases.length) {
+        fc.appendChild(document.createTextNode('→ Está en ' + (cases.length > 1 ? 'los casos: ' : 'el caso: ')));
+        cases.forEach(function(g, k) {
+          if (k) fc.appendChild(document.createTextNode(' · '));
+          var ga = document.createElement('a'); ga.dataset.goto = g.id; ga.textContent = g.titulo; fc.appendChild(ga);
+          fc.appendChild(document.createTextNode(' (' + (CS_ESTADOS[g.estado] || g.estado) + ')'));
+        });
+      } else fc.textContent = 'Todavía no está en ningún caso.';
+      card.appendChild(fc);
       var meta = document.createElement('div'); meta.className = 'fb-meta';
       meta.textContent = 'Pantalla: ' + (i.page || '—') + ' · Worker ' + (i.worker_version || '?') + (i.front_versions ? ' · ' + i.front_versions : '');
       card.appendChild(meta);
@@ -137,6 +149,7 @@
       var bar = document.createElement('div'); bar.className = 'fb-actions';
       var mk = function(txt, cls, act) { var b = document.createElement('button'); b.className = 'btn-sm ' + cls; b.textContent = txt; b.dataset.act = act; b.dataset.id = i.id; return b; };
       bar.appendChild(mk(i.seen ? 'Marcar como no visto' : 'Marcar como visto', i.seen ? 'secondary' : '', 'seen'));
+      bar.appendChild(mk('📌 Convertir en tarea', 'secondary', 'tarea'));
       bar.appendChild(mk('Copiar todo', 'secondary', 'copy'));
       if (i.logs) bar.appendChild(mk('Ver logs (' + i.logs_len + ' car.)', 'secondary', 'logs'));
       card.appendChild(bar);
@@ -152,6 +165,13 @@
       document.getElementById('fb-filter-all').addEventListener('click', function() { fbFilter = 'all'; renderFeedback(); });
       document.getElementById('fb-refresh').addEventListener('click', loadFeedback);
       document.getElementById('fb-list').addEventListener('click', async function(e) {
+        var go = e.target.closest('a[data-goto]');
+        if (go) {   // ir al caso: vista Casos, sin filtros, y se abre ese caso
+          csFilter = 'all'; csArea = null; setFbView('casos'); renderCasos();
+          var c = document.querySelector('.cs-card[data-id="' + go.dataset.goto + '"]');
+          if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.style.outline = '2px solid var(--accent)'; setTimeout(function() { c.style.outline = ''; }, 2500); }
+          return;
+        }
         var b = e.target.closest('button[data-act]'); if (!b) return;
         var id = b.dataset.id, item = fbItems.filter(function(x) { return x.id === id; })[0]; if (!item) return;
         if (b.dataset.act === 'logs') {
@@ -161,6 +181,20 @@
         if (b.dataset.act === 'copy') {
           try { await navigator.clipboard.writeText(fbCopyText(item)); b.textContent = 'Copiado ✓'; } catch (err) { b.textContent = 'No se pudo copiar'; }
           setTimeout(function() { b.textContent = 'Copiar todo'; }, 1800); return;
+        }
+        if (b.dataset.act === 'tarea') {
+          // Crea un caso "tarea" a partir del mensaje (queda enlazado a él) y marca el mensaje como visto.
+          var titulo = prompt('Título de la tarea (qué hay que hacer):', (item.ai_resumen || item.note || '').slice(0, 110));
+          if (!titulo || titulo.trim().length < 3) return;
+          b.disabled = true; b.textContent = 'Creando…';
+          try {
+            var r = await csApi('/admin/feedback-group-create', { titulo: titulo.trim(), tipo: 'tarea', gravedad: 'media', estado: 'nuevo', origen: 'mensaje', items: [id], ejemplo: (item.note || '').slice(0, 1500), nota: 'Creada desde el mensaje de ' + (item.email || item.user_name || 'anónimo') + ' del ' + fmtDateTime(item.at) + '.' });
+            if (!item.seen) { try { await fbMark(id, true); item.seen = true; } catch (x) {} }
+            var d = await csApi('/admin/feedback-groups'); csGroups = d.groups || [];
+            fbSetBadge(fbItems.filter(function(x) { return !x.seen; }).length); renderFeedback();
+            if (!r.id) throw new Error('el Worker no devolvió el caso');
+          } catch (err2) { var eb = document.getElementById('fb-error'); eb.textContent = 'No se pudo crear la tarea: ' + err2.message; eb.style.display = 'block'; b.disabled = false; b.textContent = '📌 Convertir en tarea'; }
+          return;
         }
         if (b.dataset.act === 'seen') {
           b.disabled = true;
@@ -173,7 +207,11 @@
     }
     var btn = document.getElementById('fb-refresh'), err = document.getElementById('fb-error');
     btn.disabled = true; err.style.display = 'none';
-    try { await fbFetch(); renderFeedback(); }
+    try {
+      await fbFetch();
+      try { csGroups = (await csApi('/admin/feedback-groups')).groups || []; } catch (x) {}   // para saber a qué caso fue cada mensaje
+      renderFeedback();
+    }
     catch (e) { err.textContent = 'No se pudo cargar el feedback: ' + (e && e.message ? e.message : 'error de red'); err.style.display = 'block'; }
     finally { btn.disabled = false; }
   }
@@ -183,7 +221,22 @@
   //  GET /admin/feedback-groups · POST /admin/feedback-group · POST /admin/feedback-classify-pending
   //  Cada caso agrupa los mensajes que hablan de lo mismo (lo decide GPT-4o-mini en el Worker).
   // ═══════════════════════════════════════════
-  var fbView = 'casos', csGroups = [], csFilter = 'open', csWired = false;
+  var fbView = 'casos', csGroups = [], csFilter = 'open', csWired = false, csArea = null;
+  // Qué significa cada estado y cómo se cierra (se pinta en cada caso para que no haya dudas)
+  function csAyuda(g) {
+    if (g.estado === 'comprobando') return g.tipo === 'tarea'
+      ? '👉 Te toca: ya está subido. Pruébalo y pulsa "✓ Funciona" (Hoy → Probar) para cerrarlo. Las tareas no se cierran solas.'
+      : '👉 Te toca: ya está subido. Pruébalo y pulsa "✓ Funciona" (Hoy → Probar) para cerrarlo. Si vuelve a fallar se reabre solo; si pasan 14 días sin avisos nuevos y no lo has probado, se cierra solo.';
+    return {
+      nuevo: 'Nuevo: nadie lo ha trabajado todavía. Claude lo ve al empezar cada sesión.',
+      visto: 'Visto: está apuntado, pero nadie lo está trabajando ahora.',
+      en_marcha: 'En marcha: una sesión de Claude lo está trabajando.',
+      propuesta: '👉 Te toca: Claude tiene el arreglo preparado. Apruébalo o recházalo (Hoy → Aprobar).',
+      arreglado: '✅ Cerrado.' + (g.confirmado_auto ? ' Se cerró solo (' + g.confirmado_auto + ').' : ''),
+      descartado: 'Descartado: no se va a hacer.'
+    }[g.estado] || '';
+  }
+  function csAreaOf(g) { return g.area || 'fallos'; }
   var CS_ESTADOS = { nuevo: 'Nuevo', visto: 'Visto', en_marcha: 'En marcha', propuesta: 'Propuesta lista', comprobando: 'Subido, comprobando', arreglado: 'Arreglado', descartado: 'Descartado' };
   // Botones de estado que pulsa Paco (propuesta/comprobando los pone Claude al trabajar el caso)
   var CS_BOTONES = ['visto', 'en_marcha', 'arreglado', 'descartado'];
@@ -211,7 +264,16 @@
   function renderCasos() {
     var list = document.getElementById('cs-list'); list.innerHTML = '';
     var open = function(g) { return g.estado !== 'arreglado' && g.estado !== 'descartado'; };
-    var groups = csGroups.filter(function(g) { return csFilter === 'all' || open(g); });
+    // Áreas arriba del todo: cuántos abiertos hay en cada una; tocar una filtra la lista
+    var openAll = csGroups.filter(open);
+    document.getElementById('cs-areas').innerHTML = HOY_AREAS.map(function(a) {
+      var l = openAll.filter(function(g) { return csAreaOf(g) === a[0]; }), imp = l.filter(function(g) { return g.gravedad === 'urgente' || g.gravedad === 'alta'; }).length;
+      return '<div class="hoy-area' + (csArea === a[0] ? ' on' : '') + '" data-k="' + a[0] + '"><div class="ic">' + a[1] + '</div><div class="nm">' + a[2] + '</div><div class="ct"><b>' + l.length + '</b> abiertos' + (imp ? ' · <span style="color:var(--accent)">' + imp + ' importantes</span>' : '') + '</div></div>';
+    }).join('');
+    var sel = document.getElementById('cs-area-sel');
+    sel.style.display = csArea ? '' : 'none';
+    if (csArea) sel.innerHTML = 'Viendo solo <b>' + escHtml(HOY_AREA_NAME[csArea] || csArea) + '</b> · <a href="#" id="cs-area-clear" style="color:var(--accent)">ver todas las áreas</a>';
+    var groups = csGroups.filter(function(g) { return (csFilter === 'all' || open(g)) && (!csArea || csAreaOf(g) === csArea); });
     groups.sort(function(a, b) {
       var ORD = { propuesta: -1, nuevo: 0 }; var ea = ORD[a.estado] !== undefined ? ORD[a.estado] : 1, eb = ORD[b.estado] !== undefined ? ORD[b.estado] : 1;
       if (ea !== eb && (ea === -1 || eb === -1)) return ea - eb;
@@ -230,7 +292,8 @@
       var top = document.createElement('div'); top.className = 'cs-top';
       var badge = document.createElement('span'); badge.className = 'cs-grav'; badge.textContent = (g.gravedad || '').toUpperCase(); top.appendChild(badge);
       var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', boton: '⚑ ¿Nos avisas?', pendiente: '📋 pendiente de CLAUDE.md' };
-      var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona + (ORIG[g.origen] ? ' · ' + ORIG[g.origen] : ''); top.appendChild(tags);
+      ORIG.mensaje = '💬 de un mensaje';
+      var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (HOY_AREA_NAME[csAreaOf(g)] || csAreaOf(g)) + ' · ' + (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona + (ORIG[g.origen] ? ' · ' + ORIG[g.origen] : ''); top.appendChild(tags);
       if (g.modelo) { var mo = document.createElement('span'); mo.className = 'hoy-model hoy-model-' + g.modelo; mo.textContent = '🧠 Hacer con ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet'); mo.title = g.modelo_por || ''; top.appendChild(mo); }
       var cnt = document.createElement('span'); cnt.className = 'cs-cnt'; cnt.textContent = g.count ? g.count + (g.count === 1 ? ' aviso' : ' avisos') + (g.reporters > 1 ? ' · ' + g.reporters + ' personas' : '') : ''; top.appendChild(cnt);
       card.appendChild(top);
@@ -239,11 +302,8 @@
       meta.textContent = 'Estado: ' + (CS_ESTADOS[g.estado] || g.estado) + ' · último ' + fmtDateTime(g.last_at) + ' · primero ' + fmtDateTime(g.first_at) + (g.reabierto_at ? ' · ⚠️ reabierto' : '');
       card.appendChild(meta);
       if (g.ejemplo) { var ex = document.createElement('div'); ex.className = 'cs-ejemplo'; ex.textContent = g.ejemplo; card.appendChild(ex); }
-      if (g.estado === 'propuesta' || g.estado === 'comprobando') {
-        var st = document.createElement('div'); st.className = 'cs-estado cs-estado-' + g.estado;
-        st.textContent = g.estado === 'propuesta' ? '✅ Propuesta de arreglo lista — espera tu OK (díselo a Claude en el chat)' : '⏳ Subido — se da por arreglado solo si en 48 h no vuelve a fallar';
-        card.appendChild(st);
-      }
+      var ay = document.createElement('div'); ay.className = (g.estado === 'propuesta' || g.estado === 'comprobando') ? 'cs-estado cs-estado-' + g.estado : 'cs-ayuda';
+      ay.textContent = csAyuda(g); if (ay.textContent) card.appendChild(ay);
       if (g.nota) { var nt = document.createElement('div'); nt.className = 'cs-nota'; nt.textContent = '📝 ' + g.nota; card.appendChild(nt); }
       if (g.diagnostico) {
         var dg = document.createElement('div'); dg.className = 'cs-diag';
@@ -291,6 +351,13 @@
       document.getElementById('cs-filter-open').addEventListener('click', function() { csFilter = 'open'; renderCasos(); });
       document.getElementById('cs-filter-all').addEventListener('click', function() { csFilter = 'all'; renderCasos(); });
       document.getElementById('cs-refresh').addEventListener('click', loadCasos);
+      document.getElementById('cs-areas').addEventListener('click', function(e) {
+        var a = e.target.closest('.hoy-area'); if (!a) return;
+        csArea = csArea === a.dataset.k ? null : a.dataset.k; renderCasos();
+      });
+      document.getElementById('cs-area-sel').addEventListener('click', function(e) {
+        if (e.target.id === 'cs-area-clear') { e.preventDefault(); csArea = null; renderCasos(); }
+      });
       document.getElementById('cs-classify').addEventListener('click', async function() {
         var b = this, err = document.getElementById('cs-error'); b.disabled = true; b.textContent = 'Clasificando…'; err.style.display = 'none';
         try {
@@ -354,7 +421,8 @@
   function hoyOpen(g) { return g.estado !== 'arreglado' && g.estado !== 'descartado'; }
   function hoyEsc(s) { return escHtml(s); }
   function hoyByGrav(a, b) { return (HOY_GRAV[a.gravedad] - HOY_GRAV[b.gravedad]) || String(b.last_at).localeCompare(String(a.last_at)); }
-  function hoyTuyo(g) { return g.estado === 'propuesta' || !!g.decision || (g.estado === 'comprobando' && g.tipo === 'tarea'); }
+  // Subido (comprobando) = te toca probarlo, sea tarea o fallo (desde el 26 sept ya no se cierra solo a las 48 h)
+  function hoyTuyo(g) { return g.estado === 'propuesta' || !!g.decision || g.estado === 'comprobando'; }
   function hoyAgo(iso) {
     var t = Date.parse(iso || ''); if (!t) return '';
     var m = Math.round((Date.now() - t) / 60000);
@@ -396,6 +464,7 @@
     if (g.ejemplo) p.push('<div class="cs-ejemplo">' + hoyEsc(g.ejemplo) + '</div>');
     var coms = g.comentarios || [];
     if (coms.length) p.push('<div class="hoy-hilo">' + coms.map(function(c) { return '<div><b>' + (c.de === 'claude' ? '🤖 Claude' : '👤 Tú') + '</b> · ' + fmtDateTime(c.at) + '<br>' + hoyEsc(c.texto) + '</div>'; }).join('') + '</div>');
+    if (csAyuda(g)) p.push('<div class="cs-ayuda">' + hoyEsc(csAyuda(g)) + '</div>');
     p.push('<div class="fb-meta">Estado: ' + (CS_ESTADOS[g.estado] || g.estado) + ' · caso ' + hoyEsc(g.id) + (g.first_at ? ' · desde ' + fmtDateTime(g.first_at) : '') + '</div>');
     return p.join('');
   }
@@ -429,7 +498,7 @@
     var open = hoyGroups.filter(hoyOpen);
     var aprobar = open.filter(function(g) { return g.estado === 'propuesta'; }).sort(hoyByGrav);
     var decidir = open.filter(function(g) { return g.decision && g.estado !== 'propuesta'; }).sort(hoyByGrav);
-    var probar = open.filter(function(g) { return g.estado === 'comprobando' && g.tipo === 'tarea' && !g.decision; }).sort(hoyByGrav);
+    var probar = open.filter(function(g) { return g.estado === 'comprobando' && !g.decision; }).sort(hoyByGrav);
     var urg = open.filter(function(g) { return g.gravedad === 'urgente'; }).sort(hoyByGrav);
     var wip = open.filter(function(g) { return g.estado === 'en_marcha'; });
     var n = aprobar.length + decidir.length + probar.length;
@@ -452,7 +521,7 @@
     hoyGroups.forEach(function(g) {
       if (Date.parse(g.first_at) > dia && g.count > 0) ev.push({ at: g.first_at, i: g.origen === 'navegador' || g.origen === 'worker' ? '🤖' : '🆕', t: 'Nuevo: <b>' + hoyEsc(g.titulo) + '</b>' });
       if (Date.parse(g.reabierto_at) > dia) ev.push({ at: g.reabierto_at, i: '↩️', t: '<b style="color:var(--red)">Reabierto</b>: ' + hoyEsc(g.titulo) });
-      if (g.estado === 'arreglado' && Date.parse(g.estado_at) > dia) ev.push({ at: g.estado_at, i: '✅', t: 'Arreglado' + (g.confirmado_auto ? ' (48 h sin avisos)' : '') + ': <b>' + hoyEsc(g.titulo) + '</b>' });
+      if (g.estado === 'arreglado' && Date.parse(g.estado_at) > dia) ev.push({ at: g.estado_at, i: '✅', t: 'Arreglado' + (g.confirmado_auto ? ' solo (' + hoyEsc(g.confirmado_auto) + ')' : '') + ': <b>' + hoyEsc(g.titulo) + '</b>' });
       if (g.estado === 'propuesta' && Date.parse(g.estado_at) > dia) ev.push({ at: g.estado_at, i: '🔎', t: 'Claude dejó propuesta: <b>' + hoyEsc(g.titulo) + '</b>' });
       (g.comentarios || []).forEach(function(c) { if (c.de === 'claude' && Date.parse(c.at) > dia) ev.push({ at: c.at, i: '💬', t: 'Claude en <b>' + hoyEsc(g.titulo) + '</b>: ' + hoyEsc(c.texto.slice(0, 140)) }); });
     });
@@ -487,7 +556,14 @@
     }
     var mod = g.modelo ? ' (recomendado: ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + ')' : '';
     if (act === 'claude') return copy('Mira el caso ' + g.id + ': ' + g.titulo + mod, btn, '✓ Copiado — pégalo en el chat');
-    if (act === 'opciones') return copy('Dame opciones y tu recomendación para decidir el caso ' + g.id + ': ' + g.titulo + (g.decision ? ' — ' + g.decision : '') + mod, btn, '✓ Copiado — pégalo en el chat');
+    // Queda guardado en el hilo del caso (se ve en todos tus dispositivos y Claude lo lee al empezar la sesión);
+    // Claude responde con un comentario en el mismo caso. Además se copia por si quieres pegarlo ya en el chat.
+    if (act === 'opciones') {
+      try { await csApi('/admin/feedback-group', { id: g.id, comentario: '🧭 Pido opciones y tu recomendación para decidir.' }); }
+      catch (e) { err.textContent = 'No se pudo guardar la petición: ' + e.message; err.style.display = 'block'; return; }
+      await copy('Dame opciones y tu recomendación para decidir el caso ' + g.id + ': ' + g.titulo + (g.decision ? ' — ' + g.decision : '') + mod, btn, '✓ Guardado y copiado');
+      setTimeout(hoyLoad, 1500); return;
+    }
     try {
       if (act === 'comentar') {
         var t = prompt('Mensaje para Claude en este caso (lo leerá al empezar la sesión):'); if (!t) return;

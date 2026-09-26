@@ -1117,6 +1117,10 @@ body { min-height: 100vh; }
 .cs-urgente .cs-grav { background: var(--red); color: #fff; }
 .cs-alta .cs-grav { background: var(--accent); color: var(--text-on-accent); }
 .cs-tags { color: var(--text-secondary); }
+.cs-areas { margin: 4px 0 14px; }
+.cs-ayuda { font-size: 13px; color: var(--text-secondary); margin: 6px 0; }
+.fb-caso { font-size: 13px; margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--bg-card); }
+.fb-caso a { color: var(--accent); cursor: pointer; text-decoration: underline; }
 .cs-cnt { margin-left: auto; color: var(--text-primary); font-weight: 600; }
 .cs-title { font-size: 17px; font-weight: 700; margin: 2px 0 6px; }
 .cs-ejemplo { white-space: pre-wrap; word-break: break-word; font-size: 13px; color: var(--text-secondary); margin: 8px 0; max-height: 120px; overflow: auto; background: rgba(0,0,0,.25); padding: 8px 10px; border-radius: 6px; }
