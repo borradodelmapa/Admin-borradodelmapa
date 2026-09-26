@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-26.8">
+  <link rel="stylesheet" href="admin.css?v=2026-09-26.9">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -77,6 +77,12 @@
         <p class="hoy-sub" id="hoy-saludo">Cargando…</p>
         <div id="hoy-error" class="gastos-error" style="display:none;"></div>
 
+        <h3 class="hoy-h">🗂️ Áreas <span class="hoy-n" id="hoy-n-abiertos"></span></h3>
+        <p class="hoy-hint">Todo lo abierto, por área. Toca una para ver sus casos (primero los que nadie ha atendido).</p>
+        <div class="hoy-areas" id="hoy-areas"></div>
+        <div id="hoy-area-list"></div>
+
+
         <h3 class="hoy-h">⚡ Si tienes 5 minutos</h3>
         <p class="hoy-hint">Las 3 cosas tuyas más importantes ahora mismo. Con esto basta; el resto puede esperar.</p>
         <div id="hoy-5min"></div>
@@ -104,11 +110,6 @@
         <h3 class="hoy-h">🔧 En marcha <span class="hoy-n">máx. 3</span></h3>
         <p class="hoy-hint">Lo que se está haciendo ahora. Si una sesión de Claude coge un caso, queda con candado 🔒 para que ninguna otra lo toque.</p>
         <div class="hoy-wip" id="hoy-wip"></div>
-
-        <h3 class="hoy-h">🗂️ Áreas <span class="hoy-n" id="hoy-n-abiertos"></span></h3>
-        <p class="hoy-hint">Todo lo abierto, por área. Toca una para ver sus casos.</p>
-        <div class="hoy-areas" id="hoy-areas"></div>
-        <div id="hoy-area-list"></div>
 
         <p class="hoy-foot"><b>Cómo hablamos:</b> <b>🤖 Pedir a Claude</b> copia el caso para pegarlo en el chat de Claude Code. <b>💬 Comentar</b> deja un mensaje en el caso que Claude lee al empezar la sesión. Al terminar, Claude deja cada caso al día.</p>
       </section>
@@ -560,8 +561,8 @@
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-26.6"></script>
-  <script src="admin.js?v=2026-09-26.12"></script>
+  <script src="config.js?v=2026-09-26.7"></script>
+  <script src="admin.js?v=2026-09-26.13"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>

@@ -510,6 +510,8 @@
     var coms = g.comentarios || [], last = coms[coms.length - 1];
     var html = '<div class="hoy-card ' + cls + '" data-id="' + hoyEsc(g.id) + '"><div class="hoy-card-t">' + hoyEsc(g.titulo) + '</div>';
     if (mode === 'decidir' && g.decision) html += '<div class="hoy-q">❓ ' + hoyEsc(g.decision) + '</div>';
+    if (g.ejemplo) html += '<div class="cs-ejemplo clamp">' + hoyEsc(g.ejemplo) + '</div>';
+    html += '<button class="fold-toggle" data-act="more">▾ Ver más</button><div class="hoy-more" style="display:none">';
     html += '<div class="hoy-meta"><span class="hoy-chip">' + (HOY_AREA_NAME[g.area] || g.area) + '</span><span class="hoy-chip">' + ((typeof CS_TIPO !== 'undefined' && CS_TIPO[g.tipo]) || g.tipo) + '</span>' +
       (g.count ? '<span class="hoy-chip">' + g.count + (g.count === 1 ? ' aviso' : ' avisos') + '</span>' : '') +
       (g.modelo ? '<span class="hoy-model hoy-model-' + g.modelo + '" title="' + hoyEsc(g.modelo_por || '') + '">🧠 Hacer con ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + '</span>' : '') +
@@ -523,7 +525,7 @@
     else if (mode === 'probar') acts = (g.diagnostico && /^https:\/\//.test(g.diagnostico.enlace || '') ? '<a class="hoy-btn pri" href="' + hoyEsc(g.diagnostico.enlace) + '" target="_blank" rel="noopener">▶ Abrir para probar</a>' : '') +
       b('👍 Funciona', 'funciona', 'ok') + b('👎 Falla', 'falla') + b('Pasos', 'ver') + b('💬 Comentar', 'comentar');
     else acts = b('🤖 Pedir a Claude', 'claude', 'pri') + b('💬 Comentar', 'comentar') + b('Detalle', 'ver');
-    html += '<div class="hoy-acts">' + acts + '</div><div class="hoy-det" style="display:none"></div></div>';
+    html += '<div class="hoy-acts">' + acts + '</div><div class="hoy-det" style="display:none"></div></div></div>';
     return html;
   }
 
@@ -535,7 +537,6 @@
         rows.filter(function(r) { return d[r[0]]; }).map(function(r) { return '<div class="cs-diag-r"><b>' + r[1] + ':</b> ' + hoyEsc(d[r[0]]) + '</div>'; }).join('') + '</div>');
     }
     if (g.nota) p.push('<div class="cs-nota">📝 ' + hoyEsc(g.nota) + '</div>');
-    if (g.ejemplo) p.push('<div class="cs-ejemplo">' + hoyEsc(g.ejemplo) + '</div>');
     var coms = g.comentarios || [];
     if (coms.length) p.push('<div class="hoy-hilo">' + coms.map(function(c) { return '<div><b>' + (c.de === 'claude' ? '🤖 Claude' : '👤 Tú') + '</b> · ' + fmtDateTime(c.at) + '<br>' + hoyEsc(c.texto) + '</div>'; }).join('') + '</div>');
     if (csAyuda(g)) p.push('<div class="cs-ayuda">' + hoyEsc(csAyuda(g)) + '</div>');
@@ -613,13 +614,16 @@
     // Áreas
     $('hoy-n-abiertos').textContent = open.length + ' abiertos';
     $('hoy-areas').innerHTML = HOY_AREAS.map(function(a) {
-      var l = open.filter(function(g) { return g.area === a[0]; }), imp = l.filter(function(g) { return g.gravedad === 'urgente' || g.gravedad === 'alta'; }).length;
+      var l = open.filter(function(g) { return (g.area || 'fallos') === a[0]; }), imp = l.filter(function(g) { return g.gravedad === 'urgente' || g.gravedad === 'alta'; }).length;
       return '<div class="hoy-area' + (hoyArea === a[0] ? ' on' : '') + '" data-k="' + a[0] + '"><div class="ic">' + a[1] + '</div><div class="nm">' + a[2] + '</div><div class="ct"><b>' + l.length + '</b> abiertos' + (imp ? ' · <span style="color:var(--accent)">' + imp + ' importantes</span>' : '') + '</div></div>';
     }).join('');
     var al = $('hoy-area-list');
     if (hoyArea) {
-      var l = open.filter(function(g) { return g.area === hoyArea; }).sort(hoyByGrav);
-      al.innerHTML = l.map(function(g) { return hoyCard(g, hoyTuyo(g) ? (g.estado === 'propuesta' ? 'aprobar' : g.decision ? 'decidir' : 'probar') : ''); }).join('') || '<div class="hoy-empty">Nada abierto aquí.</div>';
+      // Sin atender (nuevo, visto) → te toca → en marcha; dentro, por gravedad
+      var HORD = { nuevo: 0, visto: 0, propuesta: 1, comprobando: 1, en_marcha: 2 };
+      var hord = function(g) { return HORD[g.estado] !== undefined ? HORD[g.estado] : 2; };
+      var l = open.filter(function(g) { return (g.area || 'fallos') === hoyArea; }).sort(function(a, b) { return (hord(a) - hord(b)) || hoyByGrav(a, b); });
+      al.innerHTML = '<div class="gastos-note">Viendo solo <b>' + hoyEsc(HOY_AREA_NAME[hoyArea] || hoyArea) + '</b> · ' + l.length + ' abiertos, primero los sin atender</div>' + l.map(function(g) { return hoyCard(g, hoyTuyo(g) ? (g.estado === 'propuesta' ? 'aprobar' : g.decision ? 'decidir' : 'probar') : ''); }).join('') || '<div class="hoy-empty">Nada abierto aquí.</div>';
     } else al.innerHTML = '';
   }
 
@@ -630,6 +634,7 @@
       catch (e) { prompt('Copia esto y pégalo en el chat de Claude:', txt); }
     };
     var btn = cardEl.querySelector('[data-act="' + act + '"]');
+    if (act === 'more') { var mo = cardEl.querySelector('.hoy-more'), op = mo.style.display === 'none'; foldToggle(btn, '.hoy-more', '.cs-ejemplo', op); return; }
     if (act === 'ver') {
       var det = cardEl.querySelector('.hoy-det'), open = det.style.display === 'none';
       if (open) det.innerHTML = hoyDetalle(g); det.style.display = open ? 'block' : 'none'; return;
@@ -673,8 +678,12 @@
       var sec = document.getElementById('tab-hoy');
       sec.addEventListener('click', function(e) {
         var a = e.target.closest('.hoy-area');
-        if (a) { hoyArea = hoyArea === a.dataset.k ? null : a.dataset.k; hoyRender(); return; }
-        var b = e.target.closest('.hoy-btn'); if (!b || !b.dataset.act) return;   // sin data-act = enlace (Abrir para probar)
+        if (a) {
+          hoyArea = hoyArea === a.dataset.k ? null : a.dataset.k; hoyRender();
+          if (hoyArea) document.getElementById('hoy-area-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        var b = e.target.closest('.hoy-btn, .fold-toggle'); if (!b || !b.dataset.act) return;   // sin data-act = enlace (Abrir para probar)
         var card = b.closest('.hoy-card'), g = hoyGroups.filter(function(x) { return x.id === card.dataset.id; })[0];
         if (g) hoyAction(b.dataset.act, g, card);
       });
