@@ -237,6 +237,21 @@
     }[g.estado] || '';
   }
   function csAreaOf(g) { return g.area || 'fallos'; }
+
+  // 🎁 Gracias + 1 guía gratis a quien avisó (POST /admin/feedback-thanks). El Worker lo manda por WhatsApp si
+  // nos escribió en las últimas 24 h, si no por email, y si no se lo enseña al entrar en la app.
+  // Nunca regala dos veces a la misma persona por el mismo caso. Devuelve true si se envió.
+  async function csThanks(g) {
+    var base = '¡Hola {nombre}! Soy Salma 🧡 Nos avisaste de un fallo: «' + g.titulo + '». Ya está arreglado, gracias por ayudarnos a mejorar. Te hemos regalado 1 guía gratis: pídeme una ruta cuando quieras en borradodelmapa.com';
+    var t = prompt('Mensaje de agradecimiento ({nombre} se cambia por el nombre de cada persona). Se le suma 1 guía gratis:', base);
+    if (!t) return false;
+    var r = await csApi('/admin/feedback-thanks', { id: g.id, texto: t });
+    alert(r.personas
+      ? '🎁 Enviado a ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ': ' + (r.detalle || []).join(', ') + '.' + (r.ya_tenian ? ' (' + r.ya_tenian + ' ya lo tenían)' : '') + (r.sin_cuenta ? ' · ' + r.sin_cuenta + ' aviso(s) sin cuenta, no se puede regalar.' : '')
+      : 'No hay nadie nuevo a quien dar las gracias' + (r.ya_tenian ? ' (' + r.ya_tenian + ' ya lo tenían)' : '') + (r.sin_cuenta ? ' · ' + r.sin_cuenta + ' aviso(s) sin cuenta.' : '.'));
+    return true;
+  }
+  function csCanThank(g) { return g.count > 0 && g.tipo !== 'tarea' && (g.estado === 'arreglado' || g.estado === 'comprobando'); }
   var CS_ESTADOS = { nuevo: 'Nuevo', visto: 'Visto', en_marcha: 'En marcha', propuesta: 'Propuesta lista', comprobando: 'Subido, comprobando', arreglado: 'Arreglado', descartado: 'Descartado' };
   // Botones de estado que pulsa Paco (propuesta/comprobando los pone Claude al trabajar el caso)
   var CS_BOTONES = ['visto', 'en_marcha', 'arreglado', 'descartado'];
@@ -322,6 +337,7 @@
         var b = document.createElement('button'); b.className = 'btn-sm' + (g.estado === k ? '' : ' secondary'); b.textContent = CS_ESTADOS[k];
         b.dataset.act = 'estado'; b.dataset.estado = k; b.dataset.id = g.id; if (g.estado === k) b.disabled = true; bar.appendChild(b);
       });
+      if (csCanThank(g)) { var bg = document.createElement('button'); bg.className = 'btn-sm' + (g.gracias_n ? ' secondary' : ''); bg.textContent = g.gracias_n ? '🎁 Gracias dadas (' + g.gracias_n + ')' : '🎁 Dar las gracias'; bg.dataset.act = 'gracias'; bg.dataset.id = g.id; bar.appendChild(bg); }
       var bn = document.createElement('button'); bn.className = 'btn-sm secondary'; bn.textContent = g.nota ? 'Editar nota' : 'Añadir nota'; bn.dataset.act = 'nota'; bn.dataset.id = g.id; bar.appendChild(bn);
       if ((g.items || []).length) { var bm = document.createElement('button'); bm.className = 'btn-sm secondary'; bm.textContent = 'Ver mensajes (' + (g.items || []).length + ')'; bm.dataset.act = 'msgs'; bm.dataset.id = g.id; bar.appendChild(bm); }
       if (g.detalle) { var bd = document.createElement('button'); bd.className = 'btn-sm secondary'; bd.textContent = 'Detalle técnico'; bd.dataset.act = 'detalle'; bd.dataset.id = g.id; bar.appendChild(bd); }
@@ -387,6 +403,7 @@
           box.style.display = opening ? 'block' : 'none'; return;
         }
         try {
+          if (b.dataset.act === 'gracias') { b.disabled = true; if (await csThanks(g)) { await loadCasos(); return; } b.disabled = false; return; }
           if (b.dataset.act === 'estado') { b.disabled = true; await csApi('/admin/feedback-group', { id: g.id, estado: b.dataset.estado }); g.estado = b.dataset.estado; }
           if (b.dataset.act === 'nota') {
             var n = prompt('Nota para este caso (qué es, qué hay que hacer…):', g.nota || ''); if (n === null) return;
@@ -447,7 +464,8 @@
     var acts = '';
     if (mode === 'aprobar') acts = b('Ver propuesta', 'ver', 'pri') + b('✅ Aprobar', 'aprobar', 'ok') + b('Rechazar', 'rechazar') + b('💬 Comentar', 'comentar');
     else if (mode === 'decidir') acts = b('🤖 Opciones y recomendación', 'opciones', 'pri') + b('💬 Comentar', 'comentar');
-    else if (mode === 'probar') acts = b('✓ Funciona', 'funciona', 'ok') + b('✗ Falla', 'falla') + b('Pasos', 'ver') + b('💬 Comentar', 'comentar');
+    else if (mode === 'probar') acts = (g.diagnostico && /^https:\/\//.test(g.diagnostico.enlace || '') ? '<a class="hoy-btn pri" href="' + hoyEsc(g.diagnostico.enlace) + '" target="_blank" rel="noopener">▶ Abrir para probar</a>' : '') +
+      b('✓ Funciona', 'funciona', 'ok') + b('✗ Falla', 'falla') + b('Pasos', 'ver') + b('💬 Comentar', 'comentar');
     else acts = b('🤖 Pedir a Claude', 'claude', 'pri') + b('💬 Comentar', 'comentar') + b('Detalle', 'ver');
     html += '<div class="hoy-acts">' + acts + '</div><div class="hoy-det" style="display:none"></div></div>';
     return html;
@@ -506,6 +524,12 @@
     $('hoy-saludo').innerHTML = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) +
       ' · <b>' + n + (n === 1 ? ' cosa te espera' : ' cosas te esperan') + '</b>' + (urg.length ? ', <b style="color:var(--red)">' + urg.length + ' urgente</b>' : '') + ' · ' + open.length + ' casos abiertos.';
     $('hoy-n-tuyo').textContent = n;
+    // ⚡ 5 minutos: lo más grave de lo que te toca (aprobar → probar → decidir si empatan en gravedad)
+    var PRIO = { propuesta: 0, comprobando: 1 };
+    var top3 = aprobar.concat(probar, decidir).sort(function(a, b) {
+      return (HOY_GRAV[a.gravedad] - HOY_GRAV[b.gravedad]) || ((a.decision ? 2 : PRIO[a.estado]) - (b.decision ? 2 : PRIO[b.estado]));
+    }).slice(0, 3);
+    $('hoy-5min').innerHTML = top3.map(function(g) { return hoyCard(g, g.estado === 'propuesta' ? 'aprobar' : g.decision ? 'decidir' : 'probar'); }).join('') || '<div class="hoy-empty">Nada que te toque ahora. 🎉</div>';
     $('hoy-aprobar').innerHTML = aprobar.map(function(g) { return hoyCard(g, 'aprobar'); }).join('') || '<div class="hoy-empty">Nada que aprobar. Cuando Claude deje un arreglo preparado aparece aquí.</div>';
     $('hoy-decidir').innerHTML = decidir.map(function(g) { return hoyCard(g, 'decidir'); }).join('') || '<div class="hoy-empty">Ninguna decisión pendiente.</div>';
     $('hoy-probar').innerHTML = probar.map(function(g) { return hoyCard(g, 'probar'); }).join('') || '<div class="hoy-empty">Nada que probar.</div>';
@@ -570,6 +594,9 @@
         await csApi('/admin/feedback-group', { id: g.id, comentario: t });
       } else if (act === 'funciona') {
         await csApi('/admin/feedback-group', { id: g.id, estado: 'arreglado', comentario: '✓ Probado: funciona.' });
+        if (g.count > 0 && g.tipo !== 'tarea' && !g.gracias_n && confirm('¿Damos las gracias + 1 guía gratis a quien avisó de este fallo?')) {
+          try { await csThanks(g); } catch (x) { err.textContent = 'Cerrado, pero no se pudieron dar las gracias: ' + x.message; err.style.display = 'block'; }
+        }
       } else if (act === 'falla') {
         var f = prompt('¿Qué falla? (lo que ves en la pantalla)'); if (f === null) return;
         await csApi('/admin/feedback-group', { id: g.id, estado: 'nuevo', comentario: '✗ Probado: falla. ' + f });
@@ -591,7 +618,7 @@
       sec.addEventListener('click', function(e) {
         var a = e.target.closest('.hoy-area');
         if (a) { hoyArea = hoyArea === a.dataset.k ? null : a.dataset.k; hoyRender(); return; }
-        var b = e.target.closest('.hoy-btn'); if (!b) return;
+        var b = e.target.closest('.hoy-btn'); if (!b || !b.dataset.act) return;   // sin data-act = enlace (Abrir para probar)
         var card = b.closest('.hoy-card'), g = hoyGroups.filter(function(x) { return x.id === card.dataset.id; })[0];
         if (g) hoyAction(b.dataset.act, g, card);
       });
