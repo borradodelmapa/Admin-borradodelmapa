@@ -184,8 +184,10 @@
   //  Cada caso agrupa los mensajes que hablan de lo mismo (lo decide GPT-4o-mini en el Worker).
   // ═══════════════════════════════════════════
   var fbView = 'casos', csGroups = [], csFilter = 'open', csWired = false;
-  var CS_ESTADOS = { nuevo: 'Nuevo', visto: 'Visto', en_marcha: 'En marcha', arreglado: 'Arreglado', descartado: 'Descartado' };
-  var CS_TIPO = { fallo: '🐞 Fallo', dato_erroneo: '❌ Dato erróneo', idea: '💡 Idea', queja: '😕 Queja', elogio: '❤️ Elogio', otro: '• Otro' };
+  var CS_ESTADOS = { nuevo: 'Nuevo', visto: 'Visto', en_marcha: 'En marcha', propuesta: 'Propuesta lista', comprobando: 'Subido, comprobando', arreglado: 'Arreglado', descartado: 'Descartado' };
+  // Botones de estado que pulsa Paco (propuesta/comprobando los pone Claude al trabajar el caso)
+  var CS_BOTONES = ['visto', 'en_marcha', 'arreglado', 'descartado'];
+  var CS_TIPO = { fallo: '🐞 Fallo', dato_erroneo: '❌ Dato erróneo', idea: '💡 Idea', queja: '😕 Queja', elogio: '❤️ Elogio', tarea: '📌 Tarea', otro: '• Otro' };
   var CS_GRAV_ORDER = { urgente: 0, alta: 1, media: 2, baja: 3 };
 
   async function csApi(path, body) {
@@ -211,7 +213,8 @@
     var open = function(g) { return g.estado !== 'arreglado' && g.estado !== 'descartado'; };
     var groups = csGroups.filter(function(g) { return csFilter === 'all' || open(g); });
     groups.sort(function(a, b) {
-      var ea = a.estado === 'nuevo' ? 0 : 1, eb = b.estado === 'nuevo' ? 0 : 1;
+      var ORD = { propuesta: -1, nuevo: 0 }; var ea = ORD[a.estado] !== undefined ? ORD[a.estado] : 1, eb = ORD[b.estado] !== undefined ? ORD[b.estado] : 1;
+      if (ea !== eb && (ea === -1 || eb === -1)) return ea - eb;
       return (CS_GRAV_ORDER[a.gravedad] - CS_GRAV_ORDER[b.gravedad]) || (ea - eb) || (b.count - a.count) || String(b.last_at).localeCompare(String(a.last_at));
     });
     document.getElementById('cs-count').textContent = csGroups.filter(open).length + ' abiertos · ' + csGroups.length + ' en total';
@@ -226,19 +229,35 @@
       var card = document.createElement('div'); card.className = 'cs-card cs-' + (g.gravedad || 'media') + (open(g) ? '' : ' closed'); card.dataset.id = g.id;
       var top = document.createElement('div'); top.className = 'cs-top';
       var badge = document.createElement('span'); badge.className = 'cs-grav'; badge.textContent = (g.gravedad || '').toUpperCase(); top.appendChild(badge);
-      var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', boton: '⚑ ¿Nos avisas?' };
+      var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', boton: '⚑ ¿Nos avisas?', pendiente: '📋 pendiente de CLAUDE.md' };
       var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona + (ORIG[g.origen] ? ' · ' + ORIG[g.origen] : ''); top.appendChild(tags);
-      var cnt = document.createElement('span'); cnt.className = 'cs-cnt'; cnt.textContent = g.count + (g.count === 1 ? ' aviso' : ' avisos') + (g.reporters > 1 ? ' · ' + g.reporters + ' personas' : ''); top.appendChild(cnt);
+      var cnt = document.createElement('span'); cnt.className = 'cs-cnt'; cnt.textContent = g.count ? g.count + (g.count === 1 ? ' aviso' : ' avisos') + (g.reporters > 1 ? ' · ' + g.reporters + ' personas' : '') : ''; top.appendChild(cnt);
       card.appendChild(top);
       var t = document.createElement('div'); t.className = 'cs-title'; t.textContent = g.titulo; card.appendChild(t);
       var meta = document.createElement('div'); meta.className = 'fb-meta';
       meta.textContent = 'Estado: ' + (CS_ESTADOS[g.estado] || g.estado) + ' · último ' + fmtDateTime(g.last_at) + ' · primero ' + fmtDateTime(g.first_at) + (g.reabierto_at ? ' · ⚠️ reabierto' : '');
       card.appendChild(meta);
       if (g.ejemplo) { var ex = document.createElement('div'); ex.className = 'cs-ejemplo'; ex.textContent = g.ejemplo; card.appendChild(ex); }
+      if (g.estado === 'propuesta' || g.estado === 'comprobando') {
+        var st = document.createElement('div'); st.className = 'cs-estado cs-estado-' + g.estado;
+        st.textContent = g.estado === 'propuesta' ? '✅ Propuesta de arreglo lista — espera tu OK (díselo a Claude en el chat)' : '⏳ Subido — se da por arreglado solo si en 48 h no vuelve a fallar';
+        card.appendChild(st);
+      }
       if (g.nota) { var nt = document.createElement('div'); nt.className = 'cs-nota'; nt.textContent = '📝 ' + g.nota; card.appendChild(nt); }
+      if (g.diagnostico) {
+        var dg = document.createElement('div'); dg.className = 'cs-diag';
+        var dh = document.createElement('div'); dh.className = 'cs-diag-t'; dh.textContent = '🔎 Diagnóstico de Claude · ' + fmtDateTime(g.diagnostico_at); dg.appendChild(dh);
+        [['causa', 'Causa'], ['propuesta', 'Propuesta'], ['riesgo', 'Riesgo'], ['coste', 'Coste'], ['archivos', 'Archivos'], ['prueba', 'Cómo se prueba'], ['rama', 'Dónde está preparado']].forEach(function(kv) {
+          if (!g.diagnostico[kv[0]]) return;
+          var r = document.createElement('div'); r.className = 'cs-diag-r';
+          var k = document.createElement('b'); k.textContent = kv[1] + ': '; r.appendChild(k);
+          r.appendChild(document.createTextNode(g.diagnostico[kv[0]])); dg.appendChild(r);
+        });
+        card.appendChild(dg);
+      }
       var bar = document.createElement('div'); bar.className = 'fb-actions';
-      Object.keys(CS_ESTADOS).forEach(function(k) {
-        if (k === 'nuevo' && g.estado === 'nuevo') return;
+      var bc = document.createElement('button'); bc.className = 'btn-sm'; bc.textContent = '🤖 Pedir a Claude'; bc.dataset.act = 'claude'; bc.dataset.id = g.id; bar.appendChild(bc);
+      CS_BOTONES.forEach(function(k) {
         var b = document.createElement('button'); b.className = 'btn-sm' + (g.estado === k ? '' : ' secondary'); b.textContent = CS_ESTADOS[k];
         b.dataset.act = 'estado'; b.dataset.estado = k; b.dataset.id = g.id; if (g.estado === k) b.disabled = true; bar.appendChild(b);
       });
@@ -284,6 +303,12 @@
         var b = e.target.closest('button[data-act]'); if (!b) return;
         var g = csGroups.filter(function(x) { return x.id === b.dataset.id; })[0]; if (!g) return;
         var err = document.getElementById('cs-error'); err.style.display = 'none';
+        if (b.dataset.act === 'claude') {
+          var txt = 'Mira el caso ' + g.id + ': ' + g.titulo;
+          try { await navigator.clipboard.writeText(txt); b.textContent = '✓ Copiado — pégalo en el chat de Claude'; }
+          catch (x) { prompt('Copia esto y pégalo en el chat de Claude:', txt); }
+          setTimeout(function() { b.textContent = '🤖 Pedir a Claude'; }, 3000); return;
+        }
         if (b.dataset.act === 'detalle') {
           var pd = b.closest('.cs-card').querySelector('.cs-detalle'); var op = pd.style.display === 'none';
           pd.style.display = op ? 'block' : 'none'; b.textContent = op ? 'Ocultar detalle' : 'Detalle técnico'; return;

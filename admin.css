@@ -1124,3 +1124,12 @@ body { min-height: 100vh; }
 .cs-msgs { margin-top: 10px; }
 .cs-msg { white-space: pre-wrap; word-break: break-word; font-size: 12px; padding: 8px 10px; margin-bottom: 6px; background: rgba(0,0,0,.3); border-radius: 6px; max-height: 180px; overflow: auto; }
 .fb-ai { font-size: 12px; color: var(--accent); margin: 4px 0; }
+
+/* Paso A — diagnóstico de Claude y estados propuesta/comprobando */
+.cs-estado { font-size: 13px; font-weight: 600; margin: 8px 0; padding: 8px 10px; border-radius: 6px; }
+.cs-estado-propuesta { background: rgba(67,217,119,.12); color: var(--green); border: 1px solid rgba(67,217,119,.4); }
+.cs-estado-comprobando { background: rgba(255,209,102,.1); color: var(--yellow); border: 1px solid rgba(255,209,102,.35); }
+.cs-diag { margin: 10px 0; padding: 10px 12px; background: rgba(244,99,11,.07); border: 1px solid rgba(244,99,11,.3); border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.cs-diag-t { font-weight: 700; margin-bottom: 6px; color: var(--accent); }
+.cs-diag-r { margin: 4px 0; white-space: pre-wrap; word-break: break-word; }
+.cs-diag-r b { color: var(--text-primary); }
