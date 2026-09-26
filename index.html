@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-26.9">
+  <link rel="stylesheet" href="admin.css?v=2026-09-26.10">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -71,47 +71,78 @@
     <!-- Main content -->
     <main class="main" id="main-content">
 
-      <!-- Hoy (26 sept 2026): pantalla de inicio para todo el proyecto -->
+      <!-- Hoy + Mejora Salma (una sola página desde el 26 sept 2026): arriba Casos | Mensajes y el buscador;
+           en Casos, las áreas (tocar una enseña sus casos justo debajo) y luego lo que te toca, urgente, etc. -->
       <section class="tab-content" id="tab-hoy">
         <div class="hoy-top"><h2 class="section-title">Hoy</h2><button class="btn-sm secondary" id="hoy-refresh">Actualizar</button></div>
         <p class="hoy-sub" id="hoy-saludo">Cargando…</p>
         <div id="hoy-error" class="gastos-error" style="display:none;"></div>
 
-        <h3 class="hoy-h">🗂️ Áreas <span class="hoy-n" id="hoy-n-abiertos"></span></h3>
-        <p class="hoy-hint">Todo lo abierto, por área. Toca una para ver sus casos (primero los que nadie ha atendido).</p>
-        <div class="hoy-areas" id="hoy-areas"></div>
-        <div id="hoy-area-list"></div>
+        <div class="fb-toolbar">
+          <button class="btn-sm" id="fb-view-casos">Casos</button>
+          <button class="btn-sm secondary" id="fb-view-msgs">Mensajes</button>
+        </div>
+        <input type="search" id="fb-search" class="fb-search" placeholder="🔍 Buscar en casos y mensajes (título, texto, persona, id…)" autocomplete="off">
+        <p class="gastos-note" id="fb-search-note" style="display:none;"></p>
 
+        <div id="cs-panel">
+          <h3 class="hoy-h">🗂️ Áreas <span class="hoy-n" id="hoy-n-abiertos"></span></h3>
+          <p class="hoy-hint">Toca una para ver sus casos aquí debajo (primero los que nadie ha atendido). «Todos» enseña la lista completa.</p>
+          <div class="hoy-areas cs-areas" id="cs-areas"></div>
+          <div id="cs-listbox" style="display:none;">
+            <p class="gastos-note" id="cs-area-sel"></p>
+            <div class="fb-toolbar">
+              <button class="btn-sm" id="cs-filter-open">Abiertos</button>
+              <button class="btn-sm secondary" id="cs-filter-all">Todos</button>
+              <button class="btn-sm secondary" id="cs-classify">Clasificar pendientes</button>
+              <span id="cs-count" class="gastos-note"></span>
+            </div>
+            <div id="cs-error" class="gastos-error" style="display:none;"></div>
+            <div id="cs-list"></div>
+          </div>
 
-        <h3 class="hoy-h">⚡ Si tienes 5 minutos</h3>
-        <p class="hoy-hint">Las 3 cosas tuyas más importantes ahora mismo. Con esto basta; el resto puede esperar.</p>
-        <div id="hoy-5min"></div>
+          <h3 class="hoy-h">⚡ Si tienes 5 minutos</h3>
+          <p class="hoy-hint">Las 3 cosas tuyas más importantes ahora mismo. Con esto basta; el resto puede esperar.</p>
+          <div id="hoy-5min"></div>
 
-        <h3 class="hoy-h">📥 Te toca a ti <span class="hoy-n" id="hoy-n-tuyo"></span></h3>
-        <p class="hoy-hint">Lo que está parado esperándote. Todo lo demás lo mueve Claude.</p>
-        <div class="hoy-grid3">
-          <div class="hoy-col"><div class="hoy-col-h">✅ Aprobar <small>arreglos preparados</small></div><div id="hoy-aprobar"></div></div>
-          <div class="hoy-col"><div class="hoy-col-h">🧭 Decidir <small>decisiones tuyas</small></div><div id="hoy-decidir"></div></div>
-          <div class="hoy-col"><div class="hoy-col-h">📱 Probar <small>subido, falta tu prueba</small></div><div id="hoy-probar"></div></div>
+          <h3 class="hoy-h">📥 Te toca a ti <span class="hoy-n" id="hoy-n-tuyo"></span></h3>
+          <p class="hoy-hint">Lo que está parado esperándote. Todo lo demás lo mueve Claude.</p>
+          <div class="hoy-grid3">
+            <div class="hoy-col"><div class="hoy-col-h">✅ Aprobar <small>arreglos preparados</small></div><div id="hoy-aprobar"></div></div>
+            <div class="hoy-col"><div class="hoy-col-h">🧭 Decidir <small>decisiones tuyas</small></div><div id="hoy-decidir"></div></div>
+            <div class="hoy-col"><div class="hoy-col-h">📱 Probar <small>subido, falta tu prueba</small></div><div id="hoy-probar"></div></div>
+          </div>
+
+          <h3 class="hoy-h">🚨 Urgente <span class="hoy-n" id="hoy-n-urg"></span></h3>
+          <div id="hoy-urg"></div>
+
+          <h3 class="hoy-h">🕒 Qué ha pasado <span class="hoy-n">últimas 24 h</span></h3>
+          <div class="hoy-kpis">
+            <div class="hoy-kpi"><b id="hoy-k-subidas">—</b><span>subidas a producción</span></div>
+            <div class="hoy-kpi"><b id="hoy-k-nuevos">—</b><span>casos nuevos</span></div>
+            <div class="hoy-kpi"><b id="hoy-k-gasto">—</b><span id="hoy-k-gasto-l">Google ayer</span></div>
+            <div class="hoy-kpi"><b id="hoy-k-reg">—</b><span id="hoy-k-reg-l">registros esta semana</span></div>
+          </div>
+          <div class="hoy-feed" id="hoy-feed"></div>
+
+          <h3 class="hoy-h">🔧 En marcha <span class="hoy-n">máx. 3</span></h3>
+          <p class="hoy-hint">Lo que se está haciendo ahora. Si una sesión de Claude coge un caso, queda con candado 🔒 para que ninguna otra lo toque.</p>
+          <div class="hoy-wip" id="hoy-wip"></div>
+
+          <p class="hoy-foot"><b>Cómo hablamos:</b> <b>🤖 Pedir a Claude</b> copia el caso para pegarlo en el chat de Claude Code. <b>💬 Comentar</b> deja un mensaje en el caso que Claude lee al empezar la sesión. Al terminar, Claude deja cada caso al día.</p>
+          <p class="hoy-foot">Cada caso junta los mensajes que hablan de lo mismo (lo decide la IA al llegar). Los 🤖 son errores que la web y el Worker apuntan solos, sin que nadie pulse nada. Te avisa al momento solo si algo es urgente o se repite 3 veces en 24 h; lo demás llega en el resumen diario por email.</p>
         </div>
 
-        <h3 class="hoy-h">🚨 Urgente <span class="hoy-n" id="hoy-n-urg"></span></h3>
-        <div id="hoy-urg"></div>
-
-        <h3 class="hoy-h">🕒 Qué ha pasado <span class="hoy-n">últimas 24 h</span></h3>
-        <div class="hoy-kpis">
-          <div class="hoy-kpi"><b id="hoy-k-subidas">—</b><span>subidas a producción</span></div>
-          <div class="hoy-kpi"><b id="hoy-k-nuevos">—</b><span>casos nuevos</span></div>
-          <div class="hoy-kpi"><b id="hoy-k-gasto">—</b><span id="hoy-k-gasto-l">Google ayer</span></div>
-          <div class="hoy-kpi"><b id="hoy-k-reg">—</b><span id="hoy-k-reg-l">registros esta semana</span></div>
+        <div id="fb-panel" style="display:none;">
+          <div class="fb-toolbar">
+            <button class="btn-sm" id="fb-filter-unseen">Sin ver</button>
+            <button class="btn-sm secondary" id="fb-filter-all">Todos</button>
+            <button class="btn-sm secondary" id="fb-refresh">Actualizar</button>
+            <span id="fb-count" class="gastos-note"></span>
+          </div>
+          <div id="fb-error" class="gastos-error" style="display:none;"></div>
+          <div id="fb-list"></div>
         </div>
-        <div class="hoy-feed" id="hoy-feed"></div>
-
-        <h3 class="hoy-h">🔧 En marcha <span class="hoy-n">máx. 3</span></h3>
-        <p class="hoy-hint">Lo que se está haciendo ahora. Si una sesión de Claude coge un caso, queda con candado 🔒 para que ninguna otra lo toque.</p>
-        <div class="hoy-wip" id="hoy-wip"></div>
-
-        <p class="hoy-foot"><b>Cómo hablamos:</b> <b>🤖 Pedir a Claude</b> copia el caso para pegarlo en el chat de Claude Code. <b>💬 Comentar</b> deja un mensaje en el caso que Claude lee al empezar la sesión. Al terminar, Claude deja cada caso al día.</p>
       </section>
 
       <!-- Dashboard -->
@@ -151,7 +182,6 @@
           </div>
         </div>
         <p class="gastos-note" id="rs-nota"></p>
-        <div class="links-row" data-links="stripe,google_bill,anthropic,openai,fb_users"></div>
 
 
         <!-- Vista rápida del gasto en Google (detalle en la pestaña Gastos) -->
@@ -171,7 +201,6 @@
           </div>
         </div>
 
-        <div class="links-row" data-links="google_bill,google_quotas,bigquery"></div>
 
         <!-- Analítica de un vistazo (detalle en la pestaña Analytics) -->
         <h3 class="subsection-title">Analítica · últimos 7 días</h3>
@@ -186,7 +215,6 @@
           <div class="da-top" id="da-top"></div>
         </div>
         <p class="gastos-note" id="da-nota"></p>
-        <div class="links-row" data-links="analytics"></div>
 
         <div class="metrics-grid" id="dashboard-metrics">
           <div class="metric-card">
@@ -213,7 +241,6 @@
       <!-- Gastos en Google -->
       <section class="tab-content" id="tab-gastos">
         <h2 class="section-title">Gastos en Google</h2>
-        <div class="links-row" data-links="google_bill,google_quotas,google_budget,bigquery,anthropic,openai"></div>
         <p class="gastos-note">Estimación propia del Worker a precios de lista de Google: se adelanta a la factura real (Google aplica cupos gratis). Al llegar a los topes, el Worker deja de llamar a Google.</p>
 
         <div class="metrics-grid" id="gastos-cards">
@@ -294,7 +321,6 @@
       <!-- Ingresos -->
       <section class="tab-content" id="tab-ingresos">
         <h2 class="section-title">Ingresos</h2>
-        <div class="links-row" data-links="stripe,stripe_subs"></div>
         <div id="r-mode" class="mode-banner" style="display:none;"></div>
         <p class="gastos-note">Compras cobradas en Stripe (importes brutos, IVA incluido; sin descontar comisiones de Stripe ni reembolsos). El margen es una estimación aproximada: ingresos sin IVA menos el gasto estimado de Google y de Claude de este mes; no incluye los demás proveedores.</p>
 
@@ -338,7 +364,6 @@
       <!-- Analytics -->
       <section class="tab-content" id="tab-analytics">
         <h2 class="section-title">Analytics</h2>
-        <div class="links-row" data-links="analytics"></div>
 
         <!-- Selector de rango -->
         <div class="users-toolbar" style="margin-bottom:16px;">
@@ -388,7 +413,6 @@
       <!-- Usuarios -->
       <section class="tab-content" id="tab-usuarios">
         <h2 class="section-title">Usuarios</h2>
-        <div class="links-row" data-links="fb_users,fb_data"></div>
 
         <!-- Métricas de usuario -->
         <div class="metrics-grid" id="users-metrics">
@@ -448,42 +472,6 @@
         <div class="pagination" id="users-pagination"></div>
       </section>
 
-      <!-- Feedback de testers -->
-      <section class="tab-content" id="tab-feedback">
-        <h2 class="section-title">Mejora Salma</h2>
-        <div class="links-row" data-links="fb_feedback"></div>
-        <div class="fb-toolbar">
-          <button class="btn-sm" id="fb-view-casos">Casos</button>
-          <button class="btn-sm secondary" id="fb-view-msgs">Mensajes</button>
-        </div>
-        <input type="search" id="fb-search" class="fb-search" placeholder="🔍 Buscar en casos y mensajes (título, texto, persona, id…)" autocomplete="off">
-        <p class="gastos-note" id="fb-search-note" style="display:none;"></p>
-        <div id="cs-panel">
-          <div class="hoy-areas cs-areas" id="cs-areas"></div>
-          <p class="gastos-note" id="cs-area-sel" style="display:none;"></p>
-          <p class="gastos-note">Cada caso junta los mensajes que hablan de lo mismo (lo decide la IA al llegar). Los 🤖 son errores que la web y el Worker apuntan solos, sin que nadie pulse nada. Urgentes primero. Te avisa al momento solo si algo es urgente o se repite 3 veces en 24 h; lo demás llega en el resumen diario por email.</p>
-          <div class="fb-toolbar">
-            <button class="btn-sm" id="cs-filter-open">Abiertos</button>
-            <button class="btn-sm secondary" id="cs-filter-all">Todos</button>
-            <button class="btn-sm secondary" id="cs-refresh">Actualizar</button>
-            <button class="btn-sm secondary" id="cs-classify">Clasificar pendientes</button>
-            <span id="cs-count" class="gastos-note"></span>
-          </div>
-          <div id="cs-error" class="gastos-error" style="display:none;"></div>
-          <div id="cs-list"></div>
-        </div>
-        <div id="fb-panel" style="display:none;">
-        <div class="fb-toolbar">
-          <button class="btn-sm" id="fb-filter-unseen">Sin ver</button>
-          <button class="btn-sm secondary" id="fb-filter-all">Todos</button>
-          <button class="btn-sm secondary" id="fb-refresh">Actualizar</button>
-          <span id="fb-count" class="gastos-note"></span>
-        </div>
-        <div id="fb-error" class="gastos-error" style="display:none;"></div>
-        <div id="fb-list"></div>
-        </div>
-      </section>
-
       <!-- Configuración -->
       <section class="tab-content" id="tab-settings">
         <h2 class="section-title">Configuración</h2>
@@ -530,7 +518,6 @@
         <button class="btn-sm secondary" id="user-modal-close" aria-label="Cerrar">Cerrar ✕</button>
       </div>
       <div id="user-modal-info" class="gastos-list"></div>
-      <a class="ext-link" id="user-modal-fb" target="_blank" rel="noopener noreferrer">Ver su ficha en Firebase ↗</a>
       <h4 class="user-modal-sub">Acciones</h4>
       <div id="user-modal-actions" class="user-actions">
         <div class="user-action-row">
@@ -561,8 +548,8 @@
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-26.7"></script>
-  <script src="admin.js?v=2026-09-26.13"></script>
+  <script src="config.js?v=2026-09-26.8"></script>
+  <script src="admin.js?v=2026-09-26.14"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>
