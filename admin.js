@@ -111,7 +111,8 @@
 
   function renderFeedback() {
     var list = document.getElementById('fb-list'); list.innerHTML = '';
-    var items = fbItems.filter(function(i) { return fbFilter === 'all' || !i.seen; });
+    var items = fbQuery ? fbItems.filter(fbMatch) : fbItems.filter(function(i) { return fbFilter === 'all' || !i.seen; });
+    if (fbView === 'msgs') fbSearchNote(items.length, items.length === 1 ? 'mensaje' : 'mensajes');
     document.getElementById('fb-count').textContent = items.length + (fbFilter === 'all' ? ' mensajes' : ' sin ver') + ' · ' + fbItems.length + ' en total';
     document.getElementById('fb-filter-unseen').className = 'btn-sm' + (fbFilter === 'unseen' ? '' : ' secondary');
     document.getElementById('fb-filter-all').className = 'btn-sm' + (fbFilter === 'all' ? '' : ' secondary');
@@ -225,8 +226,8 @@
   // Qué significa cada estado y cómo se cierra (se pinta en cada caso para que no haya dudas)
   function csAyuda(g) {
     if (g.estado === 'comprobando') return g.tipo === 'tarea'
-      ? '👉 Te toca: ya está subido. Pruébalo y pulsa "✓ Funciona" (Hoy → Probar) para cerrarlo. Las tareas no se cierran solas.'
-      : '👉 Te toca: ya está subido. Pruébalo y pulsa "✓ Funciona" (Hoy → Probar) para cerrarlo. Si vuelve a fallar se reabre solo; si pasan 14 días sin avisos nuevos y no lo has probado, se cierra solo.';
+      ? '👉 Te toca: ya está subido. Pruébalo y pulsa "👍 Funciona" (Hoy → Probar) para cerrarlo. Las tareas no se cierran solas.'
+      : '👉 Te toca: ya está subido. Pruébalo y pulsa "👍 Funciona" (Hoy → Probar) para cerrarlo. Si vuelve a fallar se reabre solo; si pasan 14 días sin avisos nuevos y no lo has probado, se cierra solo.';
     return {
       nuevo: 'Nuevo: nadie lo ha trabajado todavía. Claude lo ve al empezar cada sesión.',
       visto: 'Visto: está apuntado, pero nadie lo está trabajando ahora.',
@@ -237,6 +238,26 @@
     }[g.estado] || '';
   }
   function csAreaOf(g) { return g.area || 'fallos'; }
+
+  // 🔍 Buscador de Feedback (casos y mensajes). Con algo escrito busca en TODO (abiertos y cerrados, vistos
+  // y sin ver, todas las áreas); sin nada, vuelven los filtros de siempre. Sin tildes ni mayúsculas.
+  var fbQuery = '';
+  function fbNorm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function fbHit(parts) {
+    var hay = fbNorm(parts.join(' \n '));
+    return fbNorm(fbQuery).split(/\s+/).filter(Boolean).every(function(w) { return hay.indexOf(w) >= 0; });
+  }
+  function csMatch(g) {
+    var d = g.diagnostico || {};
+    return fbHit([g.id, g.titulo, g.ejemplo, g.nota, g.zona, g.area, HOY_AREA_NAME[csAreaOf(g)], g.tipo, CS_ESTADOS[g.estado], g.decision, d.causa, d.propuesta]
+      .concat((g.comentarios || []).map(function(c) { return c.texto; })));
+  }
+  function fbMatch(i) { return fbHit([i.id, i.note, i.email, i.user_name, i.page, i.ai_resumen]); }
+  function fbSearchNote(n, what) {
+    var el = document.getElementById('fb-search-note');
+    el.style.display = fbQuery ? '' : 'none';
+    if (fbQuery) el.textContent = n + ' ' + what + ' con «' + fbQuery + '» (se busca en todos, también cerrados y vistos).';
+  }
 
   // 🎁 Gracias + 1 guía gratis a quien avisó (POST /admin/feedback-thanks). El Worker lo manda por WhatsApp si
   // nos escribió en las últimas 24 h, si no por email, y si no se lo enseña al entrar en la app.
@@ -274,6 +295,7 @@
     document.getElementById('fb-view-msgs').className = 'btn-sm' + (v === 'msgs' ? '' : ' secondary');
     document.getElementById('cs-panel').style.display = v === 'casos' ? '' : 'none';
     document.getElementById('fb-panel').style.display = v === 'msgs' ? '' : 'none';
+    if (fbQuery) { if (v === 'casos') renderCasos(); else renderFeedback(); }   // el contador del buscador sigue a la vista
   }
 
   function renderCasos() {
@@ -288,7 +310,9 @@
     var sel = document.getElementById('cs-area-sel');
     sel.style.display = csArea ? '' : 'none';
     if (csArea) sel.innerHTML = 'Viendo solo <b>' + escHtml(HOY_AREA_NAME[csArea] || csArea) + '</b> · <a href="#" id="cs-area-clear" style="color:var(--accent)">ver todas las áreas</a>';
-    var groups = csGroups.filter(function(g) { return (csFilter === 'all' || open(g)) && (!csArea || csAreaOf(g) === csArea); });
+    var groups = fbQuery ? csGroups.filter(csMatch)
+      : csGroups.filter(function(g) { return (csFilter === 'all' || open(g)) && (!csArea || csAreaOf(g) === csArea); });
+    if (fbView === 'casos') fbSearchNote(groups.length, groups.length === 1 ? 'caso' : 'casos');
     groups.sort(function(a, b) {
       var ORD = { propuesta: -1, nuevo: 0 }; var ea = ORD[a.estado] !== undefined ? ORD[a.estado] : 1, eb = ORD[b.estado] !== undefined ? ORD[b.estado] : 1;
       if (ea !== eb && (ea === -1 || eb === -1)) return ea - eb;
@@ -367,6 +391,9 @@
       document.getElementById('cs-filter-open').addEventListener('click', function() { csFilter = 'open'; renderCasos(); });
       document.getElementById('cs-filter-all').addEventListener('click', function() { csFilter = 'all'; renderCasos(); });
       document.getElementById('cs-refresh').addEventListener('click', loadCasos);
+      document.getElementById('fb-search').addEventListener('input', function() {
+        fbQuery = this.value.trim(); renderCasos(); renderFeedback();
+      });
       document.getElementById('cs-areas').addEventListener('click', function(e) {
         var a = e.target.closest('.hoy-area'); if (!a) return;
         csArea = csArea === a.dataset.k ? null : a.dataset.k; renderCasos();
@@ -462,10 +489,10 @@
     if (last) html += '<div class="hoy-last"><b>' + (last.de === 'claude' ? '🤖 Claude' : '👤 Tú') + '</b> · ' + hoyAgo(last.at) + (coms.length > 1 ? ' · ' + coms.length + ' mensajes' : '') + '<br>' + hoyEsc(last.texto) + '</div>';
     var b = function(txt, act, c) { return '<button class="hoy-btn ' + (c || '') + '" data-act="' + act + '">' + txt + '</button>'; };
     var acts = '';
-    if (mode === 'aprobar') acts = b('Ver propuesta', 'ver', 'pri') + b('✅ Aprobar', 'aprobar', 'ok') + b('Rechazar', 'rechazar') + b('💬 Comentar', 'comentar');
+    if (mode === 'aprobar') acts = b('Ver propuesta', 'ver', 'pri') + b('👍 Aprobar', 'aprobar', 'ok') + b('Rechazar', 'rechazar') + b('💬 Comentar', 'comentar');
     else if (mode === 'decidir') acts = b('🤖 Opciones y recomendación', 'opciones', 'pri') + b('💬 Comentar', 'comentar');
     else if (mode === 'probar') acts = (g.diagnostico && /^https:\/\//.test(g.diagnostico.enlace || '') ? '<a class="hoy-btn pri" href="' + hoyEsc(g.diagnostico.enlace) + '" target="_blank" rel="noopener">▶ Abrir para probar</a>' : '') +
-      b('✓ Funciona', 'funciona', 'ok') + b('✗ Falla', 'falla') + b('Pasos', 'ver') + b('💬 Comentar', 'comentar');
+      b('👍 Funciona', 'funciona', 'ok') + b('👎 Falla', 'falla') + b('Pasos', 'ver') + b('💬 Comentar', 'comentar');
     else acts = b('🤖 Pedir a Claude', 'claude', 'pri') + b('💬 Comentar', 'comentar') + b('Detalle', 'ver');
     html += '<div class="hoy-acts">' + acts + '</div><div class="hoy-det" style="display:none"></div></div>';
     return html;

@@ -1118,6 +1118,8 @@ body { min-height: 100vh; }
 .cs-alta .cs-grav { background: var(--accent); color: var(--text-on-accent); }
 .cs-tags { color: var(--text-secondary); }
 .cs-areas { margin: 4px 0 14px; }
+.fb-search { width: 100%; box-sizing: border-box; margin: 10px 0 12px; padding: 11px 14px; font-size: 15px; font-family: inherit; border: 1px solid var(--border-hover); border-radius: 10px; background: var(--bg-card); color: var(--text-primary); }
+.fb-search:focus { outline: none; border-color: var(--accent); }
 .cs-ayuda { font-size: 13px; color: var(--text-secondary); margin: 6px 0; }
 .fb-caso { font-size: 13px; margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--bg-card); }
 .fb-caso a { color: var(--accent); cursor: pointer; text-decoration: underline; }
@@ -1162,7 +1164,9 @@ body { min-height: 100vh; }
 .hoy-acts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .hoy-btn { font-family: inherit; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border-hover); background: transparent; color: var(--text-primary); cursor: pointer; }
 .hoy-btn.pri { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
-.hoy-btn.ok { background: var(--green); border-color: var(--green); color: #0D0F10; }
+/* Sin relleno: con fondo verde parecía que ya estaba pulsado (Paco, 26 sept 2026) */
+.hoy-btn.ok { background: transparent; border: 2px solid var(--green); color: var(--green); }
+.hoy-btn.ok:hover { background: var(--green); color: #0D0F10; }
 .hoy-det { margin-top: 8px; }
 .hoy-hilo { margin: 8px 0; } .hoy-hilo div { font-size: 12px; padding: 6px 8px; margin-bottom: 5px; background: rgba(0,0,0,.25); border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
 .hoy-empty { color: var(--text-muted); font-size: 13px; line-height: 1.45; padding: 4px 2px; }
