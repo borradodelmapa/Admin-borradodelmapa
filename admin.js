@@ -335,6 +335,192 @@
     finally { btn.disabled = false; }
   }
 
+  // ═══════════════════════════════════════════
+  //  HOY (26 sept 2026) — pantalla de inicio: lo que te toca a ti, urgente, qué ha pasado,
+  //  en marcha y todas las áreas del proyecto. Los datos son los casos (feedback_groups),
+  //  las subidas (deploys) y los gastos/estadísticas de siempre. Todo se habla con Claude:
+  //  "Pedir a Claude" copia el caso para pegarlo en el chat y "Comentar" deja un mensaje en
+  //  el hilo del caso que Claude lee al empezar la sesión (node scripts/casos.cjs hoy).
+  // ═══════════════════════════════════════════
+  var HOY_AREAS = [
+    ['fallos', '🐞', 'Fallos'], ['salma', '🧠', 'Calidad de Salma'], ['ux', '🎨', 'UX y producto'], ['dev', '🚀', 'Desarrollo y versiones'],
+    ['seguridad', '🔒', 'Seguridad'], ['costes', '💶', 'Costes'], ['negocio', '📈', 'Negocio y crecimiento'], ['legal', '⚖️', 'Legal']
+  ];
+  var HOY_AREA_NAME = {}; HOY_AREAS.forEach(function(a) { HOY_AREA_NAME[a[0]] = a[1] + ' ' + a[2]; });
+  var HOY_GRAV = { urgente: 0, alta: 1, media: 2, baja: 3 };
+  var hoyGroups = [], hoyDeploys = [], hoyWired = false, hoyArea = null;
+
+  function hoyOpen(g) { return g.estado !== 'arreglado' && g.estado !== 'descartado'; }
+  function hoyEsc(s) { return escHtml(s); }
+  function hoyByGrav(a, b) { return (HOY_GRAV[a.gravedad] - HOY_GRAV[b.gravedad]) || String(b.last_at).localeCompare(String(a.last_at)); }
+  function hoyTuyo(g) { return g.estado === 'propuesta' || !!g.decision || (g.estado === 'comprobando' && g.tipo === 'tarea'); }
+  function hoyAgo(iso) {
+    var t = Date.parse(iso || ''); if (!t) return '';
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 60) return 'hace ' + Math.max(1, m) + ' min'; if (m < 1440) return 'hace ' + Math.round(m / 60) + ' h';
+    return 'hace ' + Math.round(m / 1440) + ' d';
+  }
+
+  // mode: 'aprobar' | 'decidir' | 'probar' | normal
+  function hoyCard(g, mode) {
+    var cls = g.gravedad === 'urgente' ? 'urg' : g.gravedad === 'alta' ? 'alta' : g.gravedad === 'media' ? 'media' : '';
+    var who = hoyTuyo(g) ? '<b>tú</b>' : 'Claude';
+    var coms = g.comentarios || [], last = coms[coms.length - 1];
+    var html = '<div class="hoy-card ' + cls + '" data-id="' + hoyEsc(g.id) + '"><div class="hoy-card-t">' + hoyEsc(g.titulo) + '</div>';
+    if (mode === 'decidir' && g.decision) html += '<div class="hoy-q">❓ ' + hoyEsc(g.decision) + '</div>';
+    html += '<div class="hoy-meta"><span class="hoy-chip">' + (HOY_AREA_NAME[g.area] || g.area) + '</span><span class="hoy-chip">' + ((typeof CS_TIPO !== 'undefined' && CS_TIPO[g.tipo]) || g.tipo) + '</span>' +
+      (g.count ? '<span class="hoy-chip">' + g.count + (g.count === 1 ? ' aviso' : ' avisos') + '</span>' : '') +
+      (g.lock ? '<span class="hoy-lock">🔒 ' + hoyEsc(g.lock.sesion) + ' · ' + hoyAgo(g.lock.at) + '</span>' : '') +
+      '<span class="hoy-who">siguiente paso: ' + who + '</span></div>';
+    if (last) html += '<div class="hoy-last"><b>' + (last.de === 'claude' ? '🤖 Claude' : '👤 Tú') + '</b> · ' + hoyAgo(last.at) + (coms.length > 1 ? ' · ' + coms.length + ' mensajes' : '') + '<br>' + hoyEsc(last.texto) + '</div>';
+    var b = function(txt, act, c) { return '<button class="hoy-btn ' + (c || '') + '" data-act="' + act + '">' + txt + '</button>'; };
+    var acts = '';
+    if (mode === 'aprobar') acts = b('Ver propuesta', 'ver', 'pri') + b('✅ Aprobar', 'aprobar', 'ok') + b('Rechazar', 'rechazar') + b('💬 Comentar', 'comentar');
+    else if (mode === 'decidir') acts = b('🤖 Opciones y recomendación', 'opciones', 'pri') + b('💬 Comentar', 'comentar');
+    else if (mode === 'probar') acts = b('✓ Funciona', 'funciona', 'ok') + b('✗ Falla', 'falla') + b('Pasos', 'ver') + b('💬 Comentar', 'comentar');
+    else acts = b('🤖 Pedir a Claude', 'claude', 'pri') + b('💬 Comentar', 'comentar') + b('Detalle', 'ver');
+    html += '<div class="hoy-acts">' + acts + '</div><div class="hoy-det" style="display:none"></div></div>';
+    return html;
+  }
+
+  function hoyDetalle(g) {
+    var p = [];
+    if (g.diagnostico) {
+      var d = g.diagnostico, rows = [['causa', 'Causa'], ['propuesta', 'Propuesta'], ['riesgo', 'Riesgo'], ['coste', 'Coste'], ['prueba', 'Cómo se prueba'], ['archivos', 'Archivos'], ['rama', 'Dónde está preparado']];
+      p.push('<div class="cs-diag"><div class="cs-diag-t">🔎 Diagnóstico de Claude · ' + fmtDateTime(g.diagnostico_at) + '</div>' +
+        rows.filter(function(r) { return d[r[0]]; }).map(function(r) { return '<div class="cs-diag-r"><b>' + r[1] + ':</b> ' + hoyEsc(d[r[0]]) + '</div>'; }).join('') + '</div>');
+    }
+    if (g.nota) p.push('<div class="cs-nota">📝 ' + hoyEsc(g.nota) + '</div>');
+    if (g.ejemplo) p.push('<div class="cs-ejemplo">' + hoyEsc(g.ejemplo) + '</div>');
+    var coms = g.comentarios || [];
+    if (coms.length) p.push('<div class="hoy-hilo">' + coms.map(function(c) { return '<div><b>' + (c.de === 'claude' ? '🤖 Claude' : '👤 Tú') + '</b> · ' + fmtDateTime(c.at) + '<br>' + hoyEsc(c.texto) + '</div>'; }).join('') + '</div>');
+    p.push('<div class="fb-meta">Estado: ' + (CS_ESTADOS[g.estado] || g.estado) + ' · caso ' + hoyEsc(g.id) + (g.first_at ? ' · desde ' + fmtDateTime(g.first_at) : '') + '</div>');
+    return p.join('');
+  }
+
+  async function hoyLoad() {
+    var err = document.getElementById('hoy-error'); err.style.display = 'none';
+    try {
+      var r = await Promise.all([csApi('/admin/feedback-groups'), csApi('/admin/deploys').catch(function() { return { deploys: [] }; })]);
+      hoyGroups = r[0].groups || []; hoyDeploys = r[1].deploys || [];
+      hoyRender();
+    } catch (e) { err.textContent = 'No se pudo cargar: ' + e.message; err.style.display = 'block'; }
+    hoyKpis();
+  }
+
+  async function hoyKpis() {
+    var $ = function(id) { return document.getElementById(id); };
+    try {
+      var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/google-usage', { headers: await adminAuthHeaders(), cache: 'no-store' });
+      var d = await res.json(); var ayer = (d.days || [])[1];
+      $('hoy-k-gasto').textContent = ayer ? fmtEur(ayer.eur) : '—';
+      $('hoy-k-gasto-l').textContent = 'Google ayer' + (d.days && d.days[0] ? ' · hoy ' + fmtEur(d.days[0].eur) : '');
+    } catch (e) { $('hoy-k-gasto').textContent = '—'; }
+    try {
+      var t = (await fetchAdminStats()).totals;
+      $('hoy-k-reg').textContent = '+' + (t.users7 || 0);
+      $('hoy-k-reg-l').textContent = 'registros esta semana · ' + t.users + ' en total';
+    } catch (e) { $('hoy-k-reg').textContent = '—'; }
+  }
+
+  function hoyRender() {
+    var open = hoyGroups.filter(hoyOpen);
+    var aprobar = open.filter(function(g) { return g.estado === 'propuesta'; }).sort(hoyByGrav);
+    var decidir = open.filter(function(g) { return g.decision && g.estado !== 'propuesta'; }).sort(hoyByGrav);
+    var probar = open.filter(function(g) { return g.estado === 'comprobando' && g.tipo === 'tarea' && !g.decision; }).sort(hoyByGrav);
+    var urg = open.filter(function(g) { return g.gravedad === 'urgente'; }).sort(hoyByGrav);
+    var wip = open.filter(function(g) { return g.estado === 'en_marcha'; });
+    var n = aprobar.length + decidir.length + probar.length;
+    var $ = function(id) { return document.getElementById(id); };
+    $('hoy-saludo').innerHTML = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) +
+      ' · <b>' + n + (n === 1 ? ' cosa te espera' : ' cosas te esperan') + '</b>' + (urg.length ? ', <b style="color:var(--red)">' + urg.length + ' urgente</b>' : '') + ' · ' + open.length + ' casos abiertos.';
+    $('hoy-n-tuyo').textContent = n;
+    $('hoy-aprobar').innerHTML = aprobar.map(function(g) { return hoyCard(g, 'aprobar'); }).join('') || '<div class="hoy-empty">Nada que aprobar. Cuando Claude deje un arreglo preparado aparece aquí.</div>';
+    $('hoy-decidir').innerHTML = decidir.map(function(g) { return hoyCard(g, 'decidir'); }).join('') || '<div class="hoy-empty">Ninguna decisión pendiente.</div>';
+    $('hoy-probar').innerHTML = probar.map(function(g) { return hoyCard(g, 'probar'); }).join('') || '<div class="hoy-empty">Nada que probar.</div>';
+    $('hoy-n-urg').textContent = urg.length;
+    $('hoy-urg').innerHTML = urg.map(function(g) { return hoyCard(g); }).join('') || '<div class="hoy-empty">Nada urgente. 🎉</div>';
+    $('hoy-urg').className = urg.length ? 'hoy-urgbox' : 'hoy-okbox';
+    $('hoy-wip').innerHTML = (wip.map(function(g) { return hoyCard(g); }).join('') || '') +
+      (wip.length < 3 ? '<div class="hoy-empty">' + (3 - wip.length) + (3 - wip.length === 1 ? ' hueco libre' : ' huecos libres') + (wip.length > 3 ? '' : '') + '</div>' : (wip.length > 3 ? '<div class="hoy-empty" style="color:var(--red)">⚠️ Hay ' + wip.length + ' cosas en marcha: mejor terminar antes de abrir más.</div>' : ''));
+
+    // Qué ha pasado (24 h)
+    var dia = Date.now() - 24 * 3600 * 1000, ev = [];
+    hoyDeploys.forEach(function(d) { if (Date.parse(d.at) > dia) ev.push({ at: d.at, i: '🚀', t: '<b>' + hoyEsc(d.texto) + '</b>' + (d.worker ? ' · Worker ' + hoyEsc(d.worker) : '') + (d.casos && d.casos.length ? ' · ' + d.casos.length + ' caso(s)' : '') }); });
+    hoyGroups.forEach(function(g) {
+      if (Date.parse(g.first_at) > dia && g.count > 0) ev.push({ at: g.first_at, i: g.origen === 'navegador' || g.origen === 'worker' ? '🤖' : '🆕', t: 'Nuevo: <b>' + hoyEsc(g.titulo) + '</b>' });
+      if (Date.parse(g.reabierto_at) > dia) ev.push({ at: g.reabierto_at, i: '↩️', t: '<b style="color:var(--red)">Reabierto</b>: ' + hoyEsc(g.titulo) });
+      if (g.estado === 'arreglado' && Date.parse(g.estado_at) > dia) ev.push({ at: g.estado_at, i: '✅', t: 'Arreglado' + (g.confirmado_auto ? ' (48 h sin avisos)' : '') + ': <b>' + hoyEsc(g.titulo) + '</b>' });
+      if (g.estado === 'propuesta' && Date.parse(g.estado_at) > dia) ev.push({ at: g.estado_at, i: '🔎', t: 'Claude dejó propuesta: <b>' + hoyEsc(g.titulo) + '</b>' });
+      (g.comentarios || []).forEach(function(c) { if (c.de === 'claude' && Date.parse(c.at) > dia) ev.push({ at: c.at, i: '💬', t: 'Claude en <b>' + hoyEsc(g.titulo) + '</b>: ' + hoyEsc(c.texto.slice(0, 140)) }); });
+    });
+    ev.sort(function(a, b) { return String(b.at).localeCompare(String(a.at)); });
+    $('hoy-k-subidas').textContent = hoyDeploys.filter(function(d) { return Date.parse(d.at) > dia; }).length;
+    $('hoy-k-nuevos').textContent = hoyGroups.filter(function(g) { return Date.parse(g.first_at) > dia && g.count > 0; }).length;
+    $('hoy-feed').innerHTML = ev.slice(0, 25).map(function(e) { return '<div><i>' + e.i + '</i><span>' + e.t + ' <small>' + hoyAgo(e.at) + '</small></span></div>'; }).join('') || '<div><i>😴</i><span>Nada en las últimas 24 h.</span></div>';
+
+    // Áreas
+    $('hoy-n-abiertos').textContent = open.length + ' abiertos';
+    $('hoy-areas').innerHTML = HOY_AREAS.map(function(a) {
+      var l = open.filter(function(g) { return g.area === a[0]; }), imp = l.filter(function(g) { return g.gravedad === 'urgente' || g.gravedad === 'alta'; }).length;
+      return '<div class="hoy-area' + (hoyArea === a[0] ? ' on' : '') + '" data-k="' + a[0] + '"><div class="ic">' + a[1] + '</div><div class="nm">' + a[2] + '</div><div class="ct"><b>' + l.length + '</b> abiertos' + (imp ? ' · <span style="color:var(--accent)">' + imp + ' importantes</span>' : '') + '</div></div>';
+    }).join('');
+    var al = $('hoy-area-list');
+    if (hoyArea) {
+      var l = open.filter(function(g) { return g.area === hoyArea; }).sort(hoyByGrav);
+      al.innerHTML = l.map(function(g) { return hoyCard(g, hoyTuyo(g) ? (g.estado === 'propuesta' ? 'aprobar' : g.decision ? 'decidir' : 'probar') : ''); }).join('') || '<div class="hoy-empty">Nada abierto aquí.</div>';
+    } else al.innerHTML = '';
+  }
+
+  async function hoyAction(act, g, cardEl) {
+    var err = document.getElementById('hoy-error'); err.style.display = 'none';
+    var copy = async function(txt, btn, ok) {
+      try { await navigator.clipboard.writeText(txt); var o = btn.textContent; btn.textContent = ok; setTimeout(function() { btn.textContent = o; }, 3000); }
+      catch (e) { prompt('Copia esto y pégalo en el chat de Claude:', txt); }
+    };
+    var btn = cardEl.querySelector('[data-act="' + act + '"]');
+    if (act === 'ver') {
+      var det = cardEl.querySelector('.hoy-det'), open = det.style.display === 'none';
+      if (open) det.innerHTML = hoyDetalle(g); det.style.display = open ? 'block' : 'none'; return;
+    }
+    if (act === 'claude') return copy('Mira el caso ' + g.id + ': ' + g.titulo, btn, '✓ Copiado — pégalo en el chat');
+    if (act === 'opciones') return copy('Dame opciones y tu recomendación para decidir el caso ' + g.id + ': ' + g.titulo + (g.decision ? ' — ' + g.decision : ''), btn, '✓ Copiado — pégalo en el chat');
+    try {
+      if (act === 'comentar') {
+        var t = prompt('Mensaje para Claude en este caso (lo leerá al empezar la sesión):'); if (!t) return;
+        await csApi('/admin/feedback-group', { id: g.id, comentario: t });
+      } else if (act === 'funciona') {
+        await csApi('/admin/feedback-group', { id: g.id, estado: 'arreglado', comentario: '✓ Probado: funciona.' });
+      } else if (act === 'falla') {
+        var f = prompt('¿Qué falla? (lo que ves en la pantalla)'); if (f === null) return;
+        await csApi('/admin/feedback-group', { id: g.id, estado: 'nuevo', comentario: '✗ Probado: falla. ' + f });
+      } else if (act === 'aprobar') {
+        await csApi('/admin/feedback-group', { id: g.id, comentario: '✅ Aprobado: súbelo.' });
+        await copy('Aprobado el caso ' + g.id + ': ' + g.titulo + '. Súbelo.', btn, '✓ Copiado — pégalo en el chat para que lo suba');
+      } else if (act === 'rechazar') {
+        var m = prompt('¿Por qué no? (Claude lo leerá para rehacer la propuesta)'); if (m === null) return;
+        await csApi('/admin/feedback-group', { id: g.id, estado: 'visto', comentario: '❌ Rechazado. ' + m });
+      }
+      await hoyLoad();
+    } catch (e) { err.textContent = 'No se pudo guardar: ' + e.message; err.style.display = 'block'; }
+  }
+
+  async function loadHoy() {
+    if (!hoyWired) {
+      hoyWired = true;
+      var sec = document.getElementById('tab-hoy');
+      sec.addEventListener('click', function(e) {
+        var a = e.target.closest('.hoy-area');
+        if (a) { hoyArea = hoyArea === a.dataset.k ? null : a.dataset.k; hoyRender(); return; }
+        var b = e.target.closest('.hoy-btn'); if (!b) return;
+        var card = b.closest('.hoy-card'), g = hoyGroups.filter(function(x) { return x.id === card.dataset.id; })[0];
+        if (g) hoyAction(b.dataset.act, g, card);
+      });
+      document.getElementById('hoy-refresh').addEventListener('click', hoyLoad);
+    }
+    await hoyLoad();
+  }
+
   // ─── DOM REFS ───
 
   const loginScreen = document.getElementById('login-screen');
@@ -379,7 +565,7 @@
     loginScreen.style.display = 'none';
     app.classList.add('active');
     initTabs();
-    navigateTo('dashboard');
+    navigateTo('hoy');
   }
 
   // Si ya hay sesión Y Firebase Auth activo, entrar directo
@@ -480,6 +666,7 @@
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'ingresos') loadIngresos();
       if (tabId === 'feedback') { loadCasos(); loadFeedback(); }
+      if (tabId === 'hoy') loadHoy();
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'analytics') loadAnalytics();
       if (tabId === 'settings') initSettings();
@@ -489,7 +676,7 @@
   // ─── LOGO → DASHBOARD ───
 
   document.getElementById('header-logo').addEventListener('click', function() {
-    navigateTo('dashboard');
+    navigateTo('hoy');
     closeMobileMenu();
   });
 

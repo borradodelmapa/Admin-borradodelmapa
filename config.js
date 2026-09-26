@@ -4,7 +4,7 @@
 
 const ADMIN_CONFIG = {
   // Versión del panel: súbela en CADA cambio (aquí y en los ?v= de index.html). Se ve abajo a la derecha.
-  ADMIN_VERSION: '2026-09-26.3',
+  ADMIN_VERSION: '2026-09-26.4',
 
   // Firebase (mismo proyecto que borradodelmapa.com)
   FIREBASE: {
@@ -60,6 +60,7 @@ const ADMIN_CONFIG = {
 
   // Pestañas del admin
   TABS: [
+    { id: 'hoy',          label: 'Hoy',            icon: '☀️' },
     { id: 'dashboard',    label: 'Dashboard',     icon: '📊' },
     { id: 'gastos',       label: 'Gastos',         icon: '💶' },
     { id: 'ingresos',     label: 'Ingresos',       icon: '💰' },

@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-26.3">
+  <link rel="stylesheet" href="admin.css?v=2026-09-26.4">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -70,6 +70,44 @@
 
     <!-- Main content -->
     <main class="main" id="main-content">
+
+      <!-- Hoy (26 sept 2026): pantalla de inicio para todo el proyecto -->
+      <section class="tab-content" id="tab-hoy">
+        <div class="hoy-top"><h2 class="section-title">Hoy</h2><button class="btn-sm secondary" id="hoy-refresh">Actualizar</button></div>
+        <p class="hoy-sub" id="hoy-saludo">Cargando…</p>
+        <div id="hoy-error" class="gastos-error" style="display:none;"></div>
+
+        <h3 class="hoy-h">📥 Te toca a ti <span class="hoy-n" id="hoy-n-tuyo"></span></h3>
+        <p class="hoy-hint">Lo que está parado esperándote. Todo lo demás lo mueve Claude.</p>
+        <div class="hoy-grid3">
+          <div class="hoy-col"><div class="hoy-col-h">✅ Aprobar <small>arreglos preparados</small></div><div id="hoy-aprobar"></div></div>
+          <div class="hoy-col"><div class="hoy-col-h">🧭 Decidir <small>decisiones tuyas</small></div><div id="hoy-decidir"></div></div>
+          <div class="hoy-col"><div class="hoy-col-h">📱 Probar <small>subido, falta tu prueba</small></div><div id="hoy-probar"></div></div>
+        </div>
+
+        <h3 class="hoy-h">🚨 Urgente <span class="hoy-n" id="hoy-n-urg"></span></h3>
+        <div id="hoy-urg"></div>
+
+        <h3 class="hoy-h">🕒 Qué ha pasado <span class="hoy-n">últimas 24 h</span></h3>
+        <div class="hoy-kpis">
+          <div class="hoy-kpi"><b id="hoy-k-subidas">—</b><span>subidas a producción</span></div>
+          <div class="hoy-kpi"><b id="hoy-k-nuevos">—</b><span>casos nuevos</span></div>
+          <div class="hoy-kpi"><b id="hoy-k-gasto">—</b><span id="hoy-k-gasto-l">Google ayer</span></div>
+          <div class="hoy-kpi"><b id="hoy-k-reg">—</b><span id="hoy-k-reg-l">registros esta semana</span></div>
+        </div>
+        <div class="hoy-feed" id="hoy-feed"></div>
+
+        <h3 class="hoy-h">🔧 En marcha <span class="hoy-n">máx. 3</span></h3>
+        <p class="hoy-hint">Lo que se está haciendo ahora. Si una sesión de Claude coge un caso, queda con candado 🔒 para que ninguna otra lo toque.</p>
+        <div class="hoy-wip" id="hoy-wip"></div>
+
+        <h3 class="hoy-h">🗂️ Áreas <span class="hoy-n" id="hoy-n-abiertos"></span></h3>
+        <p class="hoy-hint">Todo lo abierto, por área. Toca una para ver sus casos.</p>
+        <div class="hoy-areas" id="hoy-areas"></div>
+        <div id="hoy-area-list"></div>
+
+        <p class="hoy-foot"><b>Cómo hablamos:</b> <b>🤖 Pedir a Claude</b> copia el caso para pegarlo en el chat de Claude Code. <b>💬 Comentar</b> deja un mensaje en el caso que Claude lee al empezar la sesión. Al terminar, Claude deja cada caso al día.</p>
+      </section>
 
       <!-- Dashboard -->
       <section class="tab-content" id="tab-dashboard">
@@ -514,8 +552,8 @@
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="config.js?v=2026-09-26.3"></script>
-  <script src="admin.js?v=2026-09-26.6"></script>
+  <script src="config.js?v=2026-09-26.4"></script>
+  <script src="admin.js?v=2026-09-26.7"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>
