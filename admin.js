@@ -124,6 +124,7 @@
       var who = document.createElement('strong'); who.textContent = i.email || i.user_name || (i.user_id || '').slice(0, 8) || 'anónimo';
       var when = document.createElement('span'); when.className = 'fb-when'; when.textContent = fmtDateTime(i.at);
       head.appendChild(who); head.appendChild(when); card.appendChild(head);
+      if (i.ai_tipo) { var ai = document.createElement('div'); ai.className = 'fb-ai'; ai.textContent = (CS_TIPO[i.ai_tipo] || i.ai_tipo) + ' · ' + i.ai_zona + ' · ' + i.ai_gravedad + (i.ai_resumen ? ' — ' + i.ai_resumen : ''); card.appendChild(ai); }
       var note = document.createElement('div'); note.className = 'fb-note'; note.textContent = i.note || ''; card.appendChild(note);
       var meta = document.createElement('div'); meta.className = 'fb-meta';
       meta.textContent = 'Pantalla: ' + (i.page || '—') + ' · Worker ' + (i.worker_version || '?') + (i.front_versions ? ' · ' + i.front_versions : '');
@@ -174,6 +175,131 @@
     btn.disabled = true; err.style.display = 'none';
     try { await fbFetch(); renderFeedback(); }
     catch (e) { err.textContent = 'No se pudo cargar el feedback: ' + (e && e.message ? e.message : 'error de red'); err.style.display = 'block'; }
+    finally { btn.disabled = false; }
+  }
+
+  // ═══════════════════════════════════════════
+  //  MEJORA SALMA — CASOS (Fase 2, 26 sept 2026)
+  //  GET /admin/feedback-groups · POST /admin/feedback-group · POST /admin/feedback-classify-pending
+  //  Cada caso agrupa los mensajes que hablan de lo mismo (lo decide GPT-4o-mini en el Worker).
+  // ═══════════════════════════════════════════
+  var fbView = 'casos', csGroups = [], csFilter = 'open', csWired = false;
+  var CS_ESTADOS = { nuevo: 'Nuevo', visto: 'Visto', en_marcha: 'En marcha', arreglado: 'Arreglado', descartado: 'Descartado' };
+  var CS_TIPO = { fallo: '🐞 Fallo', dato_erroneo: '❌ Dato erróneo', idea: '💡 Idea', queja: '😕 Queja', elogio: '❤️ Elogio', otro: '• Otro' };
+  var CS_GRAV_ORDER = { urgente: 0, alta: 1, media: 2, baja: 3 };
+
+  async function csApi(path, body) {
+    var opts = body ? { method: 'POST', headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) }
+                    : { headers: await adminAuthHeaders(), cache: 'no-store' };
+    var res = await fetch(ADMIN_CONFIG.WORKER_URL + path, opts);
+    var d = await res.json().catch(function() { return {}; });
+    if (res.status === 401) throw new Error('Sesión caducada o sin permiso: vuelve a entrar en el panel.');
+    if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
+    return d;
+  }
+
+  function setFbView(v) {
+    fbView = v;
+    document.getElementById('fb-view-casos').className = 'btn-sm' + (v === 'casos' ? '' : ' secondary');
+    document.getElementById('fb-view-msgs').className = 'btn-sm' + (v === 'msgs' ? '' : ' secondary');
+    document.getElementById('cs-panel').style.display = v === 'casos' ? '' : 'none';
+    document.getElementById('fb-panel').style.display = v === 'msgs' ? '' : 'none';
+  }
+
+  function renderCasos() {
+    var list = document.getElementById('cs-list'); list.innerHTML = '';
+    var open = function(g) { return g.estado !== 'arreglado' && g.estado !== 'descartado'; };
+    var groups = csGroups.filter(function(g) { return csFilter === 'all' || open(g); });
+    groups.sort(function(a, b) {
+      var ea = a.estado === 'nuevo' ? 0 : 1, eb = b.estado === 'nuevo' ? 0 : 1;
+      return (CS_GRAV_ORDER[a.gravedad] - CS_GRAV_ORDER[b.gravedad]) || (ea - eb) || (b.count - a.count) || String(b.last_at).localeCompare(String(a.last_at));
+    });
+    document.getElementById('cs-count').textContent = csGroups.filter(open).length + ' abiertos · ' + csGroups.length + ' en total';
+    document.getElementById('cs-filter-open').className = 'btn-sm' + (csFilter === 'open' ? '' : ' secondary');
+    document.getElementById('cs-filter-all').className = 'btn-sm' + (csFilter === 'all' ? '' : ' secondary');
+    if (!groups.length) {
+      var e = document.createElement('div'); e.className = 'gastos-note';
+      e.textContent = csGroups.length ? 'No hay casos abiertos. 🎉' : 'Todavía no hay casos. Si hay mensajes de antes, pulsa "Clasificar pendientes".';
+      list.appendChild(e); return;
+    }
+    groups.forEach(function(g) {
+      var card = document.createElement('div'); card.className = 'cs-card cs-' + (g.gravedad || 'media') + (open(g) ? '' : ' closed'); card.dataset.id = g.id;
+      var top = document.createElement('div'); top.className = 'cs-top';
+      var badge = document.createElement('span'); badge.className = 'cs-grav'; badge.textContent = (g.gravedad || '').toUpperCase(); top.appendChild(badge);
+      var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona; top.appendChild(tags);
+      var cnt = document.createElement('span'); cnt.className = 'cs-cnt'; cnt.textContent = g.count + (g.count === 1 ? ' aviso' : ' avisos') + (g.reporters > 1 ? ' · ' + g.reporters + ' personas' : ''); top.appendChild(cnt);
+      card.appendChild(top);
+      var t = document.createElement('div'); t.className = 'cs-title'; t.textContent = g.titulo; card.appendChild(t);
+      var meta = document.createElement('div'); meta.className = 'fb-meta';
+      meta.textContent = 'Estado: ' + (CS_ESTADOS[g.estado] || g.estado) + ' · último ' + fmtDateTime(g.last_at) + ' · primero ' + fmtDateTime(g.first_at) + (g.reabierto_at ? ' · ⚠️ reabierto' : '');
+      card.appendChild(meta);
+      if (g.ejemplo) { var ex = document.createElement('div'); ex.className = 'cs-ejemplo'; ex.textContent = g.ejemplo; card.appendChild(ex); }
+      if (g.nota) { var nt = document.createElement('div'); nt.className = 'cs-nota'; nt.textContent = '📝 ' + g.nota; card.appendChild(nt); }
+      var bar = document.createElement('div'); bar.className = 'fb-actions';
+      Object.keys(CS_ESTADOS).forEach(function(k) {
+        if (k === 'nuevo' && g.estado === 'nuevo') return;
+        var b = document.createElement('button'); b.className = 'btn-sm' + (g.estado === k ? '' : ' secondary'); b.textContent = CS_ESTADOS[k];
+        b.dataset.act = 'estado'; b.dataset.estado = k; b.dataset.id = g.id; if (g.estado === k) b.disabled = true; bar.appendChild(b);
+      });
+      var bn = document.createElement('button'); bn.className = 'btn-sm secondary'; bn.textContent = g.nota ? 'Editar nota' : 'Añadir nota'; bn.dataset.act = 'nota'; bn.dataset.id = g.id; bar.appendChild(bn);
+      var bm = document.createElement('button'); bm.className = 'btn-sm secondary'; bm.textContent = 'Ver mensajes (' + (g.items || []).length + ')'; bm.dataset.act = 'msgs'; bm.dataset.id = g.id; bar.appendChild(bm);
+      card.appendChild(bar);
+      var ml = document.createElement('div'); ml.className = 'cs-msgs'; ml.style.display = 'none'; card.appendChild(ml);
+      list.appendChild(card);
+    });
+  }
+
+  function renderCaseMsgs(card, g) {
+    var box = card.querySelector('.cs-msgs'); box.innerHTML = '';
+    var its = fbItems.filter(function(i) { return (g.items || []).indexOf(i.id) >= 0; });
+    if (!its.length) { box.textContent = 'Los mensajes de este caso ya no están entre los 100 últimos (mira la pestaña Mensajes → Todos).'; return; }
+    its.forEach(function(i) {
+      var d = document.createElement('div'); d.className = 'cs-msg';
+      d.textContent = fmtDateTime(i.at) + ' · ' + (i.email || i.user_name || 'anónimo') + '\n' + (i.note || '');
+      box.appendChild(d);
+    });
+  }
+
+  async function loadCasos() {
+    if (!csWired) {
+      csWired = true;
+      document.getElementById('fb-view-casos').addEventListener('click', function() { setFbView('casos'); });
+      document.getElementById('fb-view-msgs').addEventListener('click', function() { setFbView('msgs'); });
+      document.getElementById('cs-filter-open').addEventListener('click', function() { csFilter = 'open'; renderCasos(); });
+      document.getElementById('cs-filter-all').addEventListener('click', function() { csFilter = 'all'; renderCasos(); });
+      document.getElementById('cs-refresh').addEventListener('click', loadCasos);
+      document.getElementById('cs-classify').addEventListener('click', async function() {
+        var b = this, err = document.getElementById('cs-error'); b.disabled = true; b.textContent = 'Clasificando…'; err.style.display = 'none';
+        try {
+          var r = await csApi('/admin/feedback-classify-pending', {});
+          b.textContent = r.clasificados + ' clasificados' + (r.quedan ? ' · quedan ' + r.quedan : '');
+          await loadCasos();
+        } catch (e) { err.textContent = 'No se pudo clasificar: ' + e.message; err.style.display = 'block'; b.textContent = 'Clasificar pendientes'; }
+        finally { b.disabled = false; setTimeout(function() { b.textContent = 'Clasificar pendientes'; }, 4000); }
+      });
+      document.getElementById('cs-list').addEventListener('click', async function(e) {
+        var b = e.target.closest('button[data-act]'); if (!b) return;
+        var g = csGroups.filter(function(x) { return x.id === b.dataset.id; })[0]; if (!g) return;
+        var err = document.getElementById('cs-error'); err.style.display = 'none';
+        if (b.dataset.act === 'msgs') {
+          var card = b.closest('.cs-card'), box = card.querySelector('.cs-msgs'), opening = box.style.display === 'none';
+          if (opening) { if (!fbItems.length) { try { await fbFetch(); } catch (x) {} } renderCaseMsgs(card, g); }
+          box.style.display = opening ? 'block' : 'none'; return;
+        }
+        try {
+          if (b.dataset.act === 'estado') { b.disabled = true; await csApi('/admin/feedback-group', { id: g.id, estado: b.dataset.estado }); g.estado = b.dataset.estado; }
+          if (b.dataset.act === 'nota') {
+            var n = prompt('Nota para este caso (qué es, qué hay que hacer…):', g.nota || ''); if (n === null) return;
+            await csApi('/admin/feedback-group', { id: g.id, nota: n }); g.nota = n;
+          }
+          renderCasos();
+        } catch (x) { err.textContent = 'No se pudo guardar: ' + x.message; err.style.display = 'block'; b.disabled = false; }
+      });
+    }
+    var btn = document.getElementById('cs-refresh'), err = document.getElementById('cs-error');
+    btn.disabled = true; err.style.display = 'none';
+    try { var d = await csApi('/admin/feedback-groups'); csGroups = d.groups || []; renderCasos(); }
+    catch (e) { err.textContent = 'No se pudieron cargar los casos: ' + (e && e.message ? e.message : 'error de red'); err.style.display = 'block'; }
     finally { btn.disabled = false; }
   }
 
@@ -321,7 +447,7 @@
       }
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'ingresos') loadIngresos();
-      if (tabId === 'feedback') loadFeedback();
+      if (tabId === 'feedback') { loadCasos(); loadFeedback(); }
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'analytics') loadAnalytics();
       if (tabId === 'settings') initSettings();

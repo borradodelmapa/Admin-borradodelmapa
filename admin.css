@@ -1104,3 +1104,23 @@ body { min-height: 100vh; }
 .fb-shot img { max-width: 220px; max-height: 220px; border-radius: 8px; border: 1px solid var(--border); display: block; }
 .fb-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .fb-logs { margin: 10px 0 0; padding: 10px; max-height: 260px; overflow: auto; font-size: 11px; line-height: 1.4; background: rgba(0,0,0,.4); border: 1px solid var(--border); border-radius: 8px; white-space: pre-wrap; word-break: break-all; }
+
+/* Mejora Salma — casos (Fase 2, 26 sept 2026) */
+.cs-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 5px solid var(--text-muted); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+.cs-card.cs-urgente { border-left-color: var(--red); }
+.cs-card.cs-alta { border-left-color: var(--accent); }
+.cs-card.cs-media { border-left-color: var(--yellow); }
+.cs-card.cs-baja { border-left-color: var(--border-hover); }
+.cs-card.closed { opacity: .6; }
+.cs-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.cs-grav { font-weight: 700; letter-spacing: .06em; padding: 2px 7px; border-radius: 4px; background: rgba(255,255,255,.08); }
+.cs-urgente .cs-grav { background: var(--red); color: #fff; }
+.cs-alta .cs-grav { background: var(--accent); color: var(--text-on-accent); }
+.cs-tags { color: var(--text-secondary); }
+.cs-cnt { margin-left: auto; color: var(--text-primary); font-weight: 600; }
+.cs-title { font-size: 17px; font-weight: 700; margin: 2px 0 6px; }
+.cs-ejemplo { white-space: pre-wrap; word-break: break-word; font-size: 13px; color: var(--text-secondary); margin: 8px 0; max-height: 120px; overflow: auto; background: rgba(0,0,0,.25); padding: 8px 10px; border-radius: 6px; }
+.cs-nota { font-size: 13px; color: var(--yellow); margin: 6px 0; white-space: pre-wrap; }
+.cs-msgs { margin-top: 10px; }
+.cs-msg { white-space: pre-wrap; word-break: break-word; font-size: 12px; padding: 8px 10px; margin-bottom: 6px; background: rgba(0,0,0,.3); border-radius: 6px; max-height: 180px; overflow: auto; }
+.fb-ai { font-size: 12px; color: var(--accent); margin: 4px 0; }
