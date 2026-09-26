@@ -1136,7 +1136,7 @@ body { min-height: 100vh; }
 .fold-toggle { background: none; border: 0; padding: 4px 0; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .cs-more, .fb-more, .hoy-more { margin-top: 6px; }
 .hoy-card .cs-ejemplo { margin: 6px 0 2px; }
-#hoy-area-list { scroll-margin-top: 80px; } #cs-area-sel { scroll-margin-top: 80px; }
+#cs-listbox { scroll-margin-top: 80px; }
 .cs-est { color: var(--text-secondary); }
 .cs-msg { white-space: pre-wrap; word-break: break-word; font-size: 12px; padding: 8px 10px; margin-bottom: 6px; background: rgba(0,0,0,.3); border-radius: 6px; max-height: 180px; overflow: auto; }
 .fb-ai { font-size: 12px; color: var(--accent); margin: 4px 0; }

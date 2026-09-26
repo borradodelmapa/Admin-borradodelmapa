@@ -81,9 +81,8 @@
   var fbItems = [], fbFilter = 'unseen', fbWired = false;
 
   function fbSetBadge(n) {
-    document.querySelectorAll('.tab-btn[data-tab="feedback"]').forEach(function(b) {
-      b.textContent = '💬 Feedback' + (n > 0 ? ' (' + n + ')' : '');
-    });
+    var b = document.getElementById('fb-view-msgs');
+    if (b) b.textContent = 'Mensajes' + (n > 0 ? ' (' + n + ' sin ver)' : '');
   }
 
   async function fbFetch() {
@@ -96,7 +95,7 @@
     return d;
   }
 
-  // Número de mensajes sin ver en la pestaña, se actualiza al entrar en el Dashboard
+  // Número de mensajes sin ver (botón Mensajes de Hoy), se actualiza al entrar en el Dashboard
   async function refreshFeedbackBadge() { try { await fbFetch(); } catch (e) {} }
 
   function fbCopyText(i) {
@@ -182,7 +181,7 @@
       document.getElementById('fb-list').addEventListener('click', async function(e) {
         var go = e.target.closest('a[data-goto]');
         if (go) {   // ir al caso: vista Casos, sin filtros, y se abre ese caso
-          csFilter = 'all'; csArea = null; csOpen[go.dataset.goto] = true; setFbView('casos'); renderCasos();
+          csFilter = 'all'; csArea = 'todos'; csOpen[go.dataset.goto] = true; setFbView('casos'); renderCasos();
           var c = document.querySelector('.cs-card[data-id="' + go.dataset.goto + '"]');
           if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.style.outline = '2px solid var(--accent)'; setTimeout(function() { c.style.outline = ''; }, 2500); }
           return;
@@ -206,7 +205,7 @@
           try {
             var r = await csApi('/admin/feedback-group-create', { titulo: titulo.trim(), tipo: 'tarea', gravedad: 'media', estado: 'nuevo', origen: 'mensaje', items: [id], ejemplo: (item.note || '').slice(0, 1500), nota: 'Creada desde el mensaje de ' + (item.email || item.user_name || 'anónimo') + ' del ' + fmtDateTime(item.at) + '.' });
             if (!item.seen) { try { await fbMark(id, true); item.seen = true; } catch (x) {} }
-            var d = await csApi('/admin/feedback-groups'); csGroups = d.groups || [];
+            await hoyLoad();
             fbSetBadge(fbItems.filter(function(x) { return !x.seen; }).length); renderFeedback();
             if (!r.id) throw new Error('el Worker no devolvió el caso');
           } catch (err2) { var eb = document.getElementById('fb-error'); eb.textContent = 'No se pudo crear la tarea: ' + err2.message; eb.style.display = 'block'; b.disabled = false; b.textContent = '📌 Convertir en tarea'; }
@@ -225,7 +224,7 @@
     btn.disabled = true; err.style.display = 'none';
     try {
       await fbFetch();
-      try { csGroups = (await csApi('/admin/feedback-groups')).groups || []; } catch (x) {}   // para saber a qué caso fue cada mensaje
+      if (!csGroups.length) { try { csGroups = hoyGroups = (await csApi('/admin/feedback-groups')).groups || []; } catch (x) {} }   // para saber a qué caso fue cada mensaje
       renderFeedback();
     }
     catch (e) { err.textContent = 'No se pudo cargar el feedback: ' + (e && e.message ? e.message : 'error de red'); err.style.display = 'block'; }
@@ -316,17 +315,22 @@
   function renderCasos() {
     var list = document.getElementById('cs-list'); list.innerHTML = '';
     var open = function(g) { return g.estado !== 'arreglado' && g.estado !== 'descartado'; };
-    // Áreas arriba del todo: cuántos abiertos hay en cada una; tocar una filtra la lista
+    // Áreas arriba del todo: cuántos abiertos hay en cada una. Tocar una (o «Todos») enseña sus casos justo
+    // debajo; sin área elegida ni búsqueda la lista se esconde y se ve el resto de Hoy.
     var openAll = csGroups.filter(open);
+    var areaCard = function(k, ic, nm, l) {
+      var imp = l.filter(function(g) { return g.gravedad === 'urgente' || g.gravedad === 'alta'; }).length;
+      return '<div class="hoy-area' + (csArea === k ? ' on' : '') + '" data-k="' + k + '"><div class="ic">' + ic + '</div><div class="nm">' + nm + '</div><div class="ct"><b>' + l.length + '</b> abiertos' + (imp ? ' · <span style="color:var(--accent)">' + imp + ' importantes</span>' : '') + '</div></div>';
+    };
     document.getElementById('cs-areas').innerHTML = HOY_AREAS.map(function(a) {
-      var l = openAll.filter(function(g) { return csAreaOf(g) === a[0]; }), imp = l.filter(function(g) { return g.gravedad === 'urgente' || g.gravedad === 'alta'; }).length;
-      return '<div class="hoy-area' + (csArea === a[0] ? ' on' : '') + '" data-k="' + a[0] + '"><div class="ic">' + a[1] + '</div><div class="nm">' + a[2] + '</div><div class="ct"><b>' + l.length + '</b> abiertos' + (imp ? ' · <span style="color:var(--accent)">' + imp + ' importantes</span>' : '') + '</div></div>';
-    }).join('');
+      return areaCard(a[0], a[1], a[2], openAll.filter(function(g) { return csAreaOf(g) === a[0]; }));
+    }).join('') + areaCard('todos', '📋', 'Todos los casos', openAll);
+    document.getElementById('cs-listbox').style.display = (csArea || fbQuery) ? '' : 'none';
     var sel = document.getElementById('cs-area-sel');
-    sel.style.display = csArea ? '' : 'none';
-    if (csArea) sel.innerHTML = 'Viendo solo <b>' + escHtml(HOY_AREA_NAME[csArea] || csArea) + '</b>' + (csFilter === 'open' ? ' (abiertos)' : ' (todos, cerrados al final)') + ' · <a href="#" id="cs-area-clear" style="color:var(--accent)">ver todas las áreas</a>';
+    sel.style.display = csArea && !fbQuery ? '' : 'none';
+    if (csArea) sel.innerHTML = (csArea === 'todos' ? 'Viendo <b>todas las áreas</b>' : 'Viendo solo <b>' + escHtml(HOY_AREA_NAME[csArea] || csArea) + '</b>') + (csFilter === 'open' ? ' (abiertos)' : ' (todos, cerrados al final)') + ' · <a href="#" id="cs-area-clear" style="color:var(--accent)">cerrar lista</a>';
     var groups = fbQuery ? csGroups.filter(csMatch)
-      : csGroups.filter(function(g) { return (csFilter === 'all' || open(g)) && (!csArea || csAreaOf(g) === csArea); });
+      : csGroups.filter(function(g) { return (csFilter === 'all' || open(g)) && (!csArea || csArea === 'todos' || csAreaOf(g) === csArea); });
     if (fbView === 'casos') fbSearchNote(groups.length, groups.length === 1 ? 'caso' : 'casos');
     // Orden: sin atender (nuevo, visto) → te toca (propuesta, comprobando) → en marcha → cerrados al final.
     // Dentro de cada grupo, urgentes primero, luego los que más avisos tienen y los más recientes.
@@ -408,14 +412,16 @@
     });
   }
 
-  async function loadCasos() {
+  // Casos y Hoy comparten los mismos datos: se piden una vez (hoyLoad) y se pintan las dos partes.
+  async function loadCasos() { await hoyLoad(); }
+  function csRenderAll() { hoyRender(); renderCasos(); }
+  function wireCasos() {
     if (!csWired) {
       csWired = true;
       document.getElementById('fb-view-casos').addEventListener('click', function() { setFbView('casos'); });
       document.getElementById('fb-view-msgs').addEventListener('click', function() { setFbView('msgs'); });
       document.getElementById('cs-filter-open').addEventListener('click', function() { csFilter = 'open'; renderCasos(); });
       document.getElementById('cs-filter-all').addEventListener('click', function() { csFilter = 'all'; renderCasos(); });
-      document.getElementById('cs-refresh').addEventListener('click', loadCasos);
       document.getElementById('fb-search').addEventListener('input', function() {
         fbQuery = this.value.trim(); renderCasos(); renderFeedback();
       });
@@ -424,7 +430,7 @@
         csArea = csArea === a.dataset.k ? null : a.dataset.k;
         if (csArea) csFilter = 'open';   // el número de la tarjeta son los abiertos: la lista enseña esos mismos
         renderCasos();
-        if (csArea) document.getElementById('cs-area-sel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (csArea) document.getElementById('cs-listbox').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
       document.getElementById('cs-area-sel').addEventListener('click', function(e) {
         if (e.target.id === 'cs-area-clear') { e.preventDefault(); csArea = null; renderCasos(); }
@@ -465,15 +471,10 @@
             var n = prompt('Nota para este caso (qué es, qué hay que hacer…):', g.nota || ''); if (n === null) return;
             await csApi('/admin/feedback-group', { id: g.id, nota: n }); g.nota = n;
           }
-          renderCasos();
+          csRenderAll();
         } catch (x) { err.textContent = 'No se pudo guardar: ' + x.message; err.style.display = 'block'; b.disabled = false; }
       });
     }
-    var btn = document.getElementById('cs-refresh'), err = document.getElementById('cs-error');
-    btn.disabled = true; err.style.display = 'none';
-    try { var d = await csApi('/admin/feedback-groups'); csGroups = d.groups || []; renderCasos(); }
-    catch (e) { err.textContent = 'No se pudieron cargar los casos: ' + (e && e.message ? e.message : 'error de red'); err.style.display = 'block'; }
-    finally { btn.disabled = false; }
   }
 
   // ═══════════════════════════════════════════
@@ -489,7 +490,7 @@
   ];
   var HOY_AREA_NAME = {}; HOY_AREAS.forEach(function(a) { HOY_AREA_NAME[a[0]] = a[1] + ' ' + a[2]; });
   var HOY_GRAV = { urgente: 0, alta: 1, media: 2, baja: 3 };
-  var hoyGroups = [], hoyDeploys = [], hoyWired = false, hoyArea = null;
+  var hoyGroups = [], hoyDeploys = [], hoyWired = false;
 
   function hoyOpen(g) { return g.estado !== 'arreglado' && g.estado !== 'descartado'; }
   function hoyEsc(s) { return escHtml(s); }
@@ -548,8 +549,9 @@
     var err = document.getElementById('hoy-error'); err.style.display = 'none';
     try {
       var r = await Promise.all([csApi('/admin/feedback-groups'), csApi('/admin/deploys').catch(function() { return { deploys: [] }; })]);
-      hoyGroups = r[0].groups || []; hoyDeploys = r[1].deploys || [];
-      hoyRender();
+      hoyGroups = csGroups = r[0].groups || []; hoyDeploys = r[1].deploys || [];
+      hoyRender(); renderCasos();
+      if (fbItems.length) renderFeedback();   // para que cada mensaje diga a qué caso fue
     } catch (e) { err.textContent = 'No se pudo cargar: ' + e.message; err.style.display = 'block'; }
     hoyKpis();
   }
@@ -611,20 +613,8 @@
     $('hoy-k-nuevos').textContent = hoyGroups.filter(function(g) { return Date.parse(g.first_at) > dia && g.count > 0; }).length;
     $('hoy-feed').innerHTML = ev.slice(0, 25).map(function(e) { return '<div><i>' + e.i + '</i><span>' + e.t + ' <small>' + hoyAgo(e.at) + '</small></span></div>'; }).join('') || '<div><i>😴</i><span>Nada en las últimas 24 h.</span></div>';
 
-    // Áreas
+    // Áreas (las pinta renderCasos, que es quien enseña la lista de cada una)
     $('hoy-n-abiertos').textContent = open.length + ' abiertos';
-    $('hoy-areas').innerHTML = HOY_AREAS.map(function(a) {
-      var l = open.filter(function(g) { return (g.area || 'fallos') === a[0]; }), imp = l.filter(function(g) { return g.gravedad === 'urgente' || g.gravedad === 'alta'; }).length;
-      return '<div class="hoy-area' + (hoyArea === a[0] ? ' on' : '') + '" data-k="' + a[0] + '"><div class="ic">' + a[1] + '</div><div class="nm">' + a[2] + '</div><div class="ct"><b>' + l.length + '</b> abiertos' + (imp ? ' · <span style="color:var(--accent)">' + imp + ' importantes</span>' : '') + '</div></div>';
-    }).join('');
-    var al = $('hoy-area-list');
-    if (hoyArea) {
-      // Sin atender (nuevo, visto) → te toca → en marcha; dentro, por gravedad
-      var HORD = { nuevo: 0, visto: 0, propuesta: 1, comprobando: 1, en_marcha: 2 };
-      var hord = function(g) { return HORD[g.estado] !== undefined ? HORD[g.estado] : 2; };
-      var l = open.filter(function(g) { return (g.area || 'fallos') === hoyArea; }).sort(function(a, b) { return (hord(a) - hord(b)) || hoyByGrav(a, b); });
-      al.innerHTML = '<div class="gastos-note">Viendo solo <b>' + hoyEsc(HOY_AREA_NAME[hoyArea] || hoyArea) + '</b> · ' + l.length + ' abiertos, primero los sin atender</div>' + l.map(function(g) { return hoyCard(g, hoyTuyo(g) ? (g.estado === 'propuesta' ? 'aprobar' : g.decision ? 'decidir' : 'probar') : ''); }).join('') || '<div class="hoy-empty">Nada abierto aquí.</div>';
-    } else al.innerHTML = '';
   }
 
   async function hoyAction(act, g, cardEl) {
@@ -677,18 +667,15 @@
       hoyWired = true;
       var sec = document.getElementById('tab-hoy');
       sec.addEventListener('click', function(e) {
-        var a = e.target.closest('.hoy-area');
-        if (a) {
-          hoyArea = hoyArea === a.dataset.k ? null : a.dataset.k; hoyRender();
-          if (hoyArea) document.getElementById('hoy-area-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
-        }
         var b = e.target.closest('.hoy-btn, .fold-toggle'); if (!b || !b.dataset.act) return;   // sin data-act = enlace (Abrir para probar)
-        var card = b.closest('.hoy-card'), g = hoyGroups.filter(function(x) { return x.id === card.dataset.id; })[0];
+        var card = b.closest('.hoy-card'); if (!card) return;   // tarjetas de la lista de casos: las lleva wireCasos
+        var g = hoyGroups.filter(function(x) { return x.id === card.dataset.id; })[0];
         if (g) hoyAction(b.dataset.act, g, card);
       });
-      document.getElementById('hoy-refresh').addEventListener('click', hoyLoad);
+      document.getElementById('hoy-refresh').addEventListener('click', function() { hoyLoad(); loadFeedback(); });
+      wireCasos();
     }
+    loadFeedback();
     await hoyLoad();
   }
 
@@ -808,6 +795,7 @@
   }
 
   function navigateTo(tabId) {
+    if (tabId === 'feedback') tabId = 'hoy';   // Feedback ya es parte de Hoy
     document.querySelectorAll('.tab-content').forEach(function(el) {
       el.classList.remove('active');
     });
@@ -836,7 +824,6 @@
       }
       if (tabId === 'gastos') loadGastos();
       if (tabId === 'ingresos') loadIngresos();
-      if (tabId === 'feedback') { loadCasos(); loadFeedback(); }
       if (tabId === 'hoy') loadHoy();
       if (tabId === 'usuarios') loadUsuarios();
       if (tabId === 'analytics') loadAnalytics();
@@ -1235,8 +1222,6 @@
     ];
     var box = document.getElementById('user-modal-info'); box.innerHTML = '';
     rows.forEach(function(r) { box.appendChild(gastosRow(r[0], r[1], '', null)); });
-    var link = document.getElementById('user-modal-fb');
-    link.href = 'https://console.firebase.google.com/project/borradodelmapa-85257/firestore/databases/-default-/data/~2Fusers~2F' + encodeURIComponent(uid);
     document.getElementById('um-remove').style.display = u.premium_active ? '' : 'none';
     document.getElementById('um-disable').textContent = u.disabled ? 'Habilitar cuenta' : 'Deshabilitar cuenta';
     document.getElementById('um-disable').dataset.action = u.disabled ? 'enable' : 'disable';
