@@ -636,6 +636,10 @@
     if (g.origen === 'pendiente') return ['📋 Tarea', ''];
     return ['👤 Usuario', 'ct-robot'];   // usuario, boton, mensaje (el Worker pone «usuario» por defecto)
   }
+  // Paco, 28 sept: lo último que se tocó, arriba (entrada, aviso, estado, diagnóstico, reapertura o comentario), con fecha y hora
+  function ctTocado(g) { var t = [g.first_at, g.last_at, g.estado_at, g.diagnostico_at, g.reabierto_at].concat((g.comentarios || []).map(function(c) { return c && c.at; })).map(function(x) { return Date.parse(x || '') || 0; }); return Math.max.apply(null, t); }
+  function ctByTocado(a, b) { return ctTocado(b) - ctTocado(a); }
+  function ctFechaHora(ms) { var d = new Date(ms); return !ms || isNaN(d) ? '' : ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
   function ctFecha(iso) { var d = new Date(iso || ''); return isNaN(d) ? '' : ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
   // Problemas nuevos dentro del caso: si se reabrió, cada mensaje que llegó después (lo ya arreglado no se enseña)
   function ctSubs(g) {
@@ -667,12 +671,12 @@
     document.getElementById('ct-f-closed').className = 'btn-sm' + (ctFilter === 'closed' ? '' : ' secondary');
     var area = !fbQuery && csArea && csArea !== 'todos' ? csArea : null;
     if (area) document.getElementById('ct-kpis').innerHTML += ' · Solo <b>' + hoyEsc(HOY_AREA_NAME[area] || area) + '</b> <a href="#" id="ct-area-x" style="color:var(--accent)">quitar</a>';
-    var rows = fbQuery ? csGroups.filter(csMatch)
-      : ctFilter === 'open' ? pend.slice().sort(hoyByGrav)
-      : ctFilter === 'est' ? est.slice().sort(hoyByGrav)
-      : ctFilter === 'wip' ? wip.slice().sort(hoyByGrav)
-      : ctFilter === 'test' ? sinProbar.sort(hoyByGrav)
-      : csGroups.filter(function(g) { return g.estado === 'arreglado'; }).sort(function(a, b) { return String(b.estado_at).localeCompare(String(a.estado_at)); }).slice(0, 60);
+    var rows = fbQuery ? csGroups.filter(csMatch).sort(ctByTocado)
+      : ctFilter === 'open' ? pend.slice().sort(ctByTocado)
+      : ctFilter === 'est' ? est.slice().sort(ctByTocado)
+      : ctFilter === 'wip' ? wip.slice().sort(ctByTocado)
+      : ctFilter === 'test' ? sinProbar.sort(ctByTocado)
+      : csGroups.filter(function(g) { return g.estado === 'arreglado'; }).sort(ctByTocado).slice(0, 60);
     if (area) rows = rows.filter(function(g) { return csAreaOf(g) === area; });
     if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="ct-empty">' + ({ open: 'No hay nada pendiente.', est: 'Nada en estudio.', wip: 'Nada en marcha.', test: 'Nada sin probar.', closed: 'Nada arreglado todavía.' }[ctFilter]) + '</td></tr>'; return; }
     body.innerHTML = rows.map(function(g) {
@@ -686,7 +690,7 @@
         '<td class="ct-de ' + ctDe(g)[1] + '"><span class="ct-ic">' + ctDe(g)[0].split(' ')[0] + '</span> <span class="ct-tx">' + ctDe(g)[0].split(' ')[1] + '</span></td>' +
         '<td' + (g.gravedad === 'urgente' ? ' class="ct-urg"' : '') + '>' + (CT_GRAV[g.gravedad] || hoyEsc(g.gravedad || '')) + '</td>' +
         '<td class="' + (e[1] ? 'ct-tu' : '') + '">' + e[0] + '</td>' +
-        '<td>' + ctFecha(hoyOpen(g) ? g.last_at : g.estado_at) + '</td>' +
+        '<td>' + ctFechaHora(ctTocado(g)) + '</td>' +
         '<td' + (g.modelo === 'opus' ? ' class="ct-opus"' : '') + '>' + (g.modelo === 'opus' ? 'Opus' : g.modelo === 'sonnet' ? 'Sonnet' : '—') + '</td><td class="ct-a">' + btns + '</td></tr>';
       h += subs.map(function(s, n) {
         return '<tr class="ct-sub"><td class="ct-t">' + (n + 1) + ' · ' + hoyEsc(s.t) + '</td><td class="ct-de">👤 Usuario</td><td></td><td class="' + (s.tu ? 'ct-tu' : '') + '">' + s.e + '</td><td>' + s.f + '</td><td></td><td></td></tr>';
