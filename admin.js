@@ -768,7 +768,8 @@
           if (!confirm('¿Descartar este caso? (no se va a hacer)')) { b.disabled = false; return; }
           await csApi('/admin/feedback-group', { id: g.id, estado: 'descartado', comentario: 'Descartado por Paco (tabla).' });
         } else if (act === 'estudio') {
-          await csApi('/admin/feedback-group', { id: g.id, estado: 'visto', comentario: '📚 Paco lo pasa a En estudio.' });
+          // Si tenía una pregunta de Claude pendiente, se quita (si no, seguiría en En marcha) y queda guardada en el hilo
+          await csApi('/admin/feedback-group', { id: g.id, estado: 'visto', decision: '', comentario: '📚 Paco lo pasa a En estudio.' + (g.decision ? ' Pregunta que quedó sin contestar: «' + g.decision + '»' : '') });
         } else if (act === 'reabrir') {
           var q = prompt('¿Qué falla? (lo que ves en la pantalla)'); if (q === null) { b.disabled = false; return; }
           await csApi('/admin/feedback-group', { id: g.id, estado: 'nuevo', comentario: '↩️ Reabierto por Paco: ' + q });
