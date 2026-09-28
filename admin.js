@@ -677,10 +677,10 @@
     if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="ct-empty">' + ({ open: 'No hay nada pendiente.', est: 'Nada en estudio.', wip: 'Nada en marcha.', test: 'Nada sin probar.', closed: 'Nada arreglado todavía.' }[ctFilter]) + '</td></tr>'; return; }
     body.innerHTML = rows.map(function(g) {
       var e = g.estado === 'comprobando' ? ['Sin probar', 'tu'] : ctEstado(g), subs = ctSubs(g);
-      var btns = g.estado === 'comprobando' ? '<button class="btn-sm secondary" data-ct="cerrar">Funciona</button><button class="btn-sm secondary" data-ct="reabrir">Reabrir</button>'
-        : !hoyOpen(g) ? (g.estado === 'arreglado' && csCanThank(g) && ctDe(g)[0] === '👤 Usuario' ? (g.gracias_n ? '<span class="ct-hecho">🎁 Hecho</span>' : '<button class="btn-sm" data-ct="gracias">🎁 Regalar</button>') : '') + '<button class="btn-sm secondary" data-ct="reabrir">Reabrir</button>'
+      // Todo lo abierto (Pendientes, En marcha, Sin probar, En estudio): Cerrar · A Code · A estudio (menos en En estudio)
+      var btns = !hoyOpen(g) ? (g.estado === 'arreglado' && csCanThank(g) && ctDe(g)[0] === '👤 Usuario' ? (g.gracias_n ? '<span class="ct-hecho">🎁 Hecho</span>' : '<button class="btn-sm" data-ct="gracias">🎁 Regalar</button>') : '') + '<button class="btn-sm secondary" data-ct="reabrir">Reabrir</button>'
         : '<button class="btn-sm secondary" data-ct="cerrar">Cerrar</button><button class="btn-sm secondary" data-ct="code">A Code</button>' +
-          (g.estado === 'nuevo' && !g.decision ? '<button class="btn-sm secondary" data-ct="estudio">A estudio</button>' : '');
+          (!(g.estado === 'visto' && !g.decision) ? '<button class="btn-sm secondary" data-ct="estudio">A estudio</button>' : '');
       var h = '<tr class="ct-row' + (ctOpen[g.id] ? ' on' : '') + '" data-id="' + hoyEsc(g.id) + '">' +
         '<td class="ct-t">' + (ctOpen[g.id] ? '▾ ' : '▸ ') + hoyEsc(g.titulo) + (subs.length ? ' <span class="ct-n">(+' + subs.length + (subs.length === 1 ? ' queja nueva)' : ' quejas nuevas)') + '</span>' : '') + '</td>' +
         '<td class="ct-de ' + ctDe(g)[1] + '"><span class="ct-ic">' + ctDe(g)[0].split(' ')[0] + '</span> <span class="ct-tx">' + ctDe(g)[0].split(' ')[1] + '</span></td>' +
