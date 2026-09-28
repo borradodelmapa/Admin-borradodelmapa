@@ -606,7 +606,26 @@
     } catch (e) { $('hoy-k-reg').textContent = '—'; }
   }
 
+  // Revisor de conversaciones: casos suyos (o con ejemplos suyos) que Paco aún no ha mirado (estado nuevo)
+  function revRender() {
+    var rev = hoyGroups.filter(function(g) { return g.estado === 'nuevo' && (g.origen === 'revisor' || (g.revisor_ejemplos || []).length); }).sort(hoyByGrav);
+    document.getElementById('rev-box').style.display = rev.length ? '' : 'none';
+    document.getElementById('rev-n').textContent = rev.length + ' sin mirar';
+    document.getElementById('rev-list').innerHTML = rev.map(function(g) {
+      var cls = g.gravedad === 'urgente' ? 'urg' : g.gravedad === 'alta' ? 'alta' : g.gravedad === 'media' ? 'media' : '';
+      var ej = (g.revisor_ejemplos || []).slice(-1)[0] || g.ejemplo || '';
+      var suyo = g.origen === 'revisor';
+      return '<div class="hoy-card ' + cls + '" data-id="' + hoyEsc(g.id) + '"><div class="hoy-card-t">' + hoyEsc(g.titulo) + '</div>' +
+        (suyo ? '' : '<div class="hoy-q">Se ha juntado con este caso que ya existía</div>') +
+        '<div class="cs-ejemplo">' + hoyEsc(ej) + '</div>' +
+        (g.count > 1 ? '<div class="fb-meta">' + g.count + ' veces · la última ' + hoyAgo(g.last_at) + '</div>' : '') +
+        '<div class="hoy-acts"><button class="hoy-btn pri" data-act="revok">👍 Sí, es un fallo</button>' +
+        (suyo ? '<button class="hoy-btn" data-act="revno">👎 No es fallo</button>' : '') + '</div></div>';
+    }).join('');
+  }
+
   function hoyRender() {
+    revRender();
     var open = hoyGroups.filter(hoyOpen);
     var aprobar = open.filter(function(g) { return g.estado === 'propuesta'; }).sort(hoyByGrav);
     var decidir = open.filter(function(g) { return g.decision && g.estado !== 'propuesta'; }).sort(hoyByGrav);
@@ -689,6 +708,10 @@
       } else if (act === 'aprobar') {
         await csApi('/admin/feedback-group', { id: g.id, comentario: '✅ Aprobado: súbelo.' });
         await copy('Aprobado el caso ' + g.id + ': ' + g.titulo + '. Súbelo.', btn, '✓ Copiado — pégalo en el chat para que lo suba');
+      } else if (act === 'revok') {
+        await csApi('/admin/feedback-group', { id: g.id, estado: 'visto', comentario: '👍 Paco: sí, es un fallo de verdad (revisor).' });
+      } else if (act === 'revno') {
+        await csApi('/admin/feedback-group', { id: g.id, estado: 'descartado', comentario: '👎 Paco: no es un fallo (revisor). Afinar el revisor para no marcarlo.' });
       } else if (act === 'rechazar') {
         var m = prompt('¿Por qué no? (Claude lo leerá para rehacer la propuesta)'); if (m === null) return;
         await csApi('/admin/feedback-group', { id: g.id, estado: 'visto', comentario: '❌ Rechazado. ' + m });
