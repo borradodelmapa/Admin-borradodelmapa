@@ -92,6 +92,7 @@
     if (!res.ok) throw new Error(d.error || ('El Worker respondió ' + res.status + '.'));
     fbItems = d.items || [];
     fbSetBadge(d.unseen || 0);
+    if (csGroups.length) ctRender();   // la tabla de casos enseña las quejas nuevas de los casos reabiertos
     return d;
   }
 
@@ -117,59 +118,39 @@
     b.textContent = open ? '▴ Ver menos' : '▾ Ver más';
   }
 
+  // Mensajes en tabla (28 sept 2026, caso p-muldtl3o6kt): fecha · quién · mensaje en una línea · a qué caso fue · Visto.
+  // Pulsar la fila abre el mensaje entero, la captura y los botones (copiar, logs). Todo mensaje va a un caso solo.
+  function fbCasoDe(i) { return csGroups.filter(function(g) { return (g.items || []).indexOf(i.id) >= 0; })[0]; }
   function renderFeedback() {
-    var list = document.getElementById('fb-list'); list.innerHTML = '';
+    var list = document.getElementById('fb-list');
     var items = fbQuery ? fbItems.filter(fbMatch) : fbItems.filter(function(i) { return fbFilter === 'all' || !i.seen; });
     if (fbView === 'msgs') fbSearchNote(items.length, items.length === 1 ? 'mensaje' : 'mensajes');
     document.getElementById('fb-count').textContent = items.length + (fbFilter === 'all' ? ' mensajes' : ' sin ver') + ' · ' + fbItems.length + ' en total';
     document.getElementById('fb-filter-unseen').className = 'btn-sm' + (fbFilter === 'unseen' ? '' : ' secondary');
     document.getElementById('fb-filter-all').className = 'btn-sm' + (fbFilter === 'all' ? '' : ' secondary');
-    if (!items.length) {
-      var e = document.createElement('div'); e.className = 'gastos-note'; e.textContent = fbFilter === 'all' ? 'Todavía no hay feedback.' : 'No hay mensajes sin ver. 🎉'; list.appendChild(e); return;
-    }
-    items.forEach(function(i) {
-      var card = document.createElement('div'); card.className = 'fb-card' + (i.seen ? ' seen' : ''); card.dataset.id = i.id;
-      var head = document.createElement('div'); head.className = 'fb-head';
-      var who = document.createElement('strong'); who.textContent = i.email || i.user_name || (i.user_id || '').slice(0, 8) || 'anónimo';
-      var when = document.createElement('span'); when.className = 'fb-when'; when.textContent = fmtDateTime(i.at);
-      head.appendChild(who); head.appendChild(when); card.appendChild(head);
-      var ai;
-      var note = document.createElement('div'); note.className = 'fb-note' + (fbOpen[i.id] ? '' : ' clamp'); note.textContent = i.note || ''; card.appendChild(note);
-      // Todo lo demás (IA, caso, pantalla, captura, botones, logs) va plegado bajo "Ver más"
-      var tg = document.createElement('button'); tg.className = 'fold-toggle'; tg.dataset.act = 'more'; tg.dataset.id = i.id; tg.textContent = fbOpen[i.id] ? '▴ Ver menos' : '▾ Ver más'; card.appendChild(tg);
-      var more = document.createElement('div'); more.className = 'fb-more'; if (!fbOpen[i.id]) more.style.display = 'none'; card.appendChild(more);
-      var cardText = card; card = more;
-      if (i.ai_tipo) { ai = document.createElement('div'); ai.className = 'fb-ai'; ai.textContent = (CS_TIPO[i.ai_tipo] || i.ai_tipo) + ' · ' + i.ai_zona + ' · ' + i.ai_gravedad + (i.ai_resumen ? ' — ' + i.ai_resumen : ''); card.appendChild(ai); }
-      // A qué caso ha ido este mensaje (la IA lo mete en uno al llegar)
-      var cases = csGroups.filter(function(g) { return (g.items || []).indexOf(i.id) >= 0; });
-      var fc = document.createElement('div'); fc.className = 'fb-caso';
-      if (cases.length) {
-        fc.appendChild(document.createTextNode('→ Está en ' + (cases.length > 1 ? 'los casos: ' : 'el caso: ')));
-        cases.forEach(function(g, k) {
-          if (k) fc.appendChild(document.createTextNode(' · '));
-          var ga = document.createElement('a'); ga.dataset.goto = g.id; ga.textContent = g.titulo; fc.appendChild(ga);
-          fc.appendChild(document.createTextNode(' (' + (CS_ESTADOS[g.estado] || g.estado) + ')'));
-        });
-      } else fc.textContent = 'Todavía no está en ningún caso.';
-      card.appendChild(fc);
-      var meta = document.createElement('div'); meta.className = 'fb-meta';
-      meta.textContent = 'Pantalla: ' + (i.page || '—') + ' · Worker ' + (i.worker_version || '?') + (i.front_versions ? ' · ' + i.front_versions : '');
-      card.appendChild(meta);
-      if (i.user_agent) { var ua = document.createElement('div'); ua.className = 'fb-meta'; ua.textContent = i.user_agent; card.appendChild(ua); }
-      if (i.screenshot_url) {
-        var a = document.createElement('a'); a.href = i.screenshot_url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'fb-shot';
-        var img = document.createElement('img'); img.src = i.screenshot_url; img.alt = 'Captura del tester'; img.loading = 'lazy'; a.appendChild(img); card.appendChild(a);
-      }
-      var bar = document.createElement('div'); bar.className = 'fb-actions';
-      var mk = function(txt, cls, act) { var b = document.createElement('button'); b.className = 'btn-sm ' + cls; b.textContent = txt; b.dataset.act = act; b.dataset.id = i.id; return b; };
-      bar.appendChild(mk(i.seen ? 'Marcar como no visto' : 'Marcar como visto', i.seen ? 'secondary' : '', 'seen'));
-      bar.appendChild(mk('📌 Convertir en tarea', 'secondary', 'tarea'));
-      bar.appendChild(mk('Copiar todo', 'secondary', 'copy'));
-      if (i.logs) bar.appendChild(mk('Ver logs (' + i.logs_len + ' car.)', 'secondary', 'logs'));
-      card.appendChild(bar);
-      if (i.logs) { var pre = document.createElement('pre'); pre.className = 'fb-logs'; pre.style.display = 'none'; pre.textContent = i.logs; card.appendChild(pre); }
-      list.appendChild(cardText);
-    });
+    if (!items.length) { list.innerHTML = '<div class="gastos-note">' + (fbFilter === 'all' ? 'Todavía no hay mensajes.' : 'No hay mensajes sin ver.') + '</div>'; return; }
+    var e = hoyEsc;
+    list.innerHTML = '<table class="ct fb-t"><colgroup><col class="ct-c-f"><col class="fb-c-q"><col class="ct-c-t"><col class="fb-c-c"><col class="fb-c-v"></colgroup>' +
+      '<thead><tr><th>Fecha</th><th>Quién</th><th>Mensaje</th><th>Caso</th><th></th></tr></thead><tbody>' +
+      items.map(function(i) {
+        var g = fbCasoDe(i), quien = String(i.user_name || i.email || 'anónimo').split(/[@ ]/)[0];
+        var txt = String(i.note || '').replace(/\s+/g, ' ').replace(/^👎\s*·\s*/, '');
+        var h = '<tr class="ct-row fb-row' + (fbOpen[i.id] ? ' on' : '') + (i.seen ? ' fb-seen' : '') + '" data-id="' + e(i.id) + '">' +
+          '<td>' + ctFecha(i.at) + '</td><td class="ct-t">' + e(quien) + '</td><td class="ct-t">' + (fbOpen[i.id] ? '▾ ' : '▸ ') + e(txt.slice(0, 140)) + '</td>' +
+          '<td class="ct-t">' + (g ? '<a href="#" data-goto="' + e(g.id) + '">' + e(ctEstado(g)[0]) + '</a>' : '—') + '</td>' +
+          '<td class="ct-a"><button class="btn-sm secondary" data-act="seen" data-id="' + e(i.id) + '">' + (i.seen ? 'No visto' : 'Visto') + '</button></td></tr>';
+        if (fbOpen[i.id]) {
+          h += '<tr class="ct-det"><td colspan="5"><div class="fb-card">' +
+            '<div class="ct-res"><div>' + e(ctCorto(i.note, 350)) + '</div>' +
+            (g ? '<div><b>Caso:</b> <a href="#" data-goto="' + e(g.id) + '">' + e(g.titulo) + '</a> (' + e(ctEstado(g)[0]) + ')</div>' : '') +
+            '<div class="fb-meta">' + e(i.email || '') + ' · ' + fmtDateTime(i.at) + ' · ' + e(i.page || '') + '</div></div>' +
+            (i.screenshot_url ? '<a class="fb-shot" href="' + e(i.screenshot_url) + '" target="_blank" rel="noopener noreferrer"><img src="' + e(i.screenshot_url) + '" alt="Captura" loading="lazy"></a>' : '') +
+            '<div class="fb-actions"><button class="btn-sm secondary" data-act="copy" data-id="' + e(i.id) + '">Copiar todo</button>' +
+            (i.logs ? '<button class="btn-sm secondary" data-act="logs" data-id="' + e(i.id) + '">Ver logs (' + i.logs_len + ' car.)</button>' : '') + '</div>' +
+            (i.logs ? '<pre class="fb-logs" style="display:none">' + e(i.logs) + '</pre>' : '') + '</div></td></tr>';
+        }
+        return h;
+      }).join('') + '</tbody></table>';
   }
 
   async function loadFeedback() {
@@ -180,13 +161,17 @@
       document.getElementById('fb-refresh').addEventListener('click', loadFeedback);
       document.getElementById('fb-list').addEventListener('click', async function(e) {
         var go = e.target.closest('a[data-goto]');
-        if (go) {   // ir al caso: vista Casos, sin filtros, y se abre ese caso
-          csFilter = 'all'; csArea = 'todos'; csOpen[go.dataset.goto] = true; setFbView('casos'); renderCasos();
-          var c = document.querySelector('.cs-card[data-id="' + go.dataset.goto + '"]');
+        if (go) {   // ir al caso: vista Casos, en la pestaña de la tabla donde está, con la fila abierta
+          e.preventDefault();
+          var gg = csGroups.filter(function(x) { return x.id === go.dataset.goto; })[0]; if (!gg) return;
+          ctFilter = gg.estado === 'arreglado' || gg.estado === 'descartado' ? 'closed' : gg.estado === 'comprobando' ? 'test' : gg.decision ? 'wip' : gg.estado === 'nuevo' ? 'open' : gg.estado === 'visto' ? 'est' : 'wip';
+          csArea = null; ctOpen[gg.id] = true; setFbView('casos'); ctRender();
+          var c = document.querySelector('#ct-body tr.ct-row[data-id="' + gg.id + '"]');
           if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.style.outline = '2px solid var(--accent)'; setTimeout(function() { c.style.outline = ''; }, 2500); }
           return;
         }
-        var b = e.target.closest('button[data-act]'); if (!b) return;
+        var b = e.target.closest('button[data-act]');
+        if (!b) { var fr = e.target.closest('tr.fb-row'); if (fr) { fbOpen[fr.dataset.id] = !fbOpen[fr.dataset.id]; renderFeedback(); } return; }
         var id = b.dataset.id, item = fbItems.filter(function(x) { return x.id === id; })[0]; if (!item) return;
         if (b.dataset.act === 'more') { fbOpen[id] = !fbOpen[id]; foldToggle(b, '.fb-more', '.fb-note', fbOpen[id]); return; }
         if (b.dataset.act === 'logs') {
@@ -624,7 +609,183 @@
     }).join('');
   }
 
+  // ═══════════════════════════════════════════
+  //  TABLA DE CASOS (28 sept 2026, caso p-muldtl3o6kt) — Paco: "estilo Excel", título, gravedad, estado y
+  //  fecha; Cerrar y A Code. Cerrado (arreglado/descartado) sale de la vista y se ve igual en `casos.cjs`
+  //  (son los mismos datos). Un caso reabierto enseña debajo lo que ya se arregló y la queja nueva.
+  // ═══════════════════════════════════════════
+  var ctFilter = 'open', ctOpen = {}, ctWired = false;
+  var CT_GRAV = { urgente: 'Urgente', alta: 'Alta', media: 'Media', baja: 'Baja' };
+  // [texto, clase]: 'tu' = te toca a ti (negrita)
+  function ctEstado(g) {
+    if (g.estado === 'arreglado') return ['Cerrado', ''];
+    if (g.estado === 'descartado') return ['Descartado', ''];
+    if (g.estado === 'propuesta') return ['Tu OK', 'tu'];
+    if (g.decision) return ['Pregunta', 'tu'];   // Claude te ha dejado una pregunta (se ve al abrir la fila)
+    if (g.estado === 'comprobando') return ['Probar', 'tu'];
+    if (g.estado === 'en_marcha') return ['En marcha', ''];
+    if (g.estado === 'visto') return ['En estudio', ''];
+    if (g.reabierto_at) return ['Reabierto', 'tu'];
+    return ['Nuevo', ''];
+  }
+  // De dónde viene: Robot = revisor de conversaciones de las 6:00; Usuario = mensaje o botón «¿Nos avisas?»;
+  // Error = error automático de la web o del Worker; Tarea = apuntado a mano (pendientes).
+  function ctDe(g) {
+    if (g.origen === 'revisor' || (g.revisor_ejemplos || []).length) return ['🤖 Robot', 'ct-robot'];
+    if (g.origen === 'navegador' || g.origen === 'worker') return ['⚠️ Error', ''];
+    if (g.origen === 'pendiente') return ['📋 Tarea', ''];
+    return ['👤 Usuario', 'ct-robot'];   // usuario, boton, mensaje (el Worker pone «usuario» por defecto)
+  }
+  function ctFecha(iso) { var d = new Date(iso || ''); return isNaN(d) ? '' : ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
+  // Problemas nuevos dentro del caso: si se reabrió, cada mensaje que llegó después (lo ya arreglado no se enseña)
+  function ctSubs(g) {
+    if (!g.reabierto_at || g.estado === 'arreglado' || g.estado === 'descartado') return [];
+    var desde = Date.parse(g.reabierto_at) - 5 * 60000;
+    var nuevos = fbItems.filter(function(i) { return (g.items || []).indexOf(i.id) >= 0 && Date.parse(i.at) >= desde; });
+    var subs = [];
+    if (!nuevos.length) subs.push({ t: 'Queja nueva (ver detalle)', e: 'Nuevo', f: ctFecha(g.reabierto_at), tu: true });
+    nuevos.forEach(function(i) { subs.push({ t: String(i.note || '').replace(/\s+/g, ' ').replace(/^👎\s*·\s*/, '').slice(0, 110), e: 'Nuevo', f: ctFecha(i.at), tu: true }); });
+    return subs;
+  }
+  function ctRender() {
+    var body = document.getElementById('ct-body'); if (!body) return;
+    // Cinco botones: Pendientes (sin tocar) · En estudio · En marcha · Sin probar (subidos, comprobando) · Arreglados (cerrados). Reabrir en los dos últimos.
+    // Pendientes = nadie lo ha tocado (nuevo, reabierto). En estudio = apartado para pensarlo (estado «visto», que ya
+    // significaba «apuntado, nadie lo trabaja»). En marcha = Claude lo trabaja, espera tu OK o te ha preguntado.
+    var pend = csGroups.filter(function(g) { return g.estado === 'nuevo' && !g.decision; });
+    var est = csGroups.filter(function(g) { return g.estado === 'visto' && !g.decision; });
+    var wip = csGroups.filter(function(g) { return hoyOpen(g) && g.estado !== 'comprobando' && pend.indexOf(g) < 0 && est.indexOf(g) < 0; });
+    var sinProbar = csGroups.filter(function(g) { return g.estado === 'comprobando'; });
+    var tuyos = wip.filter(function(g) { return ctEstado(g)[1] === 'tu'; }).length;
+    var urg = pend.concat(est, wip).filter(function(g) { return g.gravedad === 'urgente'; }).length;
+    document.getElementById('ct-kpis').innerHTML = 'Pendientes <b>' + pend.length + '</b> · En marcha <b>' + wip.length + '</b>' + (tuyos ? ' (<b>' + tuyos + '</b> te esperan)' : '') +
+      (urg ? ' · <span class="ct-urg">Urgentes <b>' + urg + '</b></span>' : '') + ' · Sin probar <b>' + sinProbar.length + '</b> · En estudio <b>' + est.length + '</b>';
+    document.getElementById('ct-f-open').className = 'btn-sm' + (ctFilter === 'open' ? '' : ' secondary');
+    document.getElementById('ct-f-est').className = 'btn-sm' + (ctFilter === 'est' ? '' : ' secondary');
+    document.getElementById('ct-f-wip').className = 'btn-sm' + (ctFilter === 'wip' ? '' : ' secondary');
+    document.getElementById('ct-f-test').className = 'btn-sm' + (ctFilter === 'test' ? '' : ' secondary');
+    document.getElementById('ct-f-closed').className = 'btn-sm' + (ctFilter === 'closed' ? '' : ' secondary');
+    var area = !fbQuery && csArea && csArea !== 'todos' ? csArea : null;
+    if (area) document.getElementById('ct-kpis').innerHTML += ' · Solo <b>' + hoyEsc(HOY_AREA_NAME[area] || area) + '</b> <a href="#" id="ct-area-x" style="color:var(--accent)">quitar</a>';
+    var rows = fbQuery ? csGroups.filter(csMatch)
+      : ctFilter === 'open' ? pend.slice().sort(hoyByGrav)
+      : ctFilter === 'est' ? est.slice().sort(hoyByGrav)
+      : ctFilter === 'wip' ? wip.slice().sort(hoyByGrav)
+      : ctFilter === 'test' ? sinProbar.sort(hoyByGrav)
+      : csGroups.filter(function(g) { return g.estado === 'arreglado'; }).sort(function(a, b) { return String(b.estado_at).localeCompare(String(a.estado_at)); }).slice(0, 60);
+    if (area) rows = rows.filter(function(g) { return csAreaOf(g) === area; });
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="ct-empty">' + ({ open: 'No hay nada pendiente.', est: 'Nada en estudio.', wip: 'Nada en marcha.', test: 'Nada sin probar.', closed: 'Nada arreglado todavía.' }[ctFilter]) + '</td></tr>'; return; }
+    body.innerHTML = rows.map(function(g) {
+      var e = g.estado === 'comprobando' ? ['Sin probar', 'tu'] : ctEstado(g), subs = ctSubs(g);
+      var btns = g.estado === 'comprobando' ? '<button class="btn-sm secondary" data-ct="cerrar">Funciona</button><button class="btn-sm secondary" data-ct="reabrir">Reabrir</button>'
+        : !hoyOpen(g) ? (g.estado === 'arreglado' && csCanThank(g) && ctDe(g)[0] === '👤 Usuario' ? (g.gracias_n ? '<span class="ct-hecho">🎁 Hecho</span>' : '<button class="btn-sm" data-ct="gracias">🎁 Regalar</button>') : '') + '<button class="btn-sm secondary" data-ct="reabrir">Reabrir</button>'
+        : '<button class="btn-sm secondary" data-ct="cerrar">Cerrar</button><button class="btn-sm secondary" data-ct="code">A Code</button>' +
+          (g.estado === 'nuevo' && !g.decision ? '<button class="btn-sm secondary" data-ct="estudio">A estudio</button>' : '');
+      var h = '<tr class="ct-row' + (ctOpen[g.id] ? ' on' : '') + '" data-id="' + hoyEsc(g.id) + '">' +
+        '<td class="ct-t">' + (ctOpen[g.id] ? '▾ ' : '▸ ') + hoyEsc(g.titulo) + (subs.length ? ' <span class="ct-n">(+' + subs.length + (subs.length === 1 ? ' queja nueva)' : ' quejas nuevas)') + '</span>' : '') + '</td>' +
+        '<td class="ct-de ' + ctDe(g)[1] + '"><span class="ct-ic">' + ctDe(g)[0].split(' ')[0] + '</span> <span class="ct-tx">' + ctDe(g)[0].split(' ')[1] + '</span></td>' +
+        '<td' + (g.gravedad === 'urgente' ? ' class="ct-urg"' : '') + '>' + (CT_GRAV[g.gravedad] || hoyEsc(g.gravedad || '')) + '</td>' +
+        '<td class="' + (e[1] ? 'ct-tu' : '') + '">' + e[0] + '</td>' +
+        '<td>' + ctFecha(hoyOpen(g) ? g.last_at : g.estado_at) + '</td>' +
+        '<td' + (g.modelo === 'opus' ? ' class="ct-opus"' : '') + '>' + (g.modelo === 'opus' ? 'Opus' : g.modelo === 'sonnet' ? 'Sonnet' : '—') + '</td><td class="ct-a">' + btns + '</td></tr>';
+      h += subs.map(function(s, n) {
+        return '<tr class="ct-sub"><td class="ct-t">' + (n + 1) + ' · ' + hoyEsc(s.t) + '</td><td class="ct-de">👤 Usuario</td><td></td><td class="' + (s.tu ? 'ct-tu' : '') + '">' + s.e + '</td><td>' + s.f + '</td><td></td><td></td></tr>';
+      }).join('');
+      if (ctOpen[g.id]) h += '<tr class="ct-det" data-id="' + hoyEsc(g.id) + '"><td colspan="7">' + ctDetalle(g) + '</td></tr>';
+      return h;
+    }).join('');
+  }
+  // Detalle corto (Paco: "resumen rápido y luego qué hago"): qué pasa + quién espera a quién + botones.
+  // Lo técnico (diagnóstico entero, hilo, notas) queda plegado en "Ver detalle técnico".
+  function ctCorto(s, n) { s = String(s || '').replace(/\s+/g, ' ').trim(); var p = s.search(/[.!?](\s|$)/); if (p > 40 && p < n) return s.slice(0, p + 1); return s.length > n ? s.slice(0, n) + '…' : s; }
+  function ctDetalle(g) {
+    var b = function(txt, act) { return '<button class="btn-sm secondary" data-ct="' + act + '">' + txt + '</button>'; };
+    var d = g.diagnostico || {}, que = ctCorto(d.causa || g.ejemplo || g.titulo, 220), hacer = '', acts = '';
+    if (g.estado === 'propuesta') {
+      hacer = '<b>Claude</b> tiene el arreglo preparado' + (d.propuesta ? ': ' + hoyEsc(ctCorto(d.propuesta, 200)) : '.') + ' <b>Tú:</b> apruébalo o recházalo.';
+      acts = b('👍 Aprobar', 'aprobar') + b('Rechazar', 'rechazar');
+    } else if (g.decision) {
+      hacer = '<b>Claude te pregunta:</b> ' + hoyEsc(g.decision) + '<br><b>Tú:</b> contesta aquí (Claude lo lee al empezar la sesión).';
+      acts = b('✍️ Contestar', 'contestar');
+    } else if (g.estado === 'comprobando') {
+      hacer = '<b>Claude</b> ya lo ha subido. <b>Tú:</b> pruébalo' + (d.prueba ? ' (' + hoyEsc(ctCorto(d.prueba, 160)) + ')' : '') + ' y pulsa Funciona o Reabrir.';
+      if (/^https:\/\//.test(d.enlace || '')) acts = '<a class="btn-sm" href="' + hoyEsc(d.enlace) + '" target="_blank" rel="noopener">▶ Abrir para probar</a>';
+    } else if (g.estado === 'arreglado') {
+      hacer = 'Cerrado. Si vuelve a fallar, pulsa Reabrir.';
+    } else if (g.estado === 'en_marcha') {
+      hacer = '<b>Claude</b> lo está haciendo. <b>Tú:</b> nada por ahora.';
+    } else {
+      hacer = 'Nadie lo ha cogido todavía. <b>Tú:</b> pulsa «A Code» y pégalo en Claude cuando quieras que se haga' + (g.modelo ? ' (con ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + ')' : '') + '.';
+    }
+    if (hoyOpen(g)) acts += b('💬 Comentar', 'comentar') + b('Descartar', 'descartar');
+    if (csCanThank(g)) acts += b(g.gracias_n ? '🎁 Gracias dadas (' + g.gracias_n + ')' : '🎁 Dar las gracias', 'gracias');
+    return '<div class="ct-res"><div><b>Qué pasa:</b> ' + hoyEsc(que) + '</div><div><b>Qué hay que hacer:</b> ' + hacer + '</div></div>' +
+      '<div class="fb-actions">' + acts + '</div>' +
+      '<details class="ct-tec"><summary>Ver detalle técnico</summary>' + (g.ejemplo ? '<div class="cs-ejemplo">' + hoyEsc(g.ejemplo.slice(0, 600)) + '</div>' : '') + hoyDetalle(g) + '</details>';
+  }
+  function wireCt() {
+    if (ctWired) return; ctWired = true;
+    document.getElementById('ct-f-open').addEventListener('click', function() { ctFilter = 'open'; ctRender(); });
+    document.getElementById('ct-f-est').addEventListener('click', function() { ctFilter = 'est'; ctRender(); });
+    document.getElementById('ct-f-wip').addEventListener('click', function() { ctFilter = 'wip'; ctRender(); });
+    document.getElementById('ct-f-test').addEventListener('click', function() { ctFilter = 'test'; ctRender(); });
+    document.getElementById('ct-f-closed').addEventListener('click', function() { ctFilter = 'closed'; ctRender(); });
+    document.getElementById('fb-search').addEventListener('input', function() { ctRender(); });
+    // Áreas (resumen debajo de la tabla): wireCasos ya cambia csArea; aquí se filtra la tabla y se sube a ella
+    document.getElementById('cs-areas').addEventListener('click', function(e) {
+      if (!e.target.closest('.hoy-area')) return;
+      ctRender(); document.getElementById('ct-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    document.getElementById('ct-kpis').addEventListener('click', function(e) {
+      if (e.target.id === 'ct-area-x') { e.preventDefault(); csArea = null; renderCasos(); ctRender(); }
+    });
+    document.getElementById('ct-body').addEventListener('click', async function(e) {
+      if (e.target.closest('a')) return;
+      var tr = e.target.closest('tr[data-id]'); if (!tr) return;
+      var g = csGroups.filter(function(x) { return x.id === tr.dataset.id; })[0]; if (!g) return;
+      var b = e.target.closest('button[data-ct]');
+      if (!b) { if (tr.classList.contains('ct-row')) { ctOpen[g.id] = !ctOpen[g.id]; ctRender(); } return; }
+      var act = b.dataset.ct, err = document.getElementById('ct-error'); err.style.display = 'none';
+      var mod = g.modelo ? ' (recomendado: ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet') + ')' : '';
+      if (act === 'code') {
+        var txt = 'Mira el caso ' + g.id + ': ' + g.titulo + mod;
+        try { await navigator.clipboard.writeText(txt); b.textContent = '✓ Copiado'; setTimeout(function() { b.textContent = 'A Code'; }, 2500); }
+        catch (x) { prompt('Copia esto y pégalo en el chat de Claude:', txt); }
+        return;
+      }
+      // El resto (aprobar, falla, comentar…) hace lo mismo que los botones de siempre de Hoy
+      if (['aprobar', 'rechazar', 'comentar'].indexOf(act) >= 0) {
+        b.dataset.act = act; return hoyAction(act, g, tr);
+      }
+      try {
+        b.disabled = true;
+        if (act === 'cerrar') {
+          await csApi('/admin/feedback-group', { id: g.id, estado: 'arreglado', comentario: g.estado === 'comprobando' ? '✓ Probado: funciona.' : '✓ Cerrado por Paco (tabla).' });
+          if (g.count > 0 && g.tipo !== 'tarea' && !g.gracias_n && confirm('¿Damos las gracias + 1 guía gratis a quien avisó de este fallo?')) {
+            try { await csThanks(g); } catch (x) { err.textContent = 'Cerrado, pero no se pudieron dar las gracias: ' + x.message; err.style.display = 'block'; }
+          }
+        } else if (act === 'descartar') {
+          if (!confirm('¿Descartar este caso? (no se va a hacer)')) { b.disabled = false; return; }
+          await csApi('/admin/feedback-group', { id: g.id, estado: 'descartado', comentario: 'Descartado por Paco (tabla).' });
+        } else if (act === 'estudio') {
+          await csApi('/admin/feedback-group', { id: g.id, estado: 'visto', comentario: '📚 Paco lo pasa a En estudio.' });
+        } else if (act === 'reabrir') {
+          var q = prompt('¿Qué falla? (lo que ves en la pantalla)'); if (q === null) { b.disabled = false; return; }
+          await csApi('/admin/feedback-group', { id: g.id, estado: 'nuevo', comentario: '↩️ Reabierto por Paco: ' + q });
+        } else if (act === 'contestar') {
+          var r = prompt('Claude te pregunta: ' + g.decision + '\n\nTu respuesta:'); if (!r) { b.disabled = false; return; }
+          await csApi('/admin/feedback-group', { id: g.id, decision: '', comentario: 'Respuesta de Paco a «' + g.decision + '»: ' + r });
+        } else if (act === 'gracias') {
+          await csThanks(g);
+        }
+        delete ctOpen[g.id];
+        await hoyLoad();
+      } catch (x) { err.textContent = 'No se pudo guardar: ' + x.message; err.style.display = 'block'; b.disabled = false; }
+    });
+  }
+
   function hoyRender() {
+    wireCt(); ctRender();
     revRender();
     var open = hoyGroups.filter(hoyOpen);
     var aprobar = open.filter(function(g) { return g.estado === 'propuesta'; }).sort(hoyByGrav);

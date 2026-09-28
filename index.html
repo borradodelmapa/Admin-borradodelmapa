@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-28.1">
+  <link rel="stylesheet" href="admin.css?v=2026-09-28.10">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -75,27 +75,49 @@
            en Casos, las áreas (tocar una enseña sus casos justo debajo) y luego lo que te toca, urgente, etc. -->
       <section class="tab-content" id="tab-hoy">
         <div class="hoy-top"><h2 class="section-title">Hoy</h2><button class="btn-sm secondary" id="hoy-refresh">Actualizar</button></div>
-        <p class="hoy-sub" id="hoy-saludo">Cargando…</p>
+        <p class="hoy-sub" id="hoy-saludo" style="display:none;">Cargando…</p>
         <div id="hoy-error" class="gastos-error" style="display:none;"></div>
 
         <div class="fb-toolbar">
           <button class="btn-sm" id="fb-view-casos">Casos</button>
           <button class="btn-sm secondary" id="fb-view-msgs">Mensajes</button>
-          <button class="btn-sm secondary" id="fb-view-links">🔗 Enlaces</button>
+          <button class="btn-sm secondary" id="fb-view-links" style="display:none;">🔗 Enlaces</button>
         </div>
         <input type="search" id="fb-search" class="fb-search" placeholder="🔍 Buscar en casos y mensajes (título, texto, persona, id…)" autocomplete="off">
         <p class="gastos-note" id="fb-search-note" style="display:none;"></p>
 
         <div id="cs-panel">
+          <!-- Tabla de casos (28 sept 2026, caso p-muldtl3o6kt): "estilo Excel", una fila por caso. Cerrar lo quita
+               de la vista. Todo lo de antes sigue abajo, plegado en "Vista anterior". -->
+          <div id="ct-box">
+            <p class="ct-kpis" id="ct-kpis"></p>
+            <div class="fb-toolbar">
+              <button class="btn-sm" id="ct-f-open">Pendientes</button>
+              <button class="btn-sm secondary" id="ct-f-wip">En marcha</button>
+              <button class="btn-sm secondary" id="ct-f-test">Sin probar</button>
+              <button class="btn-sm secondary" id="ct-f-closed">Arreglados</button>
+              <button class="btn-sm secondary" id="ct-f-est">En estudio</button>
+            </div>
+            <div id="ct-error" class="gastos-error" style="display:none;"></div>
+            <table class="ct">
+              <colgroup><col class="ct-c-t"><col class="ct-c-d"><col class="ct-c-g"><col class="ct-c-e"><col class="ct-c-f"><col class="ct-c-m"><col class="ct-c-a"></colgroup>
+              <thead><tr><th>Título</th><th>De</th><th>Gravedad</th><th>Estado</th><th>Fecha</th><th>Modelo</th><th></th></tr></thead>
+              <tbody id="ct-body"></tbody>
+            </table>
+          </div>
+
+          <!-- Resumen por áreas (debajo de la tabla): tocar una filtra la tabla -->
+          <h3 class="hoy-h">🗂️ Resumen por áreas <span class="hoy-n" id="hoy-n-abiertos"></span></h3>
+          <p class="hoy-hint">Toca una para ver solo sus casos en la tabla de arriba.</p>
+          <div class="hoy-areas cs-areas" id="cs-areas"></div>
+
+          <details class="ct-old"><summary>Vista anterior (revisor, áreas, te toca, qué ha pasado…)</summary>
           <!-- Revisor de conversaciones (28 sept 2026): lo que ha detectado y aún no has mirado, arriba del todo -->
           <div id="rev-box" style="display:none;">
             <h3 class="hoy-h">🤖 Lo que ha visto el revisor <span class="hoy-n" id="rev-n"></span></h3>
             <p class="hoy-hint">Respuestas de Salma que el revisor automático cree que están mal. Míralas y dime: ¿es un fallo de verdad?</p>
             <div id="rev-list"></div>
           </div>
-          <h3 class="hoy-h">🗂️ Áreas <span class="hoy-n" id="hoy-n-abiertos"></span></h3>
-          <p class="hoy-hint">Toca una para ver sus casos aquí debajo (primero los que nadie ha atendido). «Todos» enseña la lista completa.</p>
-          <div class="hoy-areas cs-areas" id="cs-areas"></div>
           <div id="cs-listbox" style="display:none;">
             <p class="gastos-note" id="cs-area-sel"></p>
             <div class="fb-toolbar">
@@ -138,6 +160,7 @@
 
           <p class="hoy-foot"><b>Cómo hablamos:</b> <b>🤖 Pedir a Claude</b> copia el caso para pegarlo en el chat de Claude Code. <b>💬 Comentar</b> deja un mensaje en el caso que Claude lee al empezar la sesión. Al terminar, Claude deja cada caso al día.</p>
           <p class="hoy-foot">Cada caso junta los mensajes que hablan de lo mismo (lo decide la IA al llegar). Los 🤖 son errores que la web y el Worker apuntan solos, sin que nadie pulse nada. Te avisa al momento solo si algo es urgente o se repite 3 veces en 24 h; lo demás llega en el resumen diario por email.</p>
+          </details>
         </div>
 
         <div id="fb-panel" style="display:none;">
@@ -568,7 +591,7 @@
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="config.js?v=2026-09-26.8"></script>
-  <script src="admin.js?v=2026-09-28.2"></script>
+  <script src="admin.js?v=2026-09-28.17"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>

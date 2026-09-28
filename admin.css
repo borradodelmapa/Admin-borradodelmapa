@@ -1211,3 +1211,45 @@ body { min-height: 100vh; }
 .lk-row { padding: 10px 12px; margin: 6px 0; background: rgba(255,255,255,.04); border-left: 3px solid #2e7d32; }
 .lk-row.lk-mal { border-left-color: #F4630B; }
 .lk-t { font-size: 14px; word-break: break-word; }
+
+/* Tabla de casos "estilo Excel" (28 sept 2026, caso p-muldtl3o6kt): sin colores salvo Urgente; negrita = te toca */
+.ct-kpis { font-size: 14px; color: var(--text-secondary); margin: 4px 0 10px; }
+.ct-kpis b { color: var(--text-primary); }
+.ct { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; margin-bottom: 18px; }
+.ct-c-t { width: auto; } .ct-c-d { width: 78px; } .ct-c-g { width: 84px; } .ct-c-e { width: 96px; } .ct-c-f { width: 58px; } .ct-c-m { width: 70px; } .ct-c-a { width: 150px; }
+.ct-a .btn-sm[data-ct="estudio"] { display: block; margin: 4px 0 0 auto; }
+.ct th { text-align: left; font-weight: 600; font-size: 12px; color: var(--text-muted); padding: 6px 8px; border-bottom: 1px solid var(--text-muted); }
+.ct td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text-primary); }
+.ct-row { cursor: pointer; }
+.ct-row:hover td, .ct-row.on td { background: var(--bg-card-hover); }
+.ct-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-n { color: var(--text-muted); }
+.ct-tu { font-weight: 700; }
+.ct-urg, .ct td.ct-urg { color: var(--red); font-weight: 700; }
+.ct td.ct-opus { color: var(--accent); }
+.ct-a { text-align: right; white-space: nowrap; }
+.ct-a .btn-sm { margin-left: 4px; padding: 4px 8px; }
+.ct-sub td { font-size: 13px; color: var(--text-secondary); background: var(--bg-card); padding: 5px 8px; }
+.ct-sub .ct-t { padding-left: 26px; }
+.ct-sub .ct-tu { color: var(--text-primary); }
+.ct-det td { background: var(--bg-card); padding: 10px 12px 14px; white-space: normal; }
+.ct-empty { color: var(--text-muted); text-align: center; padding: 18px; }
+.ct-old { margin-top: 10px; }
+.ct-old > summary { cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 8px 0; }
+@media (max-width: 700px) {
+  .ct { font-size: 13px; }
+  .ct-c-d { width: 26px; } .ct-tx { display: none; } .ct-c-g { width: 62px; } .ct-c-e { width: 74px; } .ct-c-f { width: 44px; } .ct-c-m { width: 56px; } .ct-c-a { width: 76px; }
+  .ct td, .ct th { padding: 7px 4px; }
+  .ct-t { white-space: normal; }
+  .ct-a .btn-sm { display: block; width: 100%; margin: 2px 0; padding: 4px 2px; font-size: 12px; }
+}
+.ct-res { font-size: 14px; line-height: 1.5; display: grid; gap: 6px; margin-bottom: 8px; }
+.ct-tec > summary { cursor: pointer; color: var(--text-muted); font-size: 13px; margin-top: 8px; }
+.ct-de { font-size: 13px; color: var(--text-secondary); }
+.ct td.ct-robot { color: var(--text-primary); font-weight: 700; }
+.ct-hecho { font-size: 12px; color: var(--text-muted); margin-right: 6px; }
+.fb-c-q { width: 90px; } .fb-c-c { width: 96px; } .fb-c-v { width: 90px; }
+.fb-t tr.fb-seen td { color: var(--text-muted); }
+.fb-t .fb-card { background: none; border: 0; padding: 0; margin: 0; }
+@media (max-width: 700px) { .fb-c-q { width: 60px; } .fb-c-c { width: 70px; } .fb-c-v { width: 64px; } }
+.fb-t a, .ct-res a { color: var(--accent); }
