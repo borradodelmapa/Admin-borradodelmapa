@@ -711,6 +711,8 @@
     } else if (g.decision) {
       hacer = '<b>Claude te pregunta:</b> ' + hoyEsc(g.decision) + '<br><b>Tú:</b> contesta aquí (Claude lo lee al empezar la sesión).';
       acts = b('✍️ Contestar', 'contestar');
+    } else if (g.estado === 'comprobando' && /^s*🧪/.test(g.nota || '')) {
+      hacer = '<b>Claude</b> lo ha pasado por el banco de pruebas y sale bien. <b>Tú:</b> escribe en la app la frase de arriba y pulsa Funciona o Reabrir.';
     } else if (g.estado === 'comprobando') {
       hacer = '<b>Claude</b> ya lo ha subido. <b>Tú:</b> pruébalo' + (d.prueba ? ' (' + hoyEsc(ctCorto(d.prueba, 160)) + ')' : '') + ' y pulsa Funciona o Reabrir.';
       if (/^https:\/\//.test(d.enlace || '')) acts = '<a class="btn-sm" href="' + hoyEsc(d.enlace) + '" target="_blank" rel="noopener">▶ Abrir para probar</a>';
@@ -723,7 +725,9 @@
     }
     if (hoyOpen(g)) acts += b('💬 Comentar', 'comentar') + b('Descartar', 'descartar');
     if (csCanThank(g)) acts += b(g.gracias_n ? '🎁 Gracias dadas (' + g.gracias_n + ')' : '🎁 Dar las gracias', 'gracias');
-    return '<div class="ct-res"><div><b>Qué pasa:</b> ' + hoyEsc(que) + '</div><div><b>Qué hay que hacer:</b> ' + hacer + '</div></div>' +
+    // Banco de pruebas (28 sept): la nota que empieza por 🧪 lleva la frase exacta que Paco tiene que escribir en la app
+    var banco = /^s*🧪/.test(g.nota || '') ? String(g.nota).replace(/^s*🧪s*QU[EÉ] PREGUNTARs*/i, '').split('———')[0].trim() : '';
+    return '<div class="ct-res"><div><b>Qué pasa:</b> ' + hoyEsc(que) + '</div>' + (banco ? '<div class="ct-banco"><b>🧪 Del banco de pruebas — qué preguntar:</b> ' + hoyEsc(banco) + '</div>' : '') + '<div><b>Qué hay que hacer:</b> ' + hacer + '</div></div>' +
       '<div class="fb-actions">' + acts + '</div>' +
       '<details class="ct-tec"><summary>Ver detalle técnico</summary>' + (g.ejemplo ? '<div class="cs-ejemplo">' + hoyEsc(g.ejemplo.slice(0, 600)) + '</div>' : '') + hoyDetalle(g) + '</details>';
   }
