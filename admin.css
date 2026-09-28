@@ -1245,6 +1245,7 @@ body { min-height: 100vh; }
 }
 .ct-res { font-size: 14px; line-height: 1.5; display: grid; gap: 6px; margin-bottom: 8px; }
 .ct-banco { border-left: 3px solid var(--accent); padding: 4px 8px; background: rgba(244, 99, 11, .08); }
+.ct-banco-l { margin-top: 4px; font-size: 13px; font-weight: 400; color: var(--accent); white-space: normal; }
 .ct-tec > summary { cursor: pointer; color: var(--text-muted); font-size: 13px; margin-top: 8px; }
 .ct-de { font-size: 13px; color: var(--text-secondary); }
 .ct td.ct-robot { color: var(--text-primary); font-weight: 700; }
