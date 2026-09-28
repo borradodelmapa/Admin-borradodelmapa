@@ -639,7 +639,13 @@
   // Paco, 28 sept: lo último que se tocó, arriba (entrada, aviso, estado, diagnóstico, reapertura o comentario), con fecha y hora
   function ctTocado(g) { var t = [g.first_at, g.last_at, g.estado_at, g.diagnostico_at, g.reabierto_at].concat((g.comentarios || []).map(function(c) { return c && c.at; })).map(function(x) { return Date.parse(x || '') || 0; }); return Math.max.apply(null, t); }
   // Nota del banco de pruebas: "🧪 PREGUNTA: «frase exacta» ——— resto" → solo la frase
-  function ctBanco(g) { return /^s*🧪/.test(g.nota || '') ? String(g.nota).split('———')[0].replace(/^s*🧪[^:«]*:?s*/, '').trim() : ''; }
+  function ctBanco(g) {
+    if (!/^\s*🧪/.test(g.nota || '')) return null;
+    var t = String(g.nota).split('———')[0], ok = t.indexOf('✅'), ko = t.indexOf('❌');
+    var cut = function(a, b) { return a < 0 ? '' : t.slice(a, b < 0 || b < a ? undefined : b).replace(/^[✅❌]\s*(IN)?CORRECTO:?\s*/i, '').trim(); };
+    return { p: t.slice(0, ok >= 0 ? ok : ko >= 0 ? ko : undefined).replace(/^\s*🧪[^:«]*:?\s*/, '').trim(), ok: cut(ok, ko), ko: cut(ko, -1) };
+  }
+  function ctBancoHtml(b, cls) { return !b ? '' : '<div class="' + cls + '"><div><b>🧪 Pregunta del banco de pruebas:</b> ' + hoyEsc(b.p) + '</div>' + (b.ok ? '<div class="ct-ok">✅ <b>Correcto:</b> ' + hoyEsc(b.ok) + '</div>' : '') + (b.ko ? '<div class="ct-ko">❌ <b>Incorrecto:</b> ' + hoyEsc(b.ko) + '</div>' : '') + '</div>'; }
   function ctByTocado(a, b) { return ctTocado(b) - ctTocado(a); }
   function ctFechaHora(ms) { var d = new Date(ms); return !ms || isNaN(d) ? '' : ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
   function ctFecha(iso) { var d = new Date(iso || ''); return isNaN(d) ? '' : ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
@@ -688,7 +694,7 @@
         : '<button class="btn-sm secondary" data-ct="cerrar">Cerrar</button><button class="btn-sm secondary" data-ct="code">A Code</button>' +
           (!(g.estado === 'visto' && !g.decision) ? '<button class="btn-sm secondary" data-ct="estudio">A estudio</button>' : '');
       var h = '<tr class="ct-row' + (ctOpen[g.id] ? ' on' : '') + '" data-id="' + hoyEsc(g.id) + '">' +
-        '<td class="ct-t">' + (ctOpen[g.id] ? '▾ ' : '▸ ') + hoyEsc(g.titulo) + (subs.length ? ' <span class="ct-n">(+' + subs.length + (subs.length === 1 ? ' queja nueva)' : ' quejas nuevas)') + '</span>' : '') + (ctBanco(g) ? '<div class="ct-banco-l">🧪 Pregunta del banco de pruebas: ' + hoyEsc(ctBanco(g)) + '</div>' : '') + '</td>' +
+        '<td class="ct-t">' + (ctOpen[g.id] ? '▾ ' : '▸ ') + hoyEsc(g.titulo) + (subs.length ? ' <span class="ct-n">(+' + subs.length + (subs.length === 1 ? ' queja nueva)' : ' quejas nuevas)') + '</span>' : '') + ctBancoHtml(ctBanco(g), 'ct-banco-l') + '</td>' +
         '<td class="ct-de ' + ctDe(g)[1] + '"><span class="ct-ic">' + ctDe(g)[0].split(' ')[0] + '</span> <span class="ct-tx">' + ctDe(g)[0].split(' ')[1] + '</span></td>' +
         '<td' + (g.gravedad === 'urgente' ? ' class="ct-urg"' : '') + '>' + (CT_GRAV[g.gravedad] || hoyEsc(g.gravedad || '')) + '</td>' +
         '<td class="' + (e[1] ? 'ct-tu' : '') + '">' + e[0] + '</td>' +
@@ -729,7 +735,7 @@
     if (csCanThank(g)) acts += b(g.gracias_n ? '🎁 Gracias dadas (' + g.gracias_n + ')' : '🎁 Dar las gracias', 'gracias');
     // Banco de pruebas (28 sept): la nota que empieza por 🧪 lleva la frase exacta que Paco tiene que escribir en la app
     var banco = ctBanco(g);
-    return '<div class="ct-res"><div><b>Qué pasa:</b> ' + hoyEsc(que) + '</div>' + (banco ? '<div class="ct-banco"><b>🧪 Pregunta del banco de pruebas:</b> ' + hoyEsc(banco) + '</div>' : '') + '<div><b>Qué hay que hacer:</b> ' + hacer + '</div></div>' +
+    return '<div class="ct-res"><div><b>Qué pasa:</b> ' + hoyEsc(que) + '</div>' + ctBancoHtml(banco, 'ct-banco') + '<div><b>Qué hay que hacer:</b> ' + hacer + '</div></div>' +
       '<div class="fb-actions">' + acts + '</div>' +
       '<details class="ct-tec"><summary>Ver detalle técnico</summary>' + (g.ejemplo ? '<div class="cs-ejemplo">' + hoyEsc(g.ejemplo.slice(0, 600)) + '</div>' : '') + hoyDetalle(g) + '</details>';
   }
