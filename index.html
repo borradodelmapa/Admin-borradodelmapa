@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=2026-09-26.10">
+  <link rel="stylesheet" href="admin.css?v=2026-09-28.1">
   <!-- Firebase 8.10.1 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -81,6 +81,7 @@
         <div class="fb-toolbar">
           <button class="btn-sm" id="fb-view-casos">Casos</button>
           <button class="btn-sm secondary" id="fb-view-msgs">Mensajes</button>
+          <button class="btn-sm secondary" id="fb-view-links">🔗 Enlaces</button>
         </div>
         <input type="search" id="fb-search" class="fb-search" placeholder="🔍 Buscar en casos y mensajes (título, texto, persona, id…)" autocomplete="off">
         <p class="gastos-note" id="fb-search-note" style="display:none;"></p>
@@ -142,6 +143,18 @@
           </div>
           <div id="fb-error" class="gastos-error" style="display:none;"></div>
           <div id="fb-list"></div>
+        </div>
+
+        <!-- Enlaces del chat: cada sitio que el chat intentó enlazar (registro chat_links del Worker) -->
+        <div id="links-panel" style="display:none;">
+          <div class="fb-toolbar">
+            <button class="btn-sm" id="links-mal">Sin enlace</button>
+            <button class="btn-sm secondary" id="links-all">Todos</button>
+            <button class="btn-sm secondary" id="links-refresh">Actualizar</button>
+            <span id="links-count" class="gastos-note"></span>
+          </div>
+          <div id="links-error" class="gastos-error" style="display:none;"></div>
+          <div id="links-list"></div>
         </div>
       </section>
 
@@ -549,7 +562,7 @@
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="config.js?v=2026-09-26.8"></script>
-  <script src="admin.js?v=2026-09-26.14"></script>
+  <script src="admin.js?v=2026-09-28.1"></script>
 
   <!-- Service Worker + PWA Ready -->
   <script>

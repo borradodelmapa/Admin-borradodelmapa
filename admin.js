@@ -309,7 +309,32 @@
     document.getElementById('fb-view-msgs').className = 'btn-sm' + (v === 'msgs' ? '' : ' secondary');
     document.getElementById('cs-panel').style.display = v === 'casos' ? '' : 'none';
     document.getElementById('fb-panel').style.display = v === 'msgs' ? '' : 'none';
-    if (fbQuery) { if (v === 'casos') renderCasos(); else renderFeedback(); }   // el contador del buscador sigue a la vista
+    document.getElementById('fb-view-links').className = 'btn-sm' + (v === 'links' ? '' : ' secondary');
+    document.getElementById('links-panel').style.display = v === 'links' ? '' : 'none';
+    if (v === 'links') loadLinks();
+    if (fbQuery) { if (v === 'casos') renderCasos(); else if (v === 'msgs') renderFeedback(); }   // el contador del buscador sigue a la vista
+  }
+
+  // ─── Enlaces del chat (28 sept 2026, caso p-mulc92f6l52): registro chat_links que escribe el Worker
+  // (logChatLink) — cada sitio que el chat intentó enlazar, lo diera o no. GET /admin/chat-links.
+  var lkRows = [], lkFilter = 'mal';
+  async function loadLinks() {
+    var err = document.getElementById('links-error'); err.style.display = 'none';
+    try { lkRows = (await csApi('/admin/chat-links?limite=300')).links || []; renderLinks(); }
+    catch (e) { err.textContent = e.message; err.style.display = ''; }
+  }
+  function renderLinks() {
+    var mal = lkRows.filter(function(l) { return l.estado !== 'ok'; });
+    var rows = lkFilter === 'mal' ? mal : lkRows;
+    document.getElementById('links-mal').className = 'btn-sm' + (lkFilter === 'mal' ? '' : ' secondary');
+    document.getElementById('links-all').className = 'btn-sm' + (lkFilter === 'all' ? '' : ' secondary');
+    document.getElementById('links-count').textContent = (lkRows.length - mal.length) + ' con enlace · ' + mal.length + ' sin enlace (últimos ' + lkRows.length + ')';
+    document.getElementById('links-list').innerHTML = rows.length ? rows.map(function(l) {
+      return '<div class="lk-row' + (l.estado === 'ok' ? '' : ' lk-mal') + '"><div class="lk-t">' + (l.estado === 'ok' ? '✅' : '❌ ' + hoyEsc(l.estado)) +
+        ' <b>' + hoyEsc(l.pedido || '—') + '</b>' + (l.ciudad ? ' en ' + hoyEsc(l.ciudad) : '') +
+        (l.google ? ' → ' + hoyEsc(l.google) + (typeof l.km === 'number' ? ' (' + l.km + ' km)' : '') : '') + '</div>' +
+        '<div class="fb-meta">' + fmtDateTime(l.at) + ' · ' + hoyEsc(l.origen || '') + (l.medio ? ' · ' + hoyEsc(l.medio) : '') + ' · «' + hoyEsc(l.mensaje || '') + '»</div></div>';
+    }).join('') : '<div class="gastos-note">Nada que enseñar. 🎉</div>';
   }
 
   function renderCasos() {
@@ -361,7 +386,7 @@
       var more = document.createElement('div'); more.className = 'cs-more'; if (!csOpen[g.id]) more.style.display = 'none'; card.appendChild(more);
       var cardBox = card; card = more;
       top = document.createElement('div'); top.className = 'cs-top';
-      var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', boton: '⚑ ¿Nos avisas?', pendiente: '📋 pendiente de CLAUDE.md' };
+      var ORIG = { navegador: '🤖 error automático (web)', worker: '🤖 error automático (Worker)', revisor: '🤖 revisor de conversaciones', boton: '⚑ ¿Nos avisas?', pendiente: '📋 pendiente de CLAUDE.md' };
       ORIG.mensaje = '💬 de un mensaje';
       var tags = document.createElement('span'); tags.className = 'cs-tags'; tags.textContent = (HOY_AREA_NAME[csAreaOf(g)] || csAreaOf(g)) + ' · ' + (CS_TIPO[g.tipo] || g.tipo) + ' · ' + g.zona + (ORIG[g.origen] ? ' · ' + ORIG[g.origen] : ''); top.appendChild(tags);
       if (g.modelo) { var mo = document.createElement('span'); mo.className = 'hoy-model hoy-model-' + g.modelo; mo.textContent = '🧠 Hacer con ' + (g.modelo === 'opus' ? 'Opus' : 'Sonnet'); mo.title = g.modelo_por || ''; top.appendChild(mo); }
@@ -372,6 +397,12 @@
       card.appendChild(meta);
       var ay = document.createElement('div'); ay.className = (g.estado === 'propuesta' || g.estado === 'comprobando') ? 'cs-estado cs-estado-' + g.estado : 'cs-ayuda';
       ay.textContent = csAyuda(g); if (ay.textContent) card.appendChild(ay);
+      if (g.revisor_ejemplos && g.revisor_ejemplos.length) {
+        var rv = document.createElement('div'); rv.className = 'cs-diag';
+        var rh = document.createElement('div'); rh.className = 'cs-diag-t'; rh.textContent = '🤖 Lo que vio el revisor de conversaciones (' + g.revisor_ejemplos.length + ')'; rv.appendChild(rh);
+        g.revisor_ejemplos.slice().reverse().forEach(function(x) { var r = document.createElement('div'); r.className = 'cs-ejemplo'; r.textContent = x; rv.appendChild(r); });
+        card.appendChild(rv);
+      }
       if (g.nota) { var nt = document.createElement('div'); nt.className = 'cs-nota'; nt.textContent = '📝 ' + g.nota; card.appendChild(nt); }
       if (g.diagnostico) {
         var dg = document.createElement('div'); dg.className = 'cs-diag';
@@ -420,6 +451,10 @@
       csWired = true;
       document.getElementById('fb-view-casos').addEventListener('click', function() { setFbView('casos'); });
       document.getElementById('fb-view-msgs').addEventListener('click', function() { setFbView('msgs'); });
+      document.getElementById('fb-view-links').addEventListener('click', function() { setFbView('links'); });
+      document.getElementById('links-mal').addEventListener('click', function() { lkFilter = 'mal'; renderLinks(); });
+      document.getElementById('links-all').addEventListener('click', function() { lkFilter = 'all'; renderLinks(); });
+      document.getElementById('links-refresh').addEventListener('click', loadLinks);
       document.getElementById('cs-filter-open').addEventListener('click', function() { csFilter = 'open'; renderCasos(); });
       document.getElementById('cs-filter-all').addEventListener('click', function() { csFilter = 'all'; renderCasos(); });
       document.getElementById('fb-search').addEventListener('input', function() {
@@ -602,7 +637,7 @@
     var dia = Date.now() - 24 * 3600 * 1000, ev = [];
     hoyDeploys.forEach(function(d) { if (Date.parse(d.at) > dia) ev.push({ at: d.at, i: '🚀', t: '<b>' + hoyEsc(d.texto) + '</b>' + (d.worker ? ' · Worker ' + hoyEsc(d.worker) : '') + (d.casos && d.casos.length ? ' · ' + d.casos.length + ' caso(s)' : '') }); });
     hoyGroups.forEach(function(g) {
-      if (Date.parse(g.first_at) > dia && g.count > 0) ev.push({ at: g.first_at, i: g.origen === 'navegador' || g.origen === 'worker' ? '🤖' : '🆕', t: 'Nuevo: <b>' + hoyEsc(g.titulo) + '</b>' });
+      if (Date.parse(g.first_at) > dia && g.count > 0) ev.push({ at: g.first_at, i: g.origen === 'navegador' || g.origen === 'worker' || g.origen === 'revisor' ? '🤖' : '🆕', t: 'Nuevo: <b>' + hoyEsc(g.titulo) + '</b>' });
       if (Date.parse(g.reabierto_at) > dia) ev.push({ at: g.reabierto_at, i: '↩️', t: '<b style="color:var(--red)">Reabierto</b>: ' + hoyEsc(g.titulo) });
       if (g.estado === 'arreglado' && Date.parse(g.estado_at) > dia) ev.push({ at: g.estado_at, i: '✅', t: 'Arreglado' + (g.confirmado_auto ? ' solo (' + hoyEsc(g.confirmado_auto) + ')' : '') + ': <b>' + hoyEsc(g.titulo) + '</b>' });
       if (g.estado === 'propuesta' && Date.parse(g.estado_at) > dia) ev.push({ at: g.estado_at, i: '🔎', t: 'Claude dejó propuesta: <b>' + hoyEsc(g.titulo) + '</b>' });

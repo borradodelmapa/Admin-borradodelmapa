@@ -1206,3 +1206,8 @@ body { min-height: 100vh; }
 .hoy-model { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
 .hoy-model-opus { background: rgba(170,120,255,.15); color: #c9a8ff; border: 1px solid rgba(170,120,255,.4); }
 .hoy-model-sonnet { background: rgba(106,169,255,.12); color: #8fc0ff; border: 1px solid rgba(106,169,255,.35); }
+
+/* Enlaces del chat (28 sept 2026) */
+.lk-row { padding: 10px 12px; margin: 6px 0; background: rgba(255,255,255,.04); border-left: 3px solid #2e7d32; }
+.lk-row.lk-mal { border-left-color: #F4630B; }
+.lk-t { font-size: 14px; word-break: break-word; }
