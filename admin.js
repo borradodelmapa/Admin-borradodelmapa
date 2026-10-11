@@ -2241,64 +2241,64 @@
         else cfgMsg('cfg-health-msg', 'Todo correcto: responden los ' + r.total + ' servicios.', false);
       });
 
-      // Limpiar guías públicas en bloque (Worker: /admin/guias-publicas/eliminar). Simular primero.
+      // Limpiar guías públicas (Worker: GET /admin/guias-publicas y POST /admin/guias-publicas/eliminar)
       (function() {
-        var ta = document.getElementById('cfg-guias-slugs');
-        var simBtn = document.getElementById('cfg-guias-sim');
+        // Las que se CONSERVAN (decidido con Paco, 11 oct 2026). Todo lo demás sale marcado para borrar.
+        var KEEP = ['circuito-annapurna-nepal-ruta','everest-base-camp-nepal-ruta','upper-mustang-nepal-ruta','kathmandu-nepal-ruta','pokhara-nepal-ruta','langtang-nepal-ruta','patan-nepal-ruta','chitwan-nepal-ruta','lumbini-nepal-ruta','bhaktapur-nepal-ruta','sierra-nevada-en-autocaravana-b05t','parques-naturales-del-pais-vasco-y-navarra-tqgd','loop-de-ha-giang-en-moto-g9wb','cantabria-costa-picos-y-bahia-i2lb','malpartida-de-caceres-en-2-dias-lbzw','1-dia-en-hanoi-59zg','peso-da-regua-medio-dia-en-el-corazon-del-douro','transpirenaica-en-moto-de-irun-al-mediterraneo-qsv6','cantabria-en-moto-de-asturias-a-la-costa-verde-wmfk','n2-en-moto-de-faro-a-chaves-por-la-carretera-mas-larga-de-po-8md7','sevilla-en-3-dias-z359','pirineos-navarros-roncal-salazar-y-baztan-mnur','asturias-salvaje-de-ribadeo-a-cabo-penas-en-4-dias-b7zm','ronda-en-3-dias-o1ub'];
+        function esKeep(slug) { return KEEP.some(function(k) { return slug === k || slug.indexOf(k) === 0; }); }
+        var loadBtn = document.getElementById('cfg-guias-load');
         var delBtn = document.getElementById('cfg-guias-del');
-        var out = document.getElementById('cfg-guias-out');
-        var simulated = '';
-        function readSlugs() {
-          return ta.value.split(/[\s,]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+        var list = document.getElementById('cfg-guias-list');
+        function marcadas() {
+          return Array.prototype.slice.call(list.querySelectorAll('input[type=checkbox]:checked')).map(function(c) { return c.value; });
         }
-        async function llamar(dry) {
-          var slugs = readSlugs();
-          var body = { slugs: slugs, dryRun: dry };
-          if (!dry) body.confirmar = 'ELIMINAR';
-          var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/guias-publicas/eliminar', {
-            method: 'POST',
-            headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify(body)
-          });
-          return { ok: res.ok, data: await res.json().catch(function() { return {}; }) };
+        function actualizar() {
+          var n = marcadas().length;
+          delBtn.disabled = n === 0;
+          delBtn.textContent = 'Eliminar las marcadas (' + n + ')';
         }
-        function pintar(r) {
-          out.textContent = (r.resultado || []).map(function(x) {
-            return x.estado + '  ' + x.slug + (x.nombre ? '  — ' + x.nombre : '') + (x.dueno ? ' (' + x.dueno + ')' : '') + (x.error ? '  ' + x.error : '');
-          }).join('\n');
-        }
-        ta.addEventListener('input', function() { delBtn.disabled = true; simulated = ''; });
-        simBtn.addEventListener('click', async function() {
-          simBtn.disabled = true; delBtn.disabled = true;
-          cfgMsg('cfg-guias-msg', 'Simulando…', false);
+        function esc(s) { return String(s || '').replace(/[&<>"]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+        loadBtn.addEventListener('click', async function() {
+          loadBtn.disabled = true;
+          cfgMsg('cfg-guias-msg', 'Cargando…', false);
           try {
-            var r = await llamar(true);
-            if (!r.ok) { cfgMsg('cfg-guias-msg', r.data.error || 'Error', true); out.textContent = ''; return; }
-            pintar(r.data);
-            var n = r.data.resultado.filter(function(x) { return x.estado === 'se_borraria'; }).length;
-            var nx = r.data.resultado.filter(function(x) { return x.estado === 'no_existe'; }).length;
-            cfgMsg('cfg-guias-msg', 'Simulacro: se borrarían ' + n + ' guías públicas' + (nx ? ' (' + nx + ' ya no existen)' : '') + '. Nada se ha borrado.', false);
-            simulated = readSlugs().join('|');
-            delBtn.disabled = n === 0;
-          } catch (e) { cfgMsg('cfg-guias-msg', 'No se pudo simular: ' + e.message, true); }
-          finally { simBtn.disabled = false; }
+            var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/guias-publicas', { headers: await adminAuthHeaders() });
+            var d = await res.json();
+            if (!res.ok) { cfgMsg('cfg-guias-msg', d.error || 'Error', true); return; }
+            d.guias.sort(function(a, b) { return (esKeep(a.slug) ? 1 : 0) - (esKeep(b.slug) ? 1 : 0) || a.nombre.localeCompare(b.nombre); });
+            list.innerHTML = d.guias.map(function(g) {
+              var keep = esKeep(g.slug);
+              return '<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #2a2a2a;' + (keep ? 'opacity:.6' : '') + '">'
+                + '<input type="checkbox" value="' + esc(g.slug) + '"' + (keep ? '' : ' checked') + '>'
+                + '<span><strong>' + esc(g.nombre || g.slug) + '</strong> <small>(' + esc(g.dueno || '—') + ')</small><br>'
+                + '<small>' + g.dias + ' días · ' + g.paradas + ' paradas · ' + g.palabras + ' palabras · ' + (g.portada ? 'con foto' : 'sin foto') + (keep ? ' · SE CONSERVA' : ' · se borraría') + '</small></span></label>';
+            }).join('');
+            list.querySelectorAll('input[type=checkbox]').forEach(function(c) { c.addEventListener('change', actualizar); });
+            actualizar();
+            cfgMsg('cfg-guias-msg', d.total + ' guías públicas. Revisa las marcadas y pulsa el botón rojo. Nada se ha borrado todavía.', false);
+          } catch (e) { cfgMsg('cfg-guias-msg', 'No se pudo cargar: ' + e.message, true); }
+          finally { loadBtn.disabled = false; }
         });
         delBtn.addEventListener('click', async function() {
-          if (simulated !== readSlugs().join('|')) { cfgMsg('cfg-guias-msg', 'La lista cambió: vuelve a simular.', true); delBtn.disabled = true; return; }
-          var n = readSlugs().length;
-          var typed = window.prompt('Vas a eliminar hasta ' + n + ' guías públicas. Escribe ELIMINAR para confirmar:');
-          if (typed !== 'ELIMINAR') { cfgMsg('cfg-guias-msg', 'Cancelado: no se ha borrado nada.', false); return; }
-          delBtn.disabled = true; simBtn.disabled = true;
+          var slugs = marcadas();
+          if (!slugs.length) return;
+          if (!window.confirm('Se van a eliminar ' + slugs.length + ' guías públicas (la ruta guardada de cada dueño NO se toca; queda copia 90 días). ¿Seguro?')) return;
+          delBtn.disabled = true; loadBtn.disabled = true;
           cfgMsg('cfg-guias-msg', 'Eliminando…', false);
           try {
-            var r = await llamar(false);
-            if (!r.ok) { cfgMsg('cfg-guias-msg', r.data.error || 'Error', true); return; }
-            pintar(r.data);
-            var b = r.data.resultado.filter(function(x) { return x.estado === 'borrada'; }).length;
-            var er = r.data.resultado.filter(function(x) { return x.estado === 'error'; }).length;
-            cfgMsg('cfg-guias-msg', 'Borradas ' + b + ' guías públicas' + (er ? ', con ' + er + ' errores' : '') + '.', er > 0);
+            var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/guias-publicas/eliminar', {
+              method: 'POST',
+              headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ slugs: slugs, dryRun: false, confirmar: 'ELIMINAR' })
+            });
+            var d = await res.json();
+            if (!res.ok) { cfgMsg('cfg-guias-msg', d.error || 'Error', true); return; }
+            var b = d.resultado.filter(function(x) { return x.estado === 'borrada'; }).length;
+            var er = d.resultado.filter(function(x) { return x.estado === 'error'; }).length;
+            cfgMsg('cfg-guias-msg', 'Borradas ' + b + ' guías públicas' + (er ? ', con ' + er + ' errores' : '') + '. Pulsa «Ver guías» para ver las que quedan.', er > 0);
+            list.innerHTML = '';
           } catch (e) { cfgMsg('cfg-guias-msg', 'No se pudo eliminar: ' + e.message, true); }
-          finally { simBtn.disabled = false; }
+          finally { loadBtn.disabled = false; }
         });
       })();
 
