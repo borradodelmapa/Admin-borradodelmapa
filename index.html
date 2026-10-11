@@ -540,6 +540,14 @@
         <button class="btn-sm" id="cfg-health">Comprobar ahora</button>
         <div id="cfg-health-msg" class="gastos-note"></div>
 
+        <h3 class="subsection-title">Limpiar guías públicas</h3>
+        <p class="gastos-note">Pega los slugs (uno por línea) de las guías públicas que quieras quitar. <strong>Solo se elimina la copia pública</strong> (<code>public_guides</code>): la ruta guardada del dueño NO se toca. Primero pulsa «Simular» para ver qué se borraría; el botón rojo no se activa hasta que simules. Se guarda una copia 90 días. Coste: 0 €.</p>
+        <textarea id="cfg-guias-slugs" class="login-input" rows="6" placeholder="slug-de-la-guia&#10;otra-guia-xxxx" style="width:100%;font-family:monospace"></textarea>
+        <button class="btn-sm" id="cfg-guias-sim">Simular</button>
+        <button class="btn-sm" id="cfg-guias-del" disabled style="background:var(--red);color:#fff">Eliminar de verdad</button>
+        <div id="cfg-guias-msg" class="gastos-note"></div>
+        <pre id="cfg-guias-out" class="gastos-note" style="white-space:pre-wrap;max-height:260px;overflow:auto"></pre>
+
         <h3 class="subsection-title">Enlaces directos</h3>
         <p class="gastos-note">Cada enlace abre la página del proveedor donde se ve ese dato. Se abren en una pestaña nueva.</p>
         <div id="cfg-enlaces"></div>

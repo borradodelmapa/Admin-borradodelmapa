@@ -2241,6 +2241,67 @@
         else cfgMsg('cfg-health-msg', 'Todo correcto: responden los ' + r.total + ' servicios.', false);
       });
 
+      // Limpiar guías públicas en bloque (Worker: /admin/guias-publicas/eliminar). Simular primero.
+      (function() {
+        var ta = document.getElementById('cfg-guias-slugs');
+        var simBtn = document.getElementById('cfg-guias-sim');
+        var delBtn = document.getElementById('cfg-guias-del');
+        var out = document.getElementById('cfg-guias-out');
+        var simulated = '';
+        function readSlugs() {
+          return ta.value.split(/[\s,]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+        }
+        async function llamar(dry) {
+          var slugs = readSlugs();
+          var body = { slugs: slugs, dryRun: dry };
+          if (!dry) body.confirmar = 'ELIMINAR';
+          var res = await fetch(ADMIN_CONFIG.WORKER_URL + '/admin/guias-publicas/eliminar', {
+            method: 'POST',
+            headers: await adminAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(body)
+          });
+          return { ok: res.ok, data: await res.json().catch(function() { return {}; }) };
+        }
+        function pintar(r) {
+          out.textContent = (r.resultado || []).map(function(x) {
+            return x.estado + '  ' + x.slug + (x.nombre ? '  — ' + x.nombre : '') + (x.dueno ? ' (' + x.dueno + ')' : '') + (x.error ? '  ' + x.error : '');
+          }).join('\n');
+        }
+        ta.addEventListener('input', function() { delBtn.disabled = true; simulated = ''; });
+        simBtn.addEventListener('click', async function() {
+          simBtn.disabled = true; delBtn.disabled = true;
+          cfgMsg('cfg-guias-msg', 'Simulando…', false);
+          try {
+            var r = await llamar(true);
+            if (!r.ok) { cfgMsg('cfg-guias-msg', r.data.error || 'Error', true); out.textContent = ''; return; }
+            pintar(r.data);
+            var n = r.data.resultado.filter(function(x) { return x.estado === 'se_borraria'; }).length;
+            var nx = r.data.resultado.filter(function(x) { return x.estado === 'no_existe'; }).length;
+            cfgMsg('cfg-guias-msg', 'Simulacro: se borrarían ' + n + ' guías públicas' + (nx ? ' (' + nx + ' ya no existen)' : '') + '. Nada se ha borrado.', false);
+            simulated = readSlugs().join('|');
+            delBtn.disabled = n === 0;
+          } catch (e) { cfgMsg('cfg-guias-msg', 'No se pudo simular: ' + e.message, true); }
+          finally { simBtn.disabled = false; }
+        });
+        delBtn.addEventListener('click', async function() {
+          if (simulated !== readSlugs().join('|')) { cfgMsg('cfg-guias-msg', 'La lista cambió: vuelve a simular.', true); delBtn.disabled = true; return; }
+          var n = readSlugs().length;
+          var typed = window.prompt('Vas a eliminar hasta ' + n + ' guías públicas. Escribe ELIMINAR para confirmar:');
+          if (typed !== 'ELIMINAR') { cfgMsg('cfg-guias-msg', 'Cancelado: no se ha borrado nada.', false); return; }
+          delBtn.disabled = true; simBtn.disabled = true;
+          cfgMsg('cfg-guias-msg', 'Eliminando…', false);
+          try {
+            var r = await llamar(false);
+            if (!r.ok) { cfgMsg('cfg-guias-msg', r.data.error || 'Error', true); return; }
+            pintar(r.data);
+            var b = r.data.resultado.filter(function(x) { return x.estado === 'borrada'; }).length;
+            var er = r.data.resultado.filter(function(x) { return x.estado === 'error'; }).length;
+            cfgMsg('cfg-guias-msg', 'Borradas ' + b + ' guías públicas' + (er ? ', con ' + er + ' errores' : '') + '.', er > 0);
+          } catch (e) { cfgMsg('cfg-guias-msg', 'No se pudo eliminar: ' + e.message, true); }
+          finally { simBtn.disabled = false; }
+        });
+      })();
+
       // Cerrar sesión
       document.getElementById('cfg-logout').addEventListener('click', async function() {
         this.disabled = true;
